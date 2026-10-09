@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Power Button to .then()</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a two-column source-trace. Left rail is a live call stack (root frame at the bottom, your JS at the top); right column walks the same frames from root to end. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.6rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+
+/* rail */
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+
+/* hero */
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.2rem,6vw,3.9rem);font-weight:800;letter-spacing:-.02em}
+.hero h1 code{font-size:.82em;background:none;padding:0;color:var(--accent)}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.78rem}
+.chain a{text-decoration:none;color:var(--ink);border:1px solid var(--rule);background:var(--surface);padding:5px 9px;border-radius:6px}
+.chain a:hover{border-color:var(--accent);color:var(--accent)}
+.chain span{color:var(--muted)}
+.chain a.you{background:var(--trace-bg);border-color:var(--trace);color:var(--trace)}
+
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+
+/* code panels */
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+pre .ln.key::after{content:attr(data-tag);font-family:var(--body);font-size:.7rem;font-weight:600;color:var(--trace);margin-left:14px;letter-spacing:.02em}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+
+/* process map */
+.pmap{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.proc{border:1px solid var(--rule);background:var(--surface);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.proc.yours{border:2px solid var(--accent)}
+.proc h4{margin:0;font-family:var(--display);font-size:1rem;font-weight:700}
+.proc .cmd{font-family:var(--mono);font-size:.7rem;color:var(--muted);word-break:break-all}
+.thr{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.thr li{font-size:.84rem;line-height:1.35;display:flex;flex-direction:column}
+.thr li code{align-self:flex-start;font-size:.74rem}
+.thr li.main code{background:var(--trace-bg);color:var(--trace);font-weight:600}
+.thr li span{color:var(--muted);font-size:.78rem}
+.legend{font-size:.8rem;color:var(--muted);display:flex;gap:16px;flex-wrap:wrap}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+/* wake chain */
+.wake{display:flex;flex-direction:column;gap:0;counter-reset:w;border:1px solid var(--rule);border-radius:10px;background:var(--surface);overflow:hidden}
+.wake div{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;padding:10px 14px;border-top:1px solid var(--rule)}
+.wake div:first-child{border-top:0}
+.wake div b{font-family:var(--mono);font-size:.74rem;font-weight:500;color:var(--trace)}
+.wake div p{font-size:.92rem}
+@media (max-width:560px){.wake div{grid-template-columns:1fr;gap:2px}}
+
+/* stepper */
+.sim{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+button{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.ctr{font-family:var(--mono);font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.phases{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.ph{border:1px solid var(--rule);border-radius:7px;padding:6px 8px;font-size:.76rem;color:var(--muted);text-align:center;line-height:1.3}
+.ph.on{background:var(--accent);border-color:var(--accent);color:var(--surface);font-weight:600}
+.runbar{font-size:.86rem;padding:7px 12px;border-radius:7px}
+.runbar.you{background:var(--accent-soft);color:var(--accent)}
+.runbar.eng{background:var(--trace-bg);color:var(--trace)}
+.runbar.idle{background:var(--code);color:var(--muted)}
+.simgrid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:12px}
+@media (max-width:760px){.simgrid{grid-template-columns:1fr}.phases{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-width:0;background:var(--bg)}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.chip{display:inline-block;font-family:var(--mono);font-size:.74rem;padding:2px 7px;border-radius:5px;margin:0 4px 4px 0;background:var(--code);color:var(--ink)}
+.chip.q{background:var(--ok-bg);color:var(--ok)}.chip.t{background:var(--trace-bg);color:var(--trace)}.chip.j{background:var(--accent-soft);color:var(--accent)}
+.chip.f{background:var(--ok-bg);color:var(--ok)}.chip.r{background:var(--bad-bg);color:var(--bad)}
+.empty{font-size:.76rem;color:var(--muted)}
+.cpp{display:flex;flex-direction:column-reverse;gap:3px;font-family:var(--mono);font-size:.74rem}
+.cpp div{padding:3px 8px;border-radius:5px;background:var(--code);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cpp div.v8{background:var(--accent-soft);color:var(--accent)}
+.cpp div.os{background:var(--trace-bg);color:var(--trace)}
+.jscode .l{font-family:var(--mono);font-size:.76rem;padding:1px 8px;white-space:pre;overflow:hidden;text-overflow:ellipsis;border-left:3px solid transparent}
+.jscode .l.on{background:var(--accent-soft);border-left-color:var(--accent)}
+.jscode .l.q{background:var(--ok-bg);border-left-color:var(--ok)}
+.jscode .l.k{color:var(--muted);text-decoration:line-through}
+.note{font-size:.95rem;max-width:72ch}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+
+table{border-collapse:collapse;font-size:.88rem;width:100%}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Call stack</span><span>top = newest</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#os"><b>The OS gives you a process</b>kernel · CreateProcess / fork</a></li>
+    <li><a href="#processes"><b>Chrome's processes and threads</b>which thread is your tab</a></li>
+    <li><a href="#launch"><b>Launching a renderer</b>wWinMain → ContentMain</a></li>
+    <li><a href="#renderermain"><b>RendererMain</b>the line that starts the loop</a></li>
+    <li><a href="#loop"><b>Inside run_loop.Run()</b>MessagePumpDefault::Run</a></li>
+    <li><a href="#sleep"><b>How the loop sleeps</b>WaitForSingleObject · condvar</a></li>
+    <li><a href="#io"><b>The IO thread wakes it</b>Chrome_ChildIOThread</a></li>
+    <li><a href="#v8"><b>V8: .then() and microtasks</b>PerformPromiseThen</a></li>
+    <li><a href="#trace"><b>Full trace, step by step</b>JS + C++ stacks together</a></li>
+    <li><a href="#react"><b>Where React fits</b>your useEffect</a></li>
+    <li><a href="#node"><b>Node.js is different</b>uv_run</a></li>
+    <li><a href="#try"><b>See it on your machine</b>tools and exercises</a></li>
+  </ol>
+  <div class="base">— bottom: CPU / kernel</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <span class="eyebrow">A root-to-end trace through real Chromium, V8 and libuv source</span>
+  <h1>From the power button to <code>.then()</code></h1>
+  <p class="lede">You know processes, threads, syscalls and scheduling. This page uses exactly those ideas to follow one <code>fetch().then()</code> through the actual code that runs it: the process that hosts your React tab, the C++ thread that runs your JavaScript, the exact line that starts its event loop, the system call it sleeps in, and the V8 builtin that queues your callback.</p>
+  <div class="chain" aria-label="The call chain this page follows">
+    <a href="#os">kernel</a><span>→</span>
+    <a href="#launch">wWinMain</a><span>→</span>
+    <a href="#launch">ContentMain</a><span>→</span>
+    <a href="#launch">RunOtherNamedProcessTypeMain</a><span>→</span>
+    <a href="#renderermain">RendererMain</a><span>→</span>
+    <a href="#renderermain">run_loop.Run()</a><span>→</span>
+    <a href="#loop">MessagePumpDefault::Run</a><span>→</span>
+    <a href="#loop">DoWork</a><span>→</span>
+    <a href="#v8">V8</a><span>→</span>
+    <a href="#trace" class="you">your callback</a>
+  </div>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">Every excerpt below is copied from the current source of Chromium, V8, libuv or Node (fetched October 2026) and trimmed with <code>// …</code> where unrelated code was removed. File paths link to the originals at the bottom of the page. Highlighted lines are the ones the explanation hinges on.</p>
+</header>
+
+<section id="os">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>The OS gives Chrome a process</h2></div>
+  <div class="prose">
+    <p>Everything starts the way any program does. When you launch Chrome, the kernel creates a process: a fresh virtual address space, a handle table, and one thread whose instruction pointer starts at the executable's entry point. On Windows that entry point is <code>wWinMain</code> in <code>chrome.exe</code>. Nothing about events, promises or JavaScript exists at this point.</p>
+    <p>Chrome then becomes many processes. It does this with the same primitives you studied: <code>CreateProcess</code> on Windows, <code>fork()</code> plus <code>execvp()</code> on Linux. The browser process launches itself again, as <code>chrome.exe --type=renderer …</code>, and the command-line flag decides which <code>main</code> the child runs.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">base/process/launch_posix.cc · LaunchProcess()</span><span class="note">Linux/ChromeOS child launch, trimmed</span></figcaption>
+    <pre data-code="c-launch"></pre>
+  </figure>
+  <p class="callout">On Linux, renderers are usually forked from a pre-warmed <b>zygote</b> process rather than through this exact path, and on Windows the sandbox broker creates the renderer under a restricted token. The idea is identical: the browser process asks the kernel for a new process, then that child picks its role from <code>--type=</code>.</p>
+</section>
+
+<section id="processes">
+  <div class="sechead"><span class="eyebrow">Frame 1 · the layout</span><h2>Chrome's processes, and which thread is your tab</h2></div>
+  <div class="prose">
+    <p>Each box is a separate OS process with its own address space. Inside, each item is an OS thread. The thread names are the strings Chrome passes to <code>SetName</code> or <code>base::Thread</code>. Two of them appear verbatim in the excerpts on this page: <code>CrRendererMain</code> and <code>Chrome_ChildIOThread</code>.</p>
+  </div>
+  <div class="pmap">
+    <div class="proc"><h4>Browser process</h4><div class="cmd">chrome.exe  (no --type)</div>
+      <ul class="thr">
+        <li><code>CrBrowserMain</code><span>UI thread: tabs, address bar, window events</span></li>
+        <li><code>Chrome_IOThread</code><span>IPC routing to every child process</span></li>
+        <li><code>ThreadPool workers</code><span>disk, background jobs</span></li>
+      </ul></div>
+    <div class="proc"><h4>Network service</h4><div class="cmd">chrome.exe --type=utility --utility-sub-type=network.mojom.NetworkService</div>
+      <ul class="thr">
+        <li><code>network.CrUtilityMain</code><span>DNS, sockets, TLS, HTTP. Your fetch() bytes arrive here</span></li>
+      </ul></div>
+    <div class="proc"><h4>GPU process</h4><div class="cmd">chrome.exe --type=gpu-process</div>
+      <ul class="thr">
+        <li><code>CrGpuMain</code><span>talks to the graphics driver, draws frames</span></li>
+      </ul></div>
+    <div class="proc yours"><h4>Renderer process: your React tab</h4><div class="cmd">chrome.exe --type=renderer …</div>
+      <ul class="thr">
+        <li class="main"><code>CrRendererMain</code><span>Blink + V8. Your JavaScript, the DOM, layout and the event loop run here, one task at a time</span></li>
+        <li><code>Chrome_ChildIOThread</code><span>receives IPC messages and posts them as tasks to the main thread</span></li>
+        <li><code>Compositor</code><span>scrolling and layer compositing off the main thread</span></li>
+        <li><code>ThreadPool workers</code><span>V8 background compile and GC helpers, decoding</span></li>
+      </ul></div>
+  </div>
+  <div class="legend"><span><i style="background:var(--trace-bg);border:1px solid var(--trace)"></i>the thread that runs your JS</span><span><i style="border:2px solid var(--accent)"></i>the process that hosts your tab</span></div>
+  <p class="callout">So "JavaScript is single-threaded" means precisely this: <b>your code only ever runs on <code>CrRendererMain</code></b>, which is one OS thread in one renderer process. The process itself has many threads. Your <code>fetch</code> is performed by a different process entirely. Web Workers get their own threads, each with its own event loop.</p>
+</section>
+
+<section id="launch">
+  <div class="sechead"><span class="eyebrow">Frame 2 · entry points</span><h2>From <code>wWinMain</code> to <code>RendererMain</code></h2></div>
+  <div class="prose">
+    <p>The renderer child starts in the same executable as the browser. The path down to the renderer-specific code is a chain of ordinary function calls: the Windows entry point loads <code>chrome.dll</code>, which calls <code>ContentMain</code>, which reads <code>--type</code> and dispatches through a table of function pointers.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">chrome/app/chrome_exe_main_win.cc · wWinMain()</span><span class="note">process entry point on Windows, trimmed</span></figcaption>
+    <pre data-code="c-winmain"></pre>
+  </figure>
+  <figure class="src">
+    <figcaption><span class="path">content/app/content_main.cc · ContentMain() / RunContentProcess()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-contentmain"></pre>
+  </figure>
+  <figure class="src">
+    <figcaption><span class="path">content/app/content_main_runner_impl.cc · RunOtherNamedProcessTypeMain()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-dispatch"></pre>
+  </figure>
+  <p class="callout">That table is the whole answer to "how does one executable become a renderer": <code>process_type == "renderer"</code> means call <code>RendererMain</code>. The browser process, which has no <code>--type</code>, takes a different branch into <code>BrowserMain</code> instead.</p>
+</section>
+
+<section id="renderermain">
+  <div class="sechead"><span class="eyebrow">Frame 3 · the answer</span><h2>The line that starts your tab's event loop</h2></div>
+  <div class="prose">
+    <p>This is the main thread of the renderer process. Read it top to bottom and you watch the event loop get assembled: name the thread, initialize Blink, build a scheduler around a message pump, create the <code>RenderThreadImpl</code> (which also starts the IO thread), engage the sandbox, and finally call <code>run_loop.Run()</code>.</p>
+    <p>That call does not return until the tab's process shuts down. Every task this renderer ever runs, including parsing your HTML, executing <code>main.jsx</code>, and every React render, happens <em>inside</em> it, deeper on this thread's C++ stack.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">content/renderer/renderer_main.cc · RendererMain()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-renderermain"></pre>
+  </figure>
+  <p class="callout">Note <code>MessagePumpType::DEFAULT</code>. The renderer main thread's pump does not watch sockets or pipes itself. It sleeps on a plain event and is woken by other threads. You will see why that matters in <a href="#io">the IO thread section</a>.</p>
+</section>
+
+<section id="loop">
+  <div class="sechead"><span class="eyebrow">Frame 4 · the loop itself</span><h2>Inside <code>run_loop.Run()</code></h2></div>
+  <div class="prose">
+    <p><code>RunLoop::Run</code> hands off to the thread's controller, which calls <code>pump_-&gt;Run(this)</code>. Here is the pump: an actual <code>for (;;)</code>. Strip out the metrics and the busy-wait heuristic and it is four lines: do work, if there's more do it again, otherwise do idle work, otherwise sleep until signaled or until the next delayed task is due.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">…/thread_controller_with_message_pump_impl.cc · Run()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-tcrun"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">base/message_loop/message_pump_default.cc · Run()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-pump"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p><code>delegate-&gt;DoWork()</code> is where a <em>task</em>, in the HTML-spec sense, actually runs. The scheduler chooses the next task from several prioritized queues (input, loading, timers, and others), runs it, then calls <code>DidRunTask</code>. The comment in the source says that last call can process microtasks. That is the microtask checkpoint you traced earlier, happening right after each task.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">…/thread_controller_with_message_pump_impl.cc · DoWorkImpl()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-dowork"></pre>
+  </figure>
+  <p class="callout">Two details worth keeping. First, DoWork runs tasks in <b>batches of up to 8 ms</b> before going back to the pump. Second, <code>task_execution_allowed</code> is set to false while a task runs, which is why one task can never start inside another. A <code>while(true){}</code> in a click handler never returns from <code>RunTask</code>, so the <code>for (;;)</code> above never comes back around to anything else: no other task, no paint, no input.</p>
+</section>
+
+<section id="sleep">
+  <div class="sechead"><span class="eyebrow">Frame 5 · the bottom of the stack while idle</span><h2>How the loop sleeps without burning CPU</h2></div>
+  <div class="prose">
+    <p>When there is no work, the pump calls <code>event_.TimedWait(remaining_delay)</code>. On Windows that is a kernel event object and <code>WaitForSingleObject</code>, so the scheduler takes the thread off the CPU. On Linux and macOS, Chrome builds the same thing from a mutex and a condition variable, the textbook construction.</p>
+    <p>Waking it is the mirror image: any thread that posts a task to the main thread ends up calling <code>MessagePumpDefault::ScheduleWork()</code>, which calls <code>event_.Signal()</code>, which on Windows is <code>SetEvent</code>.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">base/synchronization/waitable_event_win.cc</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-waitwin"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">base/synchronization/waitable_event_posix.cc</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-waitposix"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">base/message_loop/message_pump_default.cc · ScheduleWork()</span><span class="note">verbatim</span></figcaption>
+    <pre data-code="c-schedule"></pre>
+  </figure>
+</section>
+
+<section id="io">
+  <div class="sechead"><span class="eyebrow">Frame 6 · the other thread</span><h2>Who signals that event: <code>Chrome_ChildIOThread</code></h2></div>
+  <div class="prose">
+    <p>The main thread's pump is <code>DEFAULT</code>; the IO thread's pump is <code>IO</code>. An IO pump blocks in the kernel's readiness mechanism, epoll on Linux and an IO completion port on Windows, waiting on the pipes that connect this renderer to the browser and network processes. When a message arrives, the IO thread wakes, decodes the Mojo message, and posts a task to the main thread. Posting is what calls <code>ScheduleWork</code> and signals the event from the previous section.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">content/child/child_process.cc · ChildProcess()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-iothread"></pre>
+  </figure>
+  <h3>The complete wake chain for your fetch reply</h3>
+  <div class="wake">
+    <div><b>NIC → kernel</b><p>The network card raises an interrupt. The kernel's TCP stack reassembles the bytes and marks a socket readable.</p></div>
+    <div><b>network process</b><p>Its thread wakes from epoll or IOCP, reads the socket, decrypts TLS, parses HTTP, and sends the response over a Mojo pipe to your renderer.</p></div>
+    <div><b>Chrome_ChildIOThread</b><p>Wakes from its own epoll or IOCP wait on that pipe, decodes the Mojo message, and posts a task to the main thread's loading queue.</p></div>
+    <div><b>PostTask</b><p>Enqueues the task and calls <code>ScheduleWork()</code>, then <code>event_.Signal()</code>, then <code>SetEvent</code> or a condition-variable broadcast.</p></div>
+    <div><b>CrRendererMain</b><p>Returns from <code>WaitForSingleObject</code>, goes back around <code>for (;;)</code>, and <code>DoWork</code> picks the task. The task resolves <code>p1</code>, which queues your <code>.then</code> callback as a microtask.</p></div>
+  </div>
+</section>
+
+<section id="v8">
+  <div class="sechead"><span class="eyebrow">Frame 7 · inside V8</span><h2>What <code>.then()</code>, resolving, and the microtask queue actually are</h2></div>
+  <div class="prose">
+    <p>V8 implements <code>Promise.prototype.then</code> as a builtin written in Torque, V8's own language for builtins, which compiles to machine code. It allocates the result promise and calls <code>PerformPromiseThenImpl</code>.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/builtins/promise-then.tq · PromisePrototypeThen</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-then"></pre>
+  </figure>
+  <div class="prose">
+    <p>This is the branch you watched in the simulator. If the promise is still pending, <code>.then</code> stores a <code>PromiseReaction</code> on it, and nothing is queued. That is the "stapling" step. If the promise has already settled, it skips straight to <code>EnqueueMicrotask</code>.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/builtins/promise-abstract-operations.tq · PerformPromiseThenImpl</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-perform"></pre>
+  </figure>
+  <div class="prose">
+    <p>When the network task later resolves <code>p1</code>, <code>FulfillPromise</code> flips the state and hands the stored reactions to <code>TriggerPromiseReactions</code>. That morphs each reaction object in place into a job task and pushes it onto the microtask queue.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/builtins/promise-abstract-operations.tq · FulfillPromise</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-fulfill"></pre>
+  </figure>
+  <div class="prose">
+    <p>The microtask queue itself is a C++ ring buffer whose capacity doubles when full. A checkpoint drains it completely, including any microtasks queued while draining, which is why a chain of resolved promises all run back to back with no paint in between.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">v8/src/execution/microtask-queue.cc</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-mq"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">blink/…/scheduler/common/event_loop.cc</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-blinkloop"></pre>
+    </figure>
+  </div>
+  <p class="callout">Ownership, confirmed by the code: <b>V8 owns the microtask queue</b>; <b>Blink decides when to drain it</b> (<code>EventLoop::PerformMicrotaskCheckpoint</code>); <b>Chromium's base library owns the task loop and the sleep</b>. The V8 comment above notes that checkpoints happen whenever script or microtask scopes exit, not only once per task.</p>
+</section>
+
+<section id="trace">
+  <div class="sechead"><span class="eyebrow">Frame 8 · everything at once</span><h2>The full trace, with both stacks visible</h2></div>
+  <div class="prose">
+    <p>This is the simulator from before with one addition: the real C++ stack of <code>CrRendererMain</code> at each step, bottom frame first. Watch how your JS frames only ever appear on top of <code>DoWork</code>, and how an idle loop's stack ends in a kernel wait.</p>
+  </div>
+  <div class="sim" id="sim">
+    <div class="ctl">
+      <button id="sOk" class="sel" type="button">Server responds</button>
+      <button id="sFail" type="button">Network fails</button>
+      <span style="flex:1"></span>
+      <button id="prev" type="button" aria-label="Previous step">← Back</button>
+      <button id="next" type="button" aria-label="Next step">Next →</button>
+      <button id="reset" type="button">Reset</button>
+      <span class="ctr" id="ctr"></span>
+    </div>
+    <div class="phases" aria-label="Event loop phase">
+      <div class="ph" id="ph0">1 · run one task</div><div class="ph" id="ph1">2 · drain microtasks</div><div class="ph" id="ph2">3 · render if due</div><div class="ph" id="ph3">4 · sleep in kernel</div>
+    </div>
+    <div class="runbar" id="run"></div>
+    <div class="simgrid">
+      <div class="col">
+        <div class="box jscode"><h5>main.jsx</h5><div id="code"></div></div>
+        <div class="two">
+          <div class="box"><h5>JS call stack</h5><div id="stack"></div></div>
+          <div class="box"><h5>Elsewhere (IO thread / network process)</h5><div id="web"></div></div>
+          <div class="box"><h5>Task queue</h5><div id="tasks"></div></div>
+          <div class="box"><h5>V8 microtask queue</h5><div id="micro"></div></div>
+        </div>
+        <div class="box"><h5>Promises on the V8 heap</h5><div id="prom"></div></div>
+        <div class="box"><h5>Console</h5><div id="con" style="font-family:var(--mono);font-size:.78rem"></div></div>
+      </div>
+      <div class="col">
+        <div class="box"><h5>CrRendererMain C++ stack (bottom → top)</h5><div class="cpp" id="cpp"></div></div>
+        <p class="note" id="note"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="react">
+  <div class="sechead"><span class="eyebrow">Frame 9 · your code</span><h2>Where your React app sits in all of this</h2></div>
+  <div class="prose">
+    <p>With <code>npm run dev</code>, Vite serves an <code>index.html</code> containing <code>&lt;script type="module" src="/src/main.jsx"&gt;</code>. Module scripts are deferred, so after parsing finishes, one task on <code>CrRendererMain</code> executes <code>main.jsx</code>. Inside that task, <code>createRoot(...).render(&lt;App /&gt;)</code> runs. React then schedules its work, and effects run in later turns of the same loop.</p>
+    <p>A typical data-loading component maps directly onto the trace:</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">src/User.jsx</span><span class="note">example</span></figcaption>
+    <pre data-code="c-react"></pre>
+  </figure>
+  <div class="prose">
+    <p>The <code>setUser</code> call inside the callback runs during a microtask checkpoint. React batches the update and re-renders, and the new DOM reaches the screen at the next render opportunity of the loop, which is phase 3 in the simulator. The <code>ignore</code> flag exists because the component can unmount while <code>p1</code> is still pending: the promise lives on the heap regardless, and its callback would still run later.</p>
+  </div>
+</section>
+
+<section id="node">
+  <div class="sechead"><span class="eyebrow">Frame 10 · contrast</span><h2>Node.js: same V8, a different loop</h2></div>
+  <div class="prose">
+    <p>Node embeds the same V8, so <code>.then</code> and the microtask queue are the identical Torque code above. The task loop is different: libuv's <code>uv_run</code>, with named phases. Node runs your entire script <em>first</em> and only then spins the loop, and the loop exits by itself once <code>uv_loop_alive</code> reports nothing left to wait for. That is why a Node script ends but a tab does not.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">node/src/api/embed_helpers.cc · SpinEventLoopInternal()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-node"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">libuv/src/unix/core.c · uv_run()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-uv"></pre>
+    </figure>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Chrome renderer</th><th>Node.js</th></tr></thead>
+    <tbody>
+      <tr><td>Loop starts</td><td>Before any JS exists (<code>run_loop.Run()</code> in RendererMain)</td><td>After your main script finishes (<code>SpinEventLoop</code>)</td></tr>
+      <tr><td>Loop ends</td><td>When the tab's process is told to quit</td><td>When nothing is pending (<code>uv_loop_alive</code> is 0)</td></tr>
+      <tr><td>Where it sleeps</td><td>Main thread waits on an event; the IO thread waits in epoll / IOCP</td><td>The main thread itself waits in epoll / kqueue / IOCP (<code>uv__io_poll</code>)</td></tr>
+      <tr><td>Task order</td><td>Prioritized task queues, plus rendering</td><td>Fixed phases: timers, pending, poll, check, close</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 11 · verify it yourself</span><h2>See these processes and threads on your own machine</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>What to look at</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>One process per tab or site</td><td>Chrome's own Task Manager: <code>Shift+Esc</code> on Windows/Linux. Your localhost React tab appears as its own row with a PID.</td></tr>
+      <tr><td>Why that process exists</td><td>Open <code>chrome://process-internals</code> to see the site-isolation decisions that assigned your tab its renderer.</td></tr>
+      <tr><td>The <code>--type=renderer</code> command line</td><td>Windows: Process Explorer (Sysinternals), or in PowerShell <code>Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | Select ProcessId, CommandLine</code>. Linux: <code>ps -eo pid,args | grep type=renderer</code>.</td></tr>
+      <tr><td>Thread names</td><td>Windows: Process Explorer → Properties → Threads. Linux: <code>cat /proc/&lt;pid&gt;/task/*/comm</code>. Linux truncates names to 15 characters, so <code>Chrome_ChildIOThread</code> shows as <code>Chrome_ChildIOT</code>.</td></tr>
+      <tr><td>Tasks and microtasks in time</td><td>DevTools → Performance → record while your fetch runs. On the Main track, each grey <b>Task</b> bar is one <code>RunTask</code>, and <b>Run Microtasks</b> blocks appear inside them.</td></tr>
+      <tr><td>The 50 ms long-task line</td><td>Any Task bar over 50 ms is marked with a red corner. That is a task that kept the <code>for (;;)</code> from coming back around.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Predict, then run: <code>console.log(1); setTimeout(()=&gt;console.log(2)); Promise.resolve().then(()=&gt;console.log(3)); console.log(4)</code>. Name the C++ function that runs <code>3</code> before <code>2</code> can be selected.</li>
+    <li>Put <code>const t = Date.now(); while (Date.now() - t &lt; 2000) {}</code> in a button's click handler, record a Performance trace, and click. Find the single 2-second Task and explain why scrolling still worked or didn't. Hint: the compositor thread.</li>
+    <li>In the Performance trace of your <code>fetch</code>, find the Task in which the response handler runs. Is it a separate Task from the one that called <code>fetch()</code>? Match it to the wake chain above.</li>
+    <li>Write <code>Promise.resolve().then(function loop(){ Promise.resolve().then(loop) })</code>. Predict what happens to the page, using the rule that a checkpoint drains until the ring buffer is empty. Then check with a <code>setTimeout</code> that never fires.</li>
+    <li>Run the same <code>fetch().then()</code> in Node 18+ with <code>node -e</code>. Using <code>uv_run</code>, explain why the process exits on its own after printing.</li>
+  </ol>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files</h2></div>
+  <ul class="src-list">
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/renderer/renderer_main.cc">content/renderer/renderer_main.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/app/content_main.cc">content/app/content_main.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/app/content_main_runner_impl.cc">content/app/content_main_runner_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:chrome/app/chrome_exe_main_win.cc">chrome/app/chrome_exe_main_win.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:base/process/launch_posix.cc">base/process/launch_posix.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:base/message_loop/message_pump_default.cc">base/message_loop/message_pump_default.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:base/task/sequence_manager/thread_controller_with_message_pump_impl.cc">base/task/sequence_manager/thread_controller_with_message_pump_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:base/synchronization/waitable_event_win.cc">base/synchronization/waitable_event_win.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:base/synchronization/waitable_event_posix.cc">base/synchronization/waitable_event_posix.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/child/child_process.cc">content/child/child_process.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/platform/scheduler/common/event_loop.cc">blink/…/scheduler/common/event_loop.cc</a></li>
+    <li><a href="https://github.com/v8/v8/blob/main/src/builtins/promise-then.tq">v8/src/builtins/promise-then.tq</a></li>
+    <li><a href="https://github.com/v8/v8/blob/main/src/builtins/promise-abstract-operations.tq">v8/src/builtins/promise-abstract-operations.tq</a></li>
+    <li><a href="https://github.com/v8/v8/blob/main/src/execution/microtask-queue.cc">v8/src/execution/microtask-queue.cc</a></li>
+    <li><a href="https://github.com/nodejs/node/blob/main/src/api/embed_helpers.cc">node/src/api/embed_helpers.cc</a></li>
+    <li><a href="https://github.com/libuv/libuv/blob/v1.x/src/unix/core.c">libuv/src/unix/core.c</a></li>
+    <li><a href="https://html.spec.whatwg.org/multipage/webappapis.html#event-loops">HTML spec: event loops</a></li>
+    <li><a href="https://www.chromium.org/developers/design-documents/multi-process-architecture/">Chromium design doc: multi-process architecture</a></li>
+    <li><a href="https://chromium.googlesource.com/chromium/src/+/main/docs/threading_and_tasks.md">Chromium docs: threading and tasks</a></li>
+    <li><a href="https://www.youtube.com/watch?v=cCOL7MC4Pl0">Jake Archibald, "In The Loop" (talk)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">Chromium, V8 and libuv/Node excerpts are © their respective authors and used under their BSD and MIT licenses. Thread names in the process map that do not appear in the excerpts above are the usual ones in current Chrome builds and can differ between versions and platforms.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-launch">Process LaunchProcess(const std::vector<std::string>& argv,
+                      const LaunchOptions& options) {
+  // …
+  pid_t pid;
+  // …
+»   pid = fork();                                        // kernel duplicates this process
+  // …
+  if (pid == 0) {
+    // Child process
+    // DANGER: no calls to malloc or locks are allowed from now on:
+    // …
+    const char* executable_path = !options.real_path.empty()
+                                      ? options.real_path.value().c_str()
+                                      : argv_cstr[0];
+
+»   execvp(executable_path, argv_cstr.data());           // replace image: chrome --type=renderer …
+
+    RAW_LOG(ERROR, "LaunchProcess: failed to execvp:");
+    _exit(127);
+  } else {
+    // Parent process
+    // …
+  }
+  return Process(pid);
+}</script>
+
+<script type="text/plain" id="c-winmain">int APIENTRY wWinMain(HINSTANCE instance, HINSTANCE prev, wchar_t*, int) {
+  // …
+  // Initialize the CommandLine singleton from the environment.
+  base::CommandLine::Init(0, nullptr);
+  base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
+
+» const std::string process_type =
+»     command_line->GetSwitchValueASCII(switches::kProcessType);   // "renderer" for your tab
+  // …
+  // Load and launch the chrome dll. *Everything* happens inside.
+  VLOG(1) << "About to load main DLL.";
+  MainDllLoader* loader = MakeMainDllLoader();
+» int rc = loader->Launch(instance, exe_entry_point_ticks);
+  delete loader;
+  // …
+  return rc;
+}</script>
+
+<script type="text/plain" id="c-contentmain">NO_STACK_PROTECTOR int ContentMain(ContentMainParams params) {
+  auto runner = ContentMainRunner::Create();
+  return RunContentProcess(std::move(params), runner.get());
+}
+
+NO_STACK_PROTECTOR int RunContentProcess(
+    ContentMainParams params,
+    ContentMainRunner* content_main_runner) {
+  // …
+    exit_code = content_main_runner->Initialize(std::move(params));
+  // …
+  if (IsSubprocess())
+    CommonSubprocessInit();
+» exit_code = content_main_runner->Run();
+  // …
+  return exit_code;
+}</script>
+
+<script type="text/plain" id="c-dispatch">// We dispatch to a process-type-specific FooMain() based on a command-line
+// flag.  This struct is used to build a table of (flag, main function) pairs.
+struct MainFunction {
+  const char* name;
+  int (*function)(MainFunctionParams);
+};
+
+NO_STACK_PROTECTOR int RunOtherNamedProcessTypeMain(
+    const std::string& process_type,
+    MainFunctionParams main_function_params,
+    ContentMainDelegate* delegate) {
+  // …
+  static const auto kMainFunctions = std::to_array<MainFunction>({
+      {switches::kUtilityProcess, UtilityMain},
+»     {switches::kRendererProcess, RendererMain},
+      {switches::kGpuProcess, GpuMain},
+  });
+  // …
+  for (const MainFunction& main_function : kMainFunctions) {
+    if (process_type == main_function.name) {
+      // …
+»     return main_function.function(
+          std::move(std::get<MainFunctionParams>(exit_code)));
+    }
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-renderermain">// mainline routine for running as the Renderer process
+int RendererMain(MainFunctionParams parameters) {
+  // …
+» base::PlatformThread::SetName("CrRendererMain");
+  // …
+  blink::Platform::InitializeBlink(std::move(cppgc_stack_start_marker));
+  std::unique_ptr<blink::scheduler::WebThreadScheduler> main_thread_scheduler =
+      blink::scheduler::WebThreadScheduler::CreateMainThreadScheduler(
+»         CreateMainThreadMessagePump());       // MessagePumpType::DEFAULT
+  platform.PlatformInitialize();
+  // …
+  {
+    // …
+    std::unique_ptr<RenderProcess> render_process = RenderProcessImpl::Create();
+    // It's not a memory leak since RenderThread has the same lifetime
+    // as a renderer process.
+    base::RunLoop run_loop;
+    new RenderThreadImpl(run_loop.QuitClosure(),
+                         std::move(main_thread_scheduler));
+    // …
+    if (need_sandbox) {
+      should_run_loop = platform.EnableSandbox();
+      // …
+    }
+    // …
+    if (should_run_loop) {
+      // …
+      TRACE_EVENT_INSTANT("toplevel", "RendererMain.START_MSG_LOOP");
+      const base::TimeTicks run_loop_start_time = base::TimeTicks::Now();
+      RenderThreadImpl::current()->set_run_loop_start_time(run_loop_start_time);
+      LogTimeToStartRunLoop(command_line, run_loop_start_time);
+»     run_loop.Run();                           // <- the event loop. Returns only at shutdown.
+    }
+    // …
+  }
+  platform.PlatformUninitialize();
+  return 0;
+}
+
+std::unique_ptr<base::MessagePump> CreateMainThreadMessagePump() {
+  // …
+  message_pump = base::MessagePump::Create(base::MessagePumpType::DEFAULT);
+  // …
+  return message_pump;
+}</script>
+
+<script type="text/plain" id="c-tcrun">void ThreadControllerWithMessagePumpImpl::Run(
+    bool application_tasks_allowed,
+    TimeDelta timeout) {
+  // …
+  if (application_tasks_allowed &&
+      !main_thread_only().task_execution_allowed) {
+    // Allow nested task execution as explicitly requested.
+    // …
+    pump_->Run(this);
+    // …
+  } else {
+»   pump_->Run(this);       // `this` is the Delegate: DoWork / DoIdleWork
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-pump">void MessagePumpDefault::Run(Delegate* delegate) {
+  AutoReset<bool> auto_reset_keep_running(&keep_running_, true);
+
+» for (;;) {
+    // …
+»   Delegate::NextWorkInfo next_work_info = delegate->DoWork();
+    bool has_more_immediate_work = next_work_info.is_immediate();
+    if (!keep_running_) {
+      break;
+    }
+
+    if (has_more_immediate_work) {
+      continue;
+    }
+
+    delegate->DoIdleWork();
+    if (!keep_running_) {
+      break;
+    }
+    // … (optional short busy-wait heuristic) …
+»     woke_from_os = event_.TimedWait(next_work_info.remaining_delay());
+    // …
+  }
+}</script>
+
+<script type="text/plain" id="c-dowork">std::optional<WakeUp> ThreadControllerWithMessagePumpImpl::DoWorkImpl(
+    LazyNow* continuation_lazy_now) {
+  // …
+  // Keep running tasks for up to 8ms before yielding to the pump when tasks are
+  // run by batches.
+  const base::TimeDelta batch_duration =
+      RunsTasksByBatches() ? base::Milliseconds(8) : base::Milliseconds(0);
+  // …
+  for (int num_tasks_executed = 0; /* … */; ++num_tasks_executed) {
+    // …
+    std::optional<SequencedTaskSource::SelectedTask> selected_task =
+»       main_thread_only().task_source->SelectNextTask(lazy_now_select_task,
+                                                       select_task_option);
+    // …
+    if (!selected_task) {
+      OnEndWorkItemImpl(lazy_now_task_selected, run_depth);
+      break;
+    }
+
+    // Execute the task and assume the worst: it is probably not reentrant.
+    AutoReset<bool> ban_nested_application_tasks(
+        &main_thread_only().task_execution_allowed, false);
+    // …
+»     task_annotator_.RunTask(
+          "ThreadControllerImpl::RunTask", selected_task->task, /* … */);
+    // …
+    LazyNow lazy_now_after_run_task(time_source_);
+»   main_thread_only().task_source->DidRunTask(lazy_now_after_run_task);
+    // End the work item scope after DidRunTask() as it can process microtasks
+    // (which are extensions of the RunTask).
+    OnEndWorkItemImpl(lazy_now_after_run_task, run_depth);
+    // …
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-waitwin">WaitableEvent::WaitableEvent(ResetPolicy reset_policy,
+                             InitialState initial_state)
+»   : handle_(CreateEvent(nullptr,
+                          reset_policy == ResetPolicy::MANUAL,
+                          initial_state == InitialState::SIGNALED,
+                          nullptr)) {
+  CHECK(handle_.is_valid());
+}
+
+void WaitableEvent::SignalImpl() {
+» SetEvent(handle_.get());
+}
+
+bool WaitableEvent::TimedWaitImpl(TimeDelta wait_delta) {
+  // …
+  for (TimeDelta remaining = wait_delta; remaining.is_positive();
+       remaining = end_time - subtle::TimeTicksNowIgnoringOverride()) {
+    // …
+»   const DWORD result = WaitForSingleObject(handle_.get(), timeout_ms);
+    if (result == WAIT_OBJECT_0) {
+      // The object is signaled.
+      return true;
+    }
+    // …
+  }
+  return false;
+}</script>
+
+<script type="text/plain" id="c-waitposix">bool WaitableEvent::TimedWaitImpl(TimeDelta wait_delta) {
+  kernel_->lock_.Acquire();
+  if (kernel_->signaled_) {
+    // …
+    kernel_->lock_.Release();
+    return true;
+  }
+
+  SyncWaiter sw;
+  // …
+  sw.lock()->Acquire();
+  Enqueue(&sw);
+  kernel_->lock_.Release();
+  // …
+  for (TimeDelta remaining = wait_delta; remaining.is_positive() && !sw.fired();
+       remaining = /* … */) {
+    if (end_time.is_max()) {
+»     sw.cv()->Wait();               // pthread condition variable
+    } else {
+»     sw.cv()->TimedWait(remaining);
+    }
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-schedule">void MessagePumpDefault::ScheduleWork() {
+  // Since this can be called on any thread, we need to ensure that our Run
+  // loop wakes up.
+» event_.Signal();
+}</script>
+
+<script type="text/plain" id="c-iothread">class ChildIOThread : public base::Thread {
+ public:
+» ChildIOThread() : base::Thread("Chrome_ChildIOThread") {}
+  // …
+};
+
+ChildProcess::ChildProcess(base::ThreadType io_thread_type,
+                           /* … */)
+    : resetter_(&child_process, this, nullptr),
+      io_thread_(std::make_unique<ChildIOThread>()),
+      is_renderer_(is_renderer) {
+  // …
+  // We can't recover from failing to start the IO thread.
+» base::Thread::Options thread_options(base::MessagePumpType::IO, 0);
+  thread_options.thread_type = io_thread_type;
+  // …
+» CHECK(io_thread_->StartWithOptions(std::move(thread_options)));
+  io_thread_runner_ = io_thread_->task_runner();
+}</script>
+
+<script type="text/plain" id="c-then">// https://tc39.es/ecma262/#sec-promise.prototype.then
+transitioning javascript builtin PromisePrototypeThen(
+    js-implicit context: NativeContext, receiver: JSAny)(onFulfilled: JSAny,
+    onRejected: JSAny): JSAny {
+  // 1. Let promise be the this value.
+  // 2. If IsPromise(promise) is false, throw a TypeError exception.
+  const promise = Cast<JSPromise>(receiver) otherwise ThrowTypeError(/* … */);
+  // …
+  } label AllocateAndInit {
+»   const resultJSPromise = NewJSPromise(promise);     // this is p2
+    resultPromiseOrCapability = resultJSPromise;
+    resultPromise = resultJSPromise;
+  }
+  // …
+  const onFulfilled = CastOrDefault<Callable>(onFulfilled, Undefined);
+  const onRejected = CastOrDefault<Callable>(onRejected, Undefined);
+
+  // 5. Return PerformPromiseThen(promise, onFulfilled, onRejected,
+  //    resultCapability).
+» PerformPromiseThenImpl(
+      promise, onFulfilled, onRejected, resultPromiseOrCapability);
+  // …
+  return resultPromise;
+}</script>
+
+<script type="text/plain" id="c-perform">transitioning macro PerformPromiseThenImpl(
+    implicit context: Context)(promise: JSPromise,
+    onFulfilled: Callable|Undefined, onRejected: Callable|Undefined,
+    resultPromiseOrCapability: JSPromise|PromiseCapability|Undefined): void {
+» if (promise.Status() == PromiseState::kPending) {
+    // The {promise} is still in "Pending" state, so we just record a new
+    // PromiseReaction holding both the onFulfilled and onRejected callbacks.
+    // Once the {promise} is resolved we decide on the concrete handler to
+    // push onto the microtask queue.
+    const promiseReactions =
+        UnsafeCast<(Zero | PromiseReaction)>(promise.reactions_or_result);
+
+»   const reaction = NewPromiseReaction(
+        promiseReactions, resultPromiseOrCapability, onFulfilled, onRejected);
+    promise.reactions_or_result = reaction;
+  } else {
+    // … already settled: build the job right now …
+»   EnqueueMicrotask(handlerContext, microtask);
+  }
+  promise.SetHasHandler();
+}</script>
+
+<script type="text/plain" id="c-fulfill">// https://tc39.es/ecma262/#sec-fulfillpromise
+transitioning builtin FulfillPromise(
+    implicit context: Context)(promise: JSPromise, value: JSAny): Undefined {
+  // Assert: The value of promise.[[PromiseState]] is "pending".
+  dcheck(promise.Status() == PromiseState::kPending);
+  // …
+  // 2. Let reactions be promise.[[PromiseFulfillReactions]].
+  const reactions =
+      UnsafeCast<(Zero | PromiseReaction)>(promise.reactions_or_result);
+
+  // 3. Set promise.[[PromiseResult]] to value.
+  promise.reactions_or_result = value;
+
+  // 6. Set promise.[[PromiseState]] to "fulfilled".
+» promise.SetStatus(PromiseState::kFulfilled);
+
+  // 7. Return TriggerPromiseReactions(reactions, value).
+» TriggerPromiseReactions(reactions, value, kPromiseReactionFulfill);
+  return Undefined;
+}
+
+// inside MorphAndEnqueuePromiseReaction, called for each reaction:
+    // Morph {current} from a PromiseReaction into a PromiseReactionJobTask
+    // and schedule that on the microtask queue.
+    // …
+»   EnqueueMicrotask(handlerContext, promiseReactionJobTask);</script>
+
+<script type="text/plain" id="c-mq">void MicrotaskQueue::EnqueueMicrotask(Tagged<Microtask> microtask) {
+  if (size_ == capacity_) {
+    // Keep the capacity of |ring_buffer_| power of 2, so that the JIT
+    // implementation can calculate the modulo easily.
+    intptr_t new_capacity = std::max(kMinimumCapacity, capacity_ << 1);
+    ResizeBuffer(new_capacity);
+  }
+  DCHECK_LT(size_, capacity_);
+» ring_buffer_[(start_ + size_) % capacity_] = microtask.ptr();
+  ++size_;
+}
+
+void MicrotaskQueue::PerformCheckpointInternal(v8::Isolate* v8_isolate) {
+  // …
+  // Fast path: Checkpoints occur frequently when exiting script or microtask
+  // scopes. If there are no microtasks to drain, …
+  // we can bail out immediately …
+  if (size() == 0 && /* … */) [[likely]] {
+    return;
+  }
+  // …
+» RunMicrotasks(isolate);
+  // …
+}
+
+int MicrotaskQueue::RunMicrotasks(Isolate* isolate) {
+  // …
+» maybe_result = Execution::TryRunMicrotasks(isolate, this);
+  // …
+  DCHECK_EQ(0, size());       // drained completely
+  // …
+}</script>
+
+<script type="text/plain" id="c-blinkloop">EventLoop::EventLoop(Delegate* delegate,
+                     v8::Isolate* isolate,
+                     v8::MicrotaskQueue* microtask_queue)
+    : delegate_(delegate),
+      isolate_(isolate),
+      microtask_queue_(microtask_queue) {
+  // …
+}
+
+void EventLoop::PerformMicrotaskCheckpoint() {
+  if (AreMicrotasksPaused() || ScriptForbiddenScope::IsScriptForbidden()) {
+    return;
+  }
+
+» microtask_queue_->PerformCheckpoint(isolate_);
+}</script>
+
+<script type="text/plain" id="c-react">import { useEffect, useState } from "react";
+
+export default function User() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    let ignore = false;
+»   fetch("https://jsonplaceholder.typicode.com/users/1")   // p1: request handed to the network process
+»     .then(res => res.json())                              // cb1: staples onto p1
+»     .then(data => { if (!ignore) setUser(data); })        // cb2: runs in a microtask checkpoint
+      .catch(err => console.error(err));
+    return () => { ignore = true; };                        // cleanup if unmounted before p1 settles
+  }, []);
+
+  return <p>{user ? user.name : "Loading…"}</p>;
+}</script>
+
+<script type="text/plain" id="c-node">Maybe<ExitCode> SpinEventLoopInternal(Environment* env) {
+  // …
+  {
+    bool more;
+    env->performance_state()->Mark(
+        node::performance::NODE_PERFORMANCE_MILESTONE_LOOP_START);
+    do {
+      if (env->is_stopping()) break;
+»     uv_run(env->event_loop(), UV_RUN_DEFAULT);
+      if (env->is_stopping()) break;
+
+      platform->DrainTasks(isolate);
+
+»     more = uv_loop_alive(env->event_loop());
+      if (more && !env->is_stopping()) continue;
+
+      if (EmitProcessBeforeExit(env).IsNothing())
+        break;
+      // …
+      more = uv_loop_alive(env->event_loop());
+    } while (more == true && !env->is_stopping());
+    // …
+  }
+  // …
+  return EmitProcessExitInternal(env);
+}</script>
+
+<script type="text/plain" id="c-uv">int uv_run(uv_loop_t* loop, uv_run_mode mode) {
+  // …
+  r = uv__loop_alive(loop);
+  // …
+» while (r != 0 && loop->stop_flag == 0) {
+    // …
+    uv__run_pending(loop);
+    uv__run_idle(loop);
+    uv__run_prepare(loop);
+
+    timeout = 0;
+    if ((mode == UV_RUN_ONCE && can_sleep) || mode == UV_RUN_DEFAULT)
+      timeout = uv__backend_timeout(loop);
+    // …
+»   uv__io_poll(loop, timeout);           // epoll_wait / kqueue: the sleep
+    // …
+    uv__run_check(loop);                  // setImmediate callbacks
+    uv__run_closing_handles(loop);
+
+    uv__update_time(loop);
+    uv__run_timers(loop);                 // setTimeout callbacks
+
+    r = uv__loop_alive(loop);
+    // …
+  }
+  // …
+  return r;
+}</script>
+
+<script>
+(function(){
+  /* ---------- source rendering ---------- */
+  var KW=/\b(if|else|for|while|do|return|break|continue|const|let|var|int|bool|void|static|auto|struct|class|public|new|delete|true|false|nullptr|namespace|transitioning|macro|builtin|javascript|label|goto|otherwise|try|function|import|from|export|default|char|intptr_t|pid_t|DWORD|std|this)\b/;
+  function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function hl(line){
+    var re=/(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(if|else|for|while|do|return|break|continue|const|let|var|int|bool|void|static|auto|struct|class|public|new|delete|true|false|nullptr|namespace|transitioning|macro|builtin|javascript|label|goto|otherwise|try|function|import|from|export|default|char|intptr_t|pid_t|DWORD)\b|\b([A-Za-z_][A-Za-z0-9_]*)(?=\s*\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){
+      out+=esc(line.slice(last,m.index));
+      var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";
+      out+='<span class="'+cls+'">'+esc(m[0])+'</span>';
+      last=re.lastIndex;
+      if(m[0].length===0)re.lastIndex++;
+    }
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=document.getElementById(pre.getAttribute("data-code"));
+    if(!src)return;
+    var lines=src.textContent.replace(/^\n/,"").split("\n");
+    pre.innerHTML=lines.map(function(l){
+      var key=false;
+      if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1);}
+      return '<span class="ln'+(key?' key" data-tag="key line':'')+'">'+(hl(l)||" ")+'</span>';
+    }).join("");
+  });
+
+  /* ---------- rail highlight ---------- */
+  var links=[].slice.call(document.querySelectorAll("#frames a"));
+  var map={};links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});var a=map[e.target.id];if(a)a.classList.add("on");}
+      });
+    },{rootMargin:"-30% 0px -60% 0px"});
+    Object.keys(map).forEach(function(id){var s=document.getElementById(id);if(s)io.observe(s)});
+  }
+
+  /* ---------- simulator ---------- */
+  var code=["console.log('A: start');","fetch('https://jsonplaceholder.typicode.com/users/1')","  .then(res => res.json())                         // cb1","  .then(data => console.log('C:', data.name))      // cb2","  .catch(err => console.log('Oops:', err.message)); // cb3","console.log('B: end');"];
+  var BASE=["RendererMain","RunLoop::Run","ThreadControllerWithMessagePumpImpl::Run","MessagePumpDefault::Run"];
+  function task(extra){return BASE.concat(["DoWork → DoWorkImpl","TaskAnnotator::RunTask"]).concat(extra||[])}
+  function script(extra){return task(["blink: execute module script main.jsx","v8: Execution::Call"]).concat(extra||[])}
+  function sleep(){return BASE.concat(["WaitableEvent::TimedWait","os: WaitForSingleObject / pthread_cond_wait"])}
+  function micro(extra){return BASE.concat(["DoWork → DoWorkImpl","DidRunTask → microtask checkpoint","v8: MicrotaskQueue::PerformCheckpoint","v8: RunMicrotasks"]).concat(extra||[])}
+  function P(a,b,c,d,j){var o={p1:a,p2:b,p3:c,p4:d,pj:j};Object.keys(o).forEach(function(k){if(o[k]===undefined)delete o[k]});return o}
+  var pend=P("pending","pending","pending","pending"),W=["network process: GET users/1"],AB=["A: start","B: end"];
+  var base=[
+    {ph:0,l:-1,r:["eng","Scheduler selected a task: execute main.jsx"],c:task(["blink: execute module script main.jsx"]),s:["(module script)"],w:[],t:[],m:[],o:[],p:{},n:"The renderer has been looping since RendererMain called run_loop.Run(). DoWork selected the 'execute script' task. Your file starts running on top of a C++ stack that is already several frames deep."},
+    {ph:0,l:0,r:["you","Line 1"],c:script(),s:["(module script)","console.log"],w:[],t:[],m:[],o:["A: start"],p:{},n:"Ordinary synchronous JS. V8 pushes a frame, runs it, pops it."},
+    {ph:0,l:1,r:["you","Line 2: fetch()"],c:script(["blink: FetchManager (C++ binding)"]),s:["(module script)","fetch"],w:W,t:[],m:[],o:["A: start"],p:P("pending"),n:"fetch is a C++ function Blink installed on window. It sends a Mojo message asking the network process to start the request, allocates p1 on the V8 heap, and returns it pending. The request now proceeds in another process."},
+    {ph:0,l:2,r:["you","Line 3: .then(cb1) is called; cb1 is not"],c:script(["v8: PromisePrototypeThen","v8: PerformPromiseThenImpl"]),s:["(module script)",".then"],w:W,t:[],m:[],o:["A: start"],p:P("pending","pending"),n:"PromisePrototypeThen allocates p2 with NewJSPromise. p1 is pending, so PerformPromiseThenImpl stores a PromiseReaction holding cb1 on p1. Nothing is queued."},
+    {ph:0,l:3,r:["you","Line 4: .then(cb2)"],c:script(["v8: PromisePrototypeThen","v8: PerformPromiseThenImpl"]),s:["(module script)",".then"],w:W,t:[],m:[],o:["A: start"],p:P("pending","pending","pending"),n:"Same path: a reaction holding cb2 is stored on p2, and p3 is returned."},
+    {ph:0,l:4,r:["you","Line 5: .catch(cb3)"],c:script(["v8: PromisePrototypeThen","v8: PerformPromiseThenImpl"]),s:["(module script)",".catch"],w:W,t:[],m:[],o:["A: start"],p:pend,n:".catch(f) calls .then(undefined, f). A reaction with onFulfilled undefined is stored on p3, and p4 is returned."},
+    {ph:0,l:5,r:["you","Line 6"],c:script(),s:["(module script)","console.log"],w:W,t:[],m:[],o:AB,p:pend,n:"'B: end' prints while the request is still in flight in the network process."},
+    {ph:1,l:-1,r:["eng","Script task returned. Microtask checkpoint"],c:micro(),s:[],w:W,t:[],m:[],o:AB,p:pend,n:"RunTask returns, then DidRunTask triggers the checkpoint. PerformCheckpointInternal takes its fast path: size() == 0, so it returns immediately."},
+    {ph:2,l:-1,r:["eng","Render opportunity"],c:BASE.concat(["DoWork → DoWorkImpl","blink: update rendering (style, layout, paint)"]),s:[],w:W,t:[],m:[],o:AB,p:pend,n:"If a frame is due, a rendering task updates style and layout and paints. Simplified here: in Chrome this is itself a scheduled task, driven by vsync signals from the browser and GPU processes."},
+    {ph:3,l:-1,r:["idle","No work. The main thread is blocked in the kernel"],c:sleep(),s:[],w:W,t:[],m:[],o:AB,p:pend,n:"DoWork found nothing and DoIdleWork found nothing, so the pump calls event_.TimedWait. The OS scheduler removes CrRendererMain from the run queue. It uses zero CPU until someone signals the event."}
+  ];
+  var ok=[
+    {ph:3,l:-1,r:["idle","Still blocked. Bytes arrive on another thread"],c:sleep(),s:[],w:["Chrome_ChildIOThread: Mojo message received"],t:["loading: response headers"],m:[],o:AB,p:pend,n:"The network process sent the response headers over a Mojo pipe. Chrome_ChildIOThread woke from epoll or IOCP, decoded the message and called PostTask on the main thread. PostTask calls ScheduleWork, which calls event_.Signal()."},
+    {ph:0,l:-1,q:2,r:["eng","Woken. DoWork runs the network task"],c:task(["blink: fetch response handler","v8: ResolvePromise → FulfillPromise","v8: TriggerPromiseReactions → EnqueueMicrotask"]),s:["(network task)"],w:["body still streaming"],t:[],m:["cb1(response)"],o:AB,p:P("fulfilled: Response","pending","pending","pending"),n:"WaitForSingleObject returned and the for (;;) came back around. The task resolves p1: FulfillPromise sets the state to fulfilled and TriggerPromiseReactions morphs the stored reaction into a job that EnqueueMicrotask writes into the ring buffer."},
+    {ph:1,l:2,r:["you","Checkpoint runs cb1"],c:micro(["v8: PromiseReactionJob","cb1 (your arrow function)"]),s:["cb1(res)","res.json"],w:["reading body stream"],t:[],m:[],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","pending"),n:"After the task, DidRunTask drains microtasks. cb1 runs; res.json() returns a new promise pj. Because cb1 returned a promise, p2 is resolved with pj and will follow it."},
+    {ph:3,l:-1,r:["idle","Blocked again"],c:sleep(),s:[],w:["network process: streaming body"],t:[],m:[],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","pending"),n:"Back in TimedWait until the rest of the body arrives."},
+    {ph:0,l:-1,r:["eng","Woken. Body complete; pj fulfilled"],c:task(["blink: body loaded, JSON parsed","v8: FulfillPromise(pj)","v8: EnqueueMicrotask"]),s:["(network task)"],w:[],t:[],m:["p2 adopts pj's value"],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","fulfilled: {id:1, …}"),n:"The IO thread posted another task. The JSON is parsed and pj fulfills. The internal reaction that links p2 to pj is queued. The spec uses one extra job here (PromiseResolveThenableJob), simplified to one step."},
+    {ph:1,l:-1,q:3,r:["eng","Checkpoint: p2 fulfilled, cb2 queued"],c:micro(["v8: PromiseReactionJob","v8: FulfillPromise(p2) → EnqueueMicrotask"]),s:["(reaction job)"],w:[],t:[],m:["cb2(data)"],o:AB,p:P("fulfilled: Response","fulfilled: {id:1, …}","pending","pending","fulfilled: {id:1, …}"),n:"Same checkpoint. Fulfilling p2 enqueues cb2 into the ring buffer that RunMicrotasks is draining, so it runs in this same drain."},
+    {ph:1,l:3,r:["you","Checkpoint runs cb2"],c:micro(["v8: PromiseReactionJob","cb2 (your arrow function)"]),s:["cb2(data)","console.log"],w:[],t:[],m:["p4 reaction"],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","pending","fulfilled: {id:1, …}"),n:"cb2 logs and returns undefined, so p3 fulfills and p3's reaction for the .catch link is queued."},
+    {ph:1,l:-1,k:4,r:["eng","Checkpoint: cb3 skipped, p4 fulfilled"],c:micro(["v8: PromiseReactionJob (no handler: pass through)"]),s:["(reaction job)"],w:[],t:[],m:[],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","fulfilled: undefined","fulfilled: {id:1, …}"),n:"The reaction's onFulfilled is undefined, so the job passes the value through to p4. cb3 never runs. The ring buffer is empty, so RunMicrotasks returns."},
+    {ph:3,l:-1,r:["idle","All settled. Back in the kernel wait"],c:sleep(),s:[],w:[],t:[],m:[],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","fulfilled: undefined","fulfilled: {id:1, …}"),n:"Done. If cb2 had called a React setState, a render would follow before this sleep. The loop waits for the next click, timer or message."}
+  ];
+  var fail=[
+    {ph:3,l:-1,r:["idle","Still blocked. An error message arrives"],c:sleep(),s:[],w:["Chrome_ChildIOThread: load failed"],t:["loading: request failed"],m:[],o:AB,p:pend,n:"DNS failed, the connection dropped, or CORS blocked it. The network process reports failure over Mojo and the IO thread posts a task. HTTP 404 and 500 are not failures here: those fulfill p1 with a Response whose ok is false."},
+    {ph:0,l:-1,r:["eng","Woken. p1 rejected"],c:task(["blink: fetch error handler","v8: RejectPromise","v8: TriggerPromiseReactions → EnqueueMicrotask"]),s:["(network task)"],w:[],t:[],m:["p2 reaction"],o:AB,p:P("rejected: TypeError","pending","pending","pending"),n:"RejectPromise sets the state to rejected and queues the stored reaction as a reject job."},
+    {ph:1,l:-1,k:2,r:["eng","Checkpoint: cb1 skipped, p2 rejected"],c:micro(["v8: PromiseReactionJob (no onRejected)"]),s:["(reaction job)"],w:[],t:[],m:["p3 reaction"],o:AB,p:P("rejected: TypeError","rejected: TypeError","pending","pending"),n:"This link has no onRejected handler, so the rejection passes through to p2, which queues its own reaction."},
+    {ph:1,l:-1,k:3,q:4,r:["eng","Checkpoint: cb2 skipped, cb3 queued"],c:micro(["v8: PromiseReactionJob (no onRejected)"]),s:["(reaction job)"],w:[],t:[],m:["cb3(err)"],o:AB,p:P("rejected: TypeError","rejected: TypeError","rejected: TypeError","pending"),n:"p3 rejects, and its reaction does have onRejected: cb3."},
+    {ph:1,l:4,r:["you","Checkpoint runs cb3"],c:micro(["v8: PromiseReactionJob","cb3 (your arrow function)"]),s:["cb3(err)","console.log"],w:[],t:[],m:[],o:["A: start","B: end","Oops: Failed to fetch"],p:P("rejected: TypeError","rejected: TypeError","rejected: TypeError","fulfilled: undefined"),n:"cb3 handles the error and returns normally, so p4 is fulfilled. Then the loop goes back to sleeping."}
+  ];
+  var sc="ok",i=0;
+  function steps(){return base.concat(sc==="ok"?ok:fail)}
+  function chips(id,arr,cls){var el=document.getElementById(id);el.innerHTML=arr.length?arr.map(function(x){return '<span class="chip '+(cls||"")+'">'+esc(x)+'</span>'}).join(""):'<span class="empty">empty</span>'}
+  function pcls(v){return v.indexOf("fulfilled")===0?"f":v.indexOf("rejected")===0?"r":""}
+  var RL={you:"Your code",eng:"Engine code",idle:"Nothing running"};
+  function draw(){
+    var S=steps();i=Math.max(0,Math.min(i,S.length-1));var st=S[i];
+    for(var k=0;k<4;k++)document.getElementById("ph"+k).className="ph"+(k===st.ph?" on":"");
+    var run=document.getElementById("run");run.className="runbar "+st.r[0];run.innerHTML="<b>"+RL[st.r[0]]+":</b> "+esc(st.r[1]);
+    document.getElementById("code").innerHTML=code.map(function(c,j){var cl="";if(j===st.l)cl=" on";else if(j===st.q)cl=" q";else if(j===st.k)cl=" k";return '<div class="l'+cl+'">'+esc(c)+'</div>'}).join("");
+    chips("stack",st.s.slice().reverse(),"j");chips("web",st.w);chips("tasks",st.t,"t");chips("micro",st.m,"q");
+    var ps=Object.keys(st.p);document.getElementById("prom").innerHTML=ps.length?ps.map(function(k){return '<span class="chip '+pcls(st.p[k])+'">'+k+": "+esc(st.p[k])+'</span>'}).join(""):'<span class="empty">none yet</span>';
+    document.getElementById("con").innerHTML=st.o.length?st.o.map(function(x){return "<div>&gt; "+esc(x)+"</div>"}).join(""):'<span class="empty">nothing logged</span>';
+    document.getElementById("cpp").innerHTML=st.c.map(function(f){var cl=f.indexOf("v8:")===0||f.indexOf("cb")===0?"v8":f.indexOf("os:")===0?"os":"";return '<div class="'+cl+'" title="'+esc(f)+'">'+esc(f)+'</div>'}).join("");
+    document.getElementById("note").textContent=st.n;
+    document.getElementById("ctr").textContent=(i+1)+" / "+S.length;
+    document.getElementById("sOk").className=sc==="ok"?"sel":"";document.getElementById("sFail").className=sc==="fail"?"sel":"";
+  }
+  document.getElementById("next").onclick=function(){i++;draw()};
+  document.getElementById("prev").onclick=function(){i--;draw()};
+  document.getElementById("reset").onclick=function(){i=0;draw()};
+  document.getElementById("sOk").onclick=function(){sc="ok";if(i>9)i=10;draw()};
+  document.getElementById("sFail").onclick=function(){sc="fail";if(i>9)i=10;draw()};
+  draw();
+})();
+</script>
+
+</body>
+</html>
