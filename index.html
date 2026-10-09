@@ -76,6 +76,17 @@ footer a{color:var(--accent)}
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="threads-vs-event-loop/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>One core, two ways to wait</h3>
+        <p>Multi-threading versus event-driven concurrency, from the kernel's <code>schedule()</code> through glibc's <code>clone</code> flags, <code>context_switch</code>, futex mutexes and <code>epoll</code>, with a race-condition stepper and a one-core timeline simulator. Companion to my CSE321 theory assignment.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>schedule()</span><i>→</i><span>clone / epoll_wait</span><i>→</i><span>context_switch</span><i>→</i><span>futex</span><i>→</i><span class="you">your server</span>
+        </div>
+        <div class="meta"><span class="tag">Operating systems</span><span class="tag">Linux</span><span class="tag">glibc</span><span class="tag">concurrency</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
   </section>
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>

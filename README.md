@@ -7,6 +7,7 @@ Interactive simulations I build while learning computer science, each one tracin
 | Topic | What it traces | Open |
 |---|---|---|
 | [JavaScript event loop](js-event-loop/) | `fetch().then()` from process creation through Chromium's `RendererMain`, `MessagePumpDefault::Run`, the kernel wait, V8's promise builtins and the microtask queue | [js-event-loop/index.html](js-event-loop/index.html) |
+| [Threads vs event loop](threads-vs-event-loop/) | Multi-threading vs event-driven concurrency from the kernel's `schedule()` through glibc `clone` flags, `context_switch`, futex mutexes and `epoll`, with a race stepper and a one-core timeline simulator (CSE321 Assignment 01 companion) | [threads-vs-event-loop/index.html](threads-vs-event-loop/index.html) |
 
 ## How to view
 

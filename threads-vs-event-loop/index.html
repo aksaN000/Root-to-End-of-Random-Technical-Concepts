@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One Core, Two Ways to Wait</title>
+<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to your server, with simulators.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: same two-column source-trace as the event-loop page. Left rail is a call stack (kernel at the bottom), right column walks it upward. Signature element: paired timelines, threads above, event loop below, on one shared time axis. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --thr:#6d3fc4; --thr-soft:#ece5fb; --loop:#0f7b74; --loop-soft:#dcf2ef; --sw:#c2410c; --io:#9aa5b4; --ready:#e7c76a;
+  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --thr:#b79bff; --thr-soft:#2a2145; --loop:#4fd1c5; --loop-soft:#123430; --sw:#ff8a4c; --io:#55606f; --ready:#b8952e;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --thr:#b79bff; --thr-soft:#2a2145; --loop:#4fd1c5; --loop-soft:#123430; --sw:#ff8a4c; --io:#55606f; --ready:#b8952e;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.4rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.2rem,6vw,3.9rem);font-weight:800;letter-spacing:-.02em}
+.hero h1 .t{color:var(--thr)}.hero h1 .l{color:var(--loop)}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+.chain{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.78rem}
+.chain a{text-decoration:none;color:var(--ink);border:1px solid var(--rule);background:var(--surface);padding:5px 9px;border-radius:6px}
+.chain a:hover{border-color:var(--accent);color:var(--accent)}
+.chain span{color:var(--muted)}
+.chain a.t{border-color:var(--thr);color:var(--thr)}.chain a.l{border-color:var(--loop);color:var(--loop)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+.claim{border:1px dashed var(--rule);border-radius:10px;padding:10px 14px;font-size:.92rem;color:var(--muted);max-width:72ch;background:var(--surface)}
+.claim b{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--trace);font-weight:500;display:block;margin-bottom:2px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src.t figcaption{border-top:3px solid var(--thr)}
+figure.src.l figcaption{border-top:3px solid var(--loop)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:4}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center}
+.ctl label{font-size:.84rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+.ctl output{font-family:var(--mono);font-size:.8rem;color:var(--ink);min-width:4.5em;font-variant-numeric:tabular-nums}
+input[type=range]{accent-color:var(--accent);width:140px}
+button,select{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 12px;border-radius:7px;cursor:pointer}
+button:hover,select:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.m{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;background:var(--bg)}
+.m span{display:block;font-size:.72rem;color:var(--muted);font-family:var(--mono);text-transform:uppercase;letter-spacing:.05em}
+.m b{font-family:var(--mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums}
+.m.t b{color:var(--thr)}.m.l b{color:var(--loop)}
+.gantt{overflow-x:auto}
+.gantt svg{display:block;width:100%;min-width:620px;height:auto}
+.legend{font-size:.8rem;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:10px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.readout{font-family:var(--mono);font-size:.8rem;color:var(--muted);min-height:1.4em}
+/* race sim */
+.race{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+@media (max-width:700px){.race{grid-template-columns:1fr}}
+.th{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;background:var(--bg);display:flex;flex-direction:column;gap:6px;min-width:0}
+.th h4{margin:0;font-family:var(--display);font-size:1rem;display:flex;justify-content:space-between;align-items:center}
+.st{font-family:var(--mono);font-size:.7rem;padding:1px 7px;border-radius:999px;background:var(--code);color:var(--muted);font-weight:500}
+.st.run{background:var(--ok-bg);color:var(--ok)}.st.sleep{background:var(--bad-bg);color:var(--bad)}.st.done{background:var(--accent-soft);color:var(--accent)}
+.ins{font-family:var(--mono);font-size:.78rem;padding:2px 8px;border-left:3px solid transparent;color:var(--muted);white-space:pre}
+.ins.pc{border-left-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.ins.dn{text-decoration:line-through}
+.reg{font-family:var(--mono);font-size:.8rem}
+.memv{font-family:var(--mono);font-size:2rem;font-weight:600;line-height:1.1}
+.mem small{display:block;font-size:.76rem;color:var(--muted)}
+.log{font-family:var(--mono);font-size:.76rem;color:var(--muted);max-height:9.5em;overflow:auto;border-top:1px solid var(--rule);padding-top:6px}
+.verdict{font-size:.92rem;padding:8px 12px;border-radius:8px}
+.verdict.bad{background:var(--bad-bg);color:var(--bad)}.verdict.ok{background:var(--ok-bg);color:var(--ok)}.verdict.idle{background:var(--code);color:var(--muted)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.88rem;width:100%}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+td.num{font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.bar{height:10px;border-radius:3px;background:var(--thr);min-width:2px}
+.bar.l{background:var(--loop)}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.notes{display:flex;flex-direction:column;gap:10px;max-width:74ch}
+.note{border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.note .said{font-size:.86rem;color:var(--muted)}
+.note .said::before{content:"Report: ";font-family:var(--mono);font-size:.72rem;color:var(--trace)}
+.note .fix{font-size:.94rem}
+.note .fix::before{content:"Sharper: ";font-family:var(--mono);font-size:.72rem;color:var(--accent)}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Call stack</span><span>top = newest</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#root"><b>The common root: schedule()</b>sk_wait_data · ep_poll</a></li>
+    <li><a href="#servers"><b>Two servers, same kernel</b>pthread_create vs epoll_wait</a></li>
+    <li><a href="#thread"><b>What a thread is</b>glibc clone flags</a></li>
+    <li><a href="#switch"><b>The context switch</b>context_switch()</a></li>
+    <li><a href="#mutex"><b>Races, mutexes, futexes</b>lll_lock · futex_wait</a></li>
+    <li><a href="#loop"><b>How the loop is woken</b>ep_poll_callback · libuv</a></li>
+    <li><a href="#sim"><b>One core, both models</b>timeline simulator</a></li>
+    <li><a href="#scale"><b>At 10,000 connections</b>memory model</a></li>
+    <li><a href="#notes"><b>Sharpening the report</b>precision notes</a></li>
+    <li><a href="#try"><b>Verify on your machine</b>tools and exercises</a></li>
+  </ol>
+  <div class="base">— bottom: CPU / kernel</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Companion to CSE321 Theory Assignment 01 · traced through Linux, glibc and libuv source</span>
+  <h1>One core, two ways to wait: <span class="t">threads</span> and the <span class="l">event loop</span></h1>
+  <p class="lede">My report compares multi-threading with event-driven concurrency at the level of ideas. This page goes one layer down. Both models are built from the same kernel primitive, a task that marks itself asleep and calls <code>schedule()</code>, and they differ only in <em>how many</em> tasks sleep and <em>on what</em>. Everything below is real code from the Linux kernel, glibc and libuv, plus two simulators you can drive.</p>
+  <div class="chain" aria-label="The layers this page follows">
+    <a href="#root">schedule()</a><span>→</span>
+    <a href="#thread" class="t">clone(CLONE_VM | CLONE_THREAD …)</a><span>/</span>
+    <a href="#loop" class="l">epoll_wait</a><span>→</span>
+    <a href="#switch" class="t">context_switch</a><span>·</span>
+    <a href="#mutex" class="t">futex</a><span>·</span>
+    <a href="#loop" class="l">uv__io_poll</a><span>→</span>
+    <a href="#sim">your server</a>
+  </div>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">Kernel, glibc and libuv excerpts were fetched from their upstream repositories in October 2026 and trimmed with <code>// …</code>. The two small servers in the second section are my own example programs. Highlighted lines are the ones each explanation hinges on.</p>
+</header>
+
+<section id="root">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>Both models end in the same place: a sleeping task and <code>schedule()</code></h2></div>
+  <div class="claim"><b>From the report, §4.1</b>In synchronous I/O the kernel suspends the thread until data is available; in asynchronous I/O the kernel notifies the application later.</div>
+  <div class="prose">
+    <p>Here is what "suspends the thread" means in the kernel. On Linux every thread is a <code>task_struct</code>. To wait, a task puts itself on a wait queue, sets its state to sleeping, and calls the scheduler, which picks some other task to run. When the awaited thing happens, whoever caused it walks the wait queue and wakes the sleepers.</p>
+    <p>The thread-per-connection server blocks in <code>read()</code>, which for TCP reaches <code>sk_wait_data</code> and waits on <em>that one socket's</em> queue. The event-loop server blocks in <code>epoll_wait()</code>, which reaches <code>ep_poll</code> and waits on <em>one queue for every socket it watches</em>. The mechanism is identical. The difference is the number of sleepers: N threads each waiting on one socket, versus one thread waiting on N.</p>
+  </div>
+  <div class="pair">
+    <figure class="src t">
+      <figcaption><span class="path">linux/net/core/sock.c · sk_wait_data()</span><span class="note">blocking read() on a TCP socket</span></figcaption>
+      <pre data-code="c-skwait"></pre>
+    </figure>
+    <figure class="src l">
+      <figcaption><span class="path">linux/fs/eventpoll.c · ep_poll()</span><span class="note">epoll_wait(), trimmed</span></figcaption>
+      <pre data-code="c-eppoll"></pre>
+    </figure>
+  </div>
+  <p class="callout"><code>tcp_recvmsg_locked</code> in <code>net/ipv4/tcp.c</code> calls <code>sk_wait_data(sk, &amp;timeo, last)</code> when the receive queue is empty. <code>sk_wait_event</code> sleeps until the condition changes. In <code>ep_poll</code>, <code>__set_current_state(TASK_INTERRUPTIBLE)</code> followed by <code>schedule_hrtimeout_range</code> is the textbook "mark asleep, then yield the CPU" pair.</p>
+</section>
+
+<section id="servers">
+  <div class="sechead"><span class="eyebrow">Frame 1 · user space</span><h2>The same echo server, written both ways</h2></div>
+  <div class="prose">
+    <p>These are minimal C programs, not from any project, written to make the structural difference concrete. The left one creates a thread per connection, and each thread spends its life blocked in <code>read()</code>. The right one has a single thread that blocks in <code>epoll_wait()</code> and handles whichever sockets are ready. Error handling is omitted.</p>
+  </div>
+  <div class="pair">
+    <figure class="src t">
+      <figcaption><span class="path">echo_threads.c</span><span class="note">thread per connection</span></figcaption>
+      <pre data-code="c-srv-thr"></pre>
+    </figure>
+    <figure class="src l">
+      <figcaption><span class="path">echo_epoll.c</span><span class="note">one thread, one event loop</span></figcaption>
+      <pre data-code="c-srv-loop"></pre>
+    </figure>
+  </div>
+  <p class="callout">The left program has N+1 kernel tasks for N clients, each with its own stack, and the kernel's scheduler decides who runs. The right program has one task, and <b>your loop</b> decides who runs, by the order in which it handles ready events. That is the whole architectural difference. The rest of this page follows each side down to the kernel code that pays for it.</p>
+</section>
+
+<section id="thread">
+  <div class="sechead"><span class="eyebrow">Frame 2 · threads</span><h2>What <code>pthread_create</code> actually asks the kernel for</h2></div>
+  <div class="claim"><b>From the report, §2.1</b>Threads in a process share the address space, file descriptors and globals, but each has its own program counter, registers and stack.</div>
+  <div class="prose">
+    <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what your report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.</p>
+  </div>
+  <figure class="src t">
+    <figcaption><span class="path">glibc/nptl/pthread_create.c · create_thread()</span><span class="note">verbatim</span></figcaption>
+    <pre data-code="c-clone"></pre>
+  </figure>
+  <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in your §4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
+</section>
+
+<section id="switch">
+  <div class="sechead"><span class="eyebrow">Frame 3 · threads</span><h2>The context switch, line by line</h2></div>
+  <div class="claim"><b>From the report, §2.2</b>The kernel saves the current thread's registers, program counter and stack pointer, loads the next thread's state, and switches the page table base if the threads belong to different processes.</div>
+  <div class="prose">
+    <p>This is that function. When the scheduler picks a different task, it calls <code>context_switch</code>. If the next task is a user task with a different address space, <code>switch_mm_irqs_off</code> loads its page tables (CR3 on x86). Two threads of the same process share <code>mm</code>, so that step costs almost nothing between them. Then <code>switch_to</code>, a short piece of architecture-specific assembly, swaps the stack pointer and callee-saved registers. When <code>switch_to</code> "returns", it returns on the <em>next</em> task's stack, into wherever that task last called <code>schedule()</code>.</p>
+  </div>
+  <figure class="src t">
+    <figcaption><span class="path">linux/kernel/sched/core.c · context_switch()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-ctxsw"></pre>
+  </figure>
+  <p class="callout">An event loop never reaches this function to move between clients. Switching from one client to another is just your loop calling a different handler: a function call on the same stack. That is where "no context switches within the loop" in your Table 1 comes from.</p>
+</section>
+
+<section id="mutex">
+  <div class="sechead"><span class="eyebrow">Frame 4 · threads</span><h2>Why <code>counter++</code> loses updates, and what <code>pthread_mutex_lock</code> really does</h2></div>
+  <div class="claim"><b>From the report, §2.3, Listing 1</b>Without the mutex, the read-modify-write on <code>counter</code> is not atomic and updates are lost. Under contention, the kernel puts the waiting thread to sleep.</div>
+  <div class="prose">
+    <p><code>counter++</code> compiles to three instructions: load into a register, add, store. Each thread has its own registers, so if the scheduler interleaves those instructions, both threads can load the same old value. Step through it below: pick an interleaving, then turn the mutex on.</p>
+    <p>The mutex is glibc's futex lock. Its word holds <code>0</code> (unlocked), <code>1</code> (locked, no waiters) or <code>2</code> (locked, maybe waiters). The fast path is a single atomic compare-and-swap in user space with no system call. Only when it fails does <code>__lll_lock_wait</code> set the word to 2 and call <code>futex_wait</code>, which puts the thread to sleep in the kernel. Unlock swaps the word back to 0 and, only if it was 2, calls <code>futex_wake</code>.</p>
+  </div>
+  <div class="pair">
+    <figure class="src t">
+      <figcaption><span class="path">glibc/sysdeps/nptl/lowlevellock.h · __lll_lock</span><span class="note">fast path</span></figcaption>
+      <pre data-code="c-lll"></pre>
+    </figure>
+    <figure class="src t">
+      <figcaption><span class="path">glibc/nptl/lowlevellock.c · __lll_lock_wait()</span><span class="note">slow path, verbatim</span></figcaption>
+      <pre data-code="c-lllwait"></pre>
+    </figure>
+  </div>
+  <div class="panel" id="race">
+    <div class="ctl">
+      <button type="button" id="rMutex">Mutex: off</button>
+      <button type="button" id="rBad">Play the losing interleaving</button>
+      <button type="button" id="rReset">Reset</button>
+      <span class="muted" style="font-size:.84rem">or step manually: you are the scheduler</span>
+    </div>
+    <div class="race">
+      <div class="th" id="T1"></div>
+      <div class="th mem">
+        <h4>Shared memory</h4>
+        <div><span class="memv" id="rCounter">0</span><small>counter</small></div>
+        <div id="rWordBox"><span class="memv" id="rWord" style="font-size:1.4rem">0</span><small>mutex futex word · 0 free, 1 locked, 2 locked with waiters</small></div>
+        <div class="verdict idle" id="rVerdict">Each thread will run counter++ once. Correct final value: 2.</div>
+      </div>
+      <div class="th" id="T2"></div>
+    </div>
+    <div class="log" id="rLog" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="loop">
+  <div class="sechead"><span class="eyebrow">Frame 5 · event loop</span><h2>How a single <code>epoll_wait</code> learns about N sockets</h2></div>
+  <div class="claim"><b>From the report, §3.1</b>Node.js's event loop is built on libuv, which hides platform features like Linux's <code>epoll</code>, macOS's <code>kqueue</code> and Windows I/O completion ports.</div>
+  <div class="prose">
+    <p>When you <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.</p>
+    <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs your JavaScript callback.</p>
+  </div>
+  <div class="pair">
+    <figure class="src l">
+      <figcaption><span class="path">linux/fs/eventpoll.c · ep_poll_callback()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-epcb"></pre>
+    </figure>
+    <figure class="src l">
+      <figcaption><span class="path">libuv/src/unix/linux.c · uv__io_poll()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-uvpoll"></pre>
+    </figure>
+  </div>
+  <p class="callout">Note what is <em>not</em> here: no per-connection thread and no per-connection stack. The per-connection kernel state is an <code>epitem</code> on a list. What a connection costs in an event loop is that small kernel record plus whatever your callback closures hold. The full path from <code>epoll_wait</code> up through V8's microtask queue is traced on the <a href="../js-event-loop/">event-loop page</a>.</p>
+</section>
+
+<section id="sim">
+  <div class="sechead"><span class="eyebrow">Frame 6 · both, on one core</span><h2>Run the same requests through both models</h2></div>
+  <div class="prose">
+    <p>This is a small discrete-event simulation with one CPU core. Each request needs some CPU time, may wait on I/O (a database or network call), then needs more CPU. In the <span style="color:var(--thr);font-weight:600">threads</span> model, each request gets a thread, the scheduler runs ready threads round-robin with a time slice, and every switch between threads costs CPU time. In the <span style="color:var(--loop);font-weight:600">event loop</span> model, one thread runs each callback to completion and starts I/O without blocking.</p>
+  </div>
+  <div class="panel">
+    <div class="ctl">
+      <label for="wl">Workload
+        <select id="wl">
+          <option value="io">I/O-bound API (many short requests, long DB waits)</option>
+          <option value="cpu">CPU-bound jobs (pure computation)</option>
+          <option value="hol">One expensive request among cheap ones</option>
+        </select>
+      </label>
+      <label for="q">Time slice <input type="range" id="q" min="1" max="10" step="1" value="3"><output id="qo">3 ms</output></label>
+      <label for="cs">Switch cost <input type="range" id="cs" min="0" max="1" step="0.1" value="0.3"><output id="cso">0.3 ms</output></label>
+    </div>
+    <p class="muted" style="font-size:.84rem">The switch cost is drawn about 100 times larger than reality (a real switch costs microseconds) so you can see it on a millisecond axis. Set it to 0 to compare pure scheduling order.</p>
+    <div class="metrics" id="metrics"></div>
+    <div class="gantt" id="gantt"></div>
+    <div class="legend">
+      <span><i style="background:var(--thr)"></i>thread running</span>
+      <span><i style="background:var(--loop)"></i>callback running</span>
+      <span><i style="background:var(--sw)"></i>context switch</span>
+      <span><i style="background:var(--ready)"></i>ready, waiting for the CPU</span>
+      <span><i style="background:var(--io)"></i>waiting on I/O</span>
+    </div>
+    <div class="ctl"><label for="tc">Time cursor <input type="range" id="tc" min="0" max="100" step="0.5" value="0" style="width:260px"><output id="tco">0 ms</output></label></div>
+    <div class="readout" id="readout"></div>
+  </div>
+  <div class="prose">
+    <p>Things to look for. With the <b>I/O-bound</b> workload the two models finish at about the same time, but the threads row pays for every switch, and on a real server that overhead grows with the number of runnable threads. With <b>CPU-bound</b> jobs on one core neither model can go faster; threads just interleave the work and add switches, so the mean latency gets worse. More cores are what help, and only threads can use them without extra processes. With <b>one expensive request</b>, the event loop's head-of-line blocking appears: every cheap request that becomes ready while the expensive callback runs waits behind it, while the time slice lets threads keep cheap requests moving.</p>
+  </div>
+</section>
+
+<section id="scale">
+  <div class="sechead"><span class="eyebrow">Frame 7 · scale</span><h2>What 10,000 idle connections cost in each model</h2></div>
+  <div class="claim"><b>From the report, §4.3</b>A pthread on Linux defaults to an 8 MB stack. An event-driven server holds only a small descriptor and a few callback closures per connection.</div>
+  <div class="panel">
+    <div class="ctl"><label for="nc">Connections <input type="range" id="nc" min="1" max="5" step="0.01" value="4" style="width:240px"><output id="nco"></output></label></div>
+    <div class="tbl"><table id="scaleTbl"></table></div>
+  </div>
+  <div class="prose">
+    <p>Two corrections make this more precise than the usual "8 MB per thread" line. First, 8 MB is <b>reserved virtual address space</b>, not RAM. Linux backs stack pages lazily, so an idle thread typically uses only the pages it has touched, often tens of KB of resident memory. Second, the cost that is always resident is the kernel side: a <code>task_struct</code> plus a 16 KB kernel stack per thread, and a scheduler that has more runnable tasks to consider. The model shows reserved stack and kernel stack separately for that reason. Socket buffers are the same in both models, so they are left out.</p>
+  </div>
+</section>
+
+<section id="notes">
+  <div class="sechead"><span class="eyebrow">Frame 8 · review</span><h2>Sharpening a few lines of the report</h2></div>
+  <div class="prose"><p>Tracing the source turned up a few places where the report is right in spirit but can be stated more precisely.</p></div>
+  <div class="notes">
+    <div class="note"><div class="said">Linux's Completely Fair Scheduler (CFS) is the example of a modern scheduler.</div><div class="fix">Since Linux 6.6 (2023), the default scheduler for normal tasks is EEVDF (Earliest Eligible Virtual Deadline First), which replaced CFS. It keeps CFS's idea of virtual runtime but also schedules by deadlines derived from a task's time slice.</div></div>
+    <div class="note"><div class="said">The kernel saves registers into the process control block (PCB).</div><div class="fix">Linux has no structure called a PCB. On a switch, user registers are already saved on the task's kernel stack (from the system call or interrupt entry), and <code>switch_to</code> saves the stack pointer and callee-saved state into <code>task_struct</code> (its <code>thread</code> field). "PCB" is the textbook name for the role <code>task_struct</code> plays.</div></div>
+    <div class="note"><div class="said">If the threads belong to different processes, the TLB may need to be flushed.</div><div class="fix">On modern x86 with PCID, switching address spaces usually does not flush the TLB; entries are tagged with an address-space ID. Switching between two threads of the same process skips <code>switch_mm</code>'s real work entirely, because both share one <code>mm_struct</code>.</div></div>
+    <div class="note"><div class="said">Event-driven code has no race conditions on in-process data.</div><div class="fix">There are no data races, since only one callback runs at a time, but there are still <b>logical</b> races. Any state read before an <code>await</code> can be changed by another callback before execution resumes, for example a check-then-act on a balance across an <code>await db.query()</code>.</div></div>
+    <div class="note"><div class="said">fs.readFile hands the request to a thread pool or the kernel's asynchronous I/O facility.</div><div class="fix">On Linux, libuv performs regular file I/O on its worker thread pool (4 threads by default, <code>UV_THREADPOOL_SIZE</code>), because epoll cannot report readiness for regular files. Newer libuv versions can use io_uring for some file operations. Sockets, by contrast, go through epoll. So a Node process is never truly single-threaded; only your JavaScript is.</div></div>
+    <div class="note"><div class="said">A context switch typically costs between one and ten microseconds.</div><div class="fix">The direct cost of a thread switch within one process is often around a microsecond or less. The larger cost is the indirect one the report mentions: cold caches and branch predictors afterwards. Measure it yourself with <code>perf bench sched pipe</code> (exercise 3).</div></div>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 9 · verify it yourself</span><h2>See it on your own machine</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>How (Linux or WSL2)</th></tr></thead>
+    <tbody>
+      <tr><td>Threads are tasks with one PID</td><td><code>ps -eLf | grep echo_threads</code> shows one PID and many LWP (thread) IDs. <code>ls /proc/&lt;pid&gt;/task</code> lists them.</td></tr>
+      <tr><td>The clone flags</td><td><code>strace -f -e trace=clone,clone3 ./echo_threads</code> prints the flags from <code>create_thread</code> for every connection.</td></tr>
+      <tr><td>Where each thread is sleeping</td><td><code>cat /proc/&lt;pid&gt;/task/*/wchan</code> for a thread blocked in read shows a wait function such as <code>sk_wait_data</code>; the epoll server shows <code>ep_poll</code>.</td></tr>
+      <tr><td>Context switches per thread</td><td><code>grep ctxt /proc/&lt;pid&gt;/task/*/status</code> shows voluntary (blocked on I/O) and nonvoluntary (preempted) switches.</td></tr>
+      <tr><td>Reserved vs resident stack</td><td><code>pmap -x &lt;pid&gt;</code>: each thread stack shows about 8192 KB of address space but a small RSS.</td></tr>
+      <tr><td>Futex calls under contention</td><td><code>strace -f -e trace=futex ./counter</code> on Listing 1: futex calls appear only when threads actually collide.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Compile Listing 1 without the mutex (<code>gcc -O0 -pthread</code>) with two threads of 1,000,000 increments each. Run it five times and explain each wrong total using the race simulator's interleaving. Then compile with <code>-O2</code> and explain why the result changes. Hint: look at the generated loop with <code>objdump -d</code>.</li>
+    <li>Using the two echo servers, open 5,000 idle connections to each (a small Python script with <code>socket</code> works). Compare <code>VmRSS</code> and <code>Threads</code> in <code>/proc/&lt;pid&gt;/status</code> with the scale model above.</li>
+    <li>Run <code>perf bench sched pipe</code>, which bounces a message between two tasks. Divide the time by the number of round trips to estimate one switch, then rerun with both tasks pinned to one CPU via <code>taskset -c 0</code>.</li>
+    <li>In the epoll server, add a 200 ms busy loop to the handler for one client. Connect three clients with <code>nc</code> and observe the head-of-line blocking from the simulator's third workload. Then move the busy work to a thread and explain what changed.</li>
+    <li>Read <code>ep_poll_callback</code> in full and find where <code>EPOLLEXCLUSIVE</code> limits wakeups. Explain the "thundering herd" problem it solves when many processes wait on one listening socket.</li>
+  </ol>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files</h2></div>
+  <ul class="src-list">
+    <li><a href="https://github.com/torvalds/linux/blob/master/kernel/sched/core.c">linux/kernel/sched/core.c</a></li>
+    <li><a href="https://github.com/torvalds/linux/blob/master/fs/eventpoll.c">linux/fs/eventpoll.c</a></li>
+    <li><a href="https://github.com/torvalds/linux/blob/master/net/core/sock.c">linux/net/core/sock.c</a></li>
+    <li><a href="https://github.com/torvalds/linux/blob/master/net/ipv4/tcp.c">linux/net/ipv4/tcp.c</a></li>
+    <li><a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/pthread_create.c">glibc/nptl/pthread_create.c</a></li>
+    <li><a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=nptl/lowlevellock.c">glibc/nptl/lowlevellock.c</a></li>
+    <li><a href="https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/nptl/lowlevellock.h">glibc/sysdeps/nptl/lowlevellock.h</a></li>
+    <li><a href="https://github.com/libuv/libuv/blob/v1.x/src/unix/linux.c">libuv/src/unix/linux.c</a></li>
+    <li><a href="https://man7.org/linux/man-pages/man2/clone.2.html">clone(2) man page</a></li>
+    <li><a href="https://man7.org/linux/man-pages/man2/futex.2.html">futex(2) man page</a></li>
+    <li><a href="https://man7.org/linux/man-pages/man7/epoll.7.html">epoll(7) man page</a></li>
+    <li><a href="https://docs.kernel.org/scheduler/sched-eevdf.html">Kernel docs: EEVDF scheduler</a></li>
+    <li><a href="http://www.kegel.com/c10k.html">Dan Kegel, "The C10K problem"</a></li>
+    <li><a href="https://www.akkadia.org/drepper/futex.pdf">Ulrich Drepper, "Futexes Are Tricky"</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">Linux excerpts are GPL-2.0, glibc LGPL-2.1+, libuv MIT; all © their authors and quoted for study. The simulator is a teaching model with stated assumptions, not a benchmark.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-skwait">int sk_wait_data(struct sock *sk, long *timeo, const struct sk_buff *skb)
+{
+	DEFINE_WAIT_FUNC(wait, woken_wake_function);
+	int rc;
+
+»	add_wait_queue(sk_sleep(sk), &wait);          // this socket's own queue
+	sk_set_bit(SOCKWQ_ASYNC_WAITDATA, sk);
+»	rc = sk_wait_event(sk, timeo, skb_peek_tail(&sk->sk_receive_queue) != skb, &wait);
+	sk_clear_bit(SOCKWQ_ASYNC_WAITDATA, sk);
+	remove_wait_queue(sk_sleep(sk), &wait);
+	return rc;
+}</script>
+
+<script type="text/plain" id="c-eppoll">static int ep_poll(struct eventpoll *ep, struct epoll_event __user *events,
+		   int maxevents, struct timespec64 *timeout)
+{
+	// …
+	eavail = ep_events_available(ep);
+
+	while (1) {
+		if (eavail) {
+»			res = ep_try_send_events(ep, events, maxevents);
+			if (res)
+				return res;
+		}
+		// …
+		init_wait(&wait);
+		wait.func = ep_autoremove_wake_function;
+
+		spin_lock_irq(&ep->lock);
+		// …
+»		__set_current_state(TASK_INTERRUPTIBLE);
+		// …
+		eavail = ep_events_available(ep);
+		if (!eavail)
+»			__add_wait_queue_exclusive(&ep->wq, &wait);   // one queue for all fds
+
+		spin_unlock_irq(&ep->lock);
+
+		if (!eavail) {
+			// …
+			timed_out = !ep_schedule_timeout(to) ||
+»				!schedule_hrtimeout_range(to, slack,
+							  HRTIMER_MODE_ABS);
+		}
+		__set_current_state(TASK_RUNNING);
+		// …
+	}
+}</script>
+
+<script type="text/plain" id="c-srv-thr">void *handle(void *arg) {
+    int fd = (int)(intptr_t)arg;
+    char buf[4096];
+    ssize_t n;
+»   while ((n = read(fd, buf, sizeof buf)) > 0)   // blocks: sk_wait_data
+        write(fd, buf, n);
+    close(fd);
+    return NULL;
+}
+
+int main(void) {
+    int lfd = listen_on(8080);                     // socket+bind+listen
+    for (;;) {
+        int cfd = accept(lfd, NULL, NULL);         // blocks until a client
+        pthread_t t;
+»       pthread_create(&t, NULL, handle, (void *)(intptr_t)cfd);
+        pthread_detach(t);                         // one task per client
+    }
+}</script>
+
+<script type="text/plain" id="c-srv-loop">int main(void) {
+    int lfd = listen_on(8080);
+    fcntl(lfd, F_SETFL, O_NONBLOCK);
+    int ep = epoll_create1(0);
+    struct epoll_event ev = { .events = EPOLLIN, .data.fd = lfd };
+    epoll_ctl(ep, EPOLL_CTL_ADD, lfd, &ev);
+
+    struct epoll_event ready[64];
+    char buf[4096];
+    for (;;) {
+»       int n = epoll_wait(ep, ready, 64, -1);     // blocks: ep_poll
+        for (int i = 0; i < n; i++) {
+            int fd = ready[i].data.fd;
+            if (fd == lfd) {                       // new client
+                int cfd = accept(lfd, NULL, NULL);
+                fcntl(cfd, F_SETFL, O_NONBLOCK);
+                ev = (struct epoll_event){ .events = EPOLLIN, .data.fd = cfd };
+»               epoll_ctl(ep, EPOLL_CTL_ADD, cfd, &ev);
+            } else {                               // data ready: never blocks
+                ssize_t r = read(fd, buf, sizeof buf);
+                if (r > 0) write(fd, buf, r); else close(fd);
+            }
+        }
+    }
+}</script>
+
+<script type="text/plain" id="c-clone">  const int clone_flags = (CLONE_VM | CLONE_FS | CLONE_FILES | CLONE_SYSVSEM
+			   | CLONE_SIGHAND | CLONE_THREAD
+			   | CLONE_SETTLS | CLONE_PARENT_SETTID
+			   | CLONE_CHILD_CLEARTID
+			   | 0);
+
+  TLS_DEFINE_INIT_TP (tp, pd);
+
+  struct clone_args args =
+    {
+      .flags = clone_flags,
+      .pidfd = (uintptr_t) &pd->tid,
+      .parent_tid = (uintptr_t) &pd->tid,
+      .child_tid = (uintptr_t) &pd->joinstate,
+»     .stack = (uintptr_t) stackaddr,          // this thread's own stack
+»     .stack_size = stacksize,
+»     .tls = (uintptr_t) tp,                   // its own thread-local storage
+    };
+» int ret = __clone_internal (&args, &start_thread, pd);
+  if (__glibc_unlikely (ret == -1))
+    return errno;</script>
+
+<script type="text/plain" id="c-ctxsw">/*
+ * context_switch - switch to the new MM and the new thread's register state.
+ */
+static __always_inline struct rq *
+context_switch(struct rq *rq, struct task_struct *prev,
+	       struct task_struct *next, struct rq_flags *rf)
+	__releases(__rq_lockp(rq))
+{
+	prepare_task_switch(rq, prev, next);
+	// …
+	/*
+	 * kernel -> kernel   lazy + transfer active
+	 *   user -> kernel   lazy + mmgrab_lazy_tlb() active
+	 *
+	 * kernel ->   user   switch + mmdrop_lazy_tlb() active
+	 *   user ->   user   switch
+	 */
+	if (!next->mm) {				// to kernel
+		enter_lazy_tlb(prev->active_mm, next);
+		// …
+	} else {					// to user
+		membarrier_switch_mm(rq, prev->active_mm, next->mm);
+		// …
+»		switch_mm_irqs_off(prev->active_mm, next->mm, next);
+		lru_gen_use_mm(next->mm);
+		// …
+	}
+	// …
+	prepare_lock_switch(rq, next, rf);
+
+	/* Here we just switch the register state and the stack. */
+»	switch_to(prev, next, prev);
+	barrier();
+
+	return finish_task_switch(prev);
+}</script>
+
+<script type="text/plain" id="c-lll">#define __lll_lock(futex, private)                                      \
+  ((void)                                                               \
+   ({                                                                   \
+     int *__futex = (futex);                                            \
+     if (__glibc_unlikely                                               \
+»        (atomic_compare_and_exchange_bool_acq (__futex, 1, 0)))        \
+       {                                                                \
+         if (__builtin_constant_p (private) && (private) == LLL_PRIVATE) \
+           __lll_lock_wait_private (__futex);                           \
+         else                                                           \
+»          __lll_lock_wait (__futex, private);                          \
+       }                                                                \
+   }))</script>
+
+<script type="text/plain" id="c-lllwait">void
+__lll_lock_wait (int *futex, int private)
+{
+  if (atomic_load_relaxed (futex) == 2)
+    goto futex;
+
+» while (atomic_exchange_acquire (futex, 2) != 0)
+    {
+    futex:
+      LIBC_PROBE (lll_lock_wait, 1, futex);
+»     futex_wait ((unsigned int *) futex, 2, private); /* Wait if *futex == 2.  */
+    }
+}</script>
+
+<script type="text/plain" id="c-epcb">	} else if (!ep_is_linked(epi)) {
+		/* In the usual case, add event to ready list. */
+»		list_add_tail(&epi->rdllink, &ep->rdllist);
+		ep_pm_stay_awake_rcu(epi);
+	}
+
+	/*
+	 * Wake up ( if active ) both the eventpoll wait list and the ->poll()
+	 * wait list.
+	 */
+	if (waitqueue_active(&ep->wq)) {
+		// … EPOLLEXCLUSIVE handling …
+		if (sync)
+			wake_up_sync(&ep->wq);
+		else
+»			wake_up(&ep->wq);          // wakes the task sleeping in ep_poll
+	}</script>
+
+<script type="text/plain" id="c-uvpoll">  for (;;) {
+    // …
+    uv__io_poll_prepare(loop, NULL, timeout);
+»   nfds = epoll_pwait(epollfd, events, ARRAY_SIZE(events), timeout, sigmask);
+    uv__io_poll_check(loop, NULL);
+    // …
+    for (i = 0; i < nfds; i++) {
+      pe = events + i;
+      fd = pe->data.fd;
+      // …
+      w = loop->watchers[fd];
+      // …
+      pe->events &= w->pevents | POLLERR | POLLHUP;
+
+      if (pe->events != 0) {
+        // …
+        } else {
+          uv__metrics_update_idle_time(loop);
+»         uv__io_cb(loop, w, pe->events);     // dispatch to the watcher
+        }
+
+        nevents++;
+      }
+    }
+    // …</script>
+
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+
+  /* ---------- source rendering ---------- */
+  function hl(line){
+    var re=/(\/\/.*$|\/\*.*?\*\/|^\s*\*.*$|^\s*\/\*.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|\b(if|else|for|while|do|return|break|continue|const|int|bool|void|static|struct|unsigned|char|long|ssize_t|size_t|goto|define|sizeof|NULL|true|false)\b|\b([A-Za-z_][A-Za-z0-9_]*)(?=\s*\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){
+      out+=esc(line.slice(last,m.index));
+      var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";
+      out+='<span class="'+cls+'">'+esc(m[0])+'</span>';
+      last=re.lastIndex;
+      if(m[0].length===0)re.lastIndex++;
+    }
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=document.getElementById(pre.getAttribute("data-code"));
+    if(!src)return;
+    var lines=src.textContent.replace(/^\n/,"").split("\n");
+    pre.innerHTML=lines.map(function(l){
+      var key=false;
+      if(l.charAt(0)==="»"){key=true;l=(l.charAt(1)==="\t"?"":" ")+l.slice(1);}
+      return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>';
+    }).join("");
+  });
+
+  /* ---------- rail highlight ---------- */
+  var links=[].slice.call(document.querySelectorAll("#frames a"));
+  var map={};links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(es){
+      es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});var a=map[e.target.id];if(a)a.classList.add("on");}});
+    },{rootMargin:"-30% 0px -60% 0px"});
+    Object.keys(map).forEach(function(id){var s=document.getElementById(id);if(s)io.observe(s)});
+  }
+
+  /* ---------- race simulator ---------- */
+  var R={};
+  var PLAIN=[["load","r = counter"],["add","r = r + 1"],["store","counter = r"]];
+  var LOCKED=[["lock","pthread_mutex_lock(&lock)"],["load","r = counter"],["add","r = r + 1"],["store","counter = r"],["unlock","pthread_mutex_unlock(&lock)"]];
+  var mutexOn=false, playTimer=null;
+  function rReset(){
+    if(playTimer){clearInterval(playTimer);playTimer=null}
+    R={counter:0,word:0,log:[],t:[{pc:0,r:"–",st:"runnable",woken:false},{pc:0,r:"–",st:"runnable",woken:false}]};
+    rDraw();
+  }
+  function prog(){return mutexOn?LOCKED:PLAIN}
+  function lg(s){R.log.unshift(s)}
+  function stepT(i){
+    var th=R.t[i],P=prog(),name="T"+(i+1);
+    if(th.st==="done"){lg(name+" has finished.");return rDraw()}
+    if(th.st==="asleep"){lg(name+" is asleep in futex_wait. The kernel will not run it until someone calls futex_wake.");return rDraw()}
+    var op=P[th.pc][0];
+    if(op==="lock"){
+      if(!th.woken&&R.word===0){R.word=1;th.pc++;lg(name+": CAS(word, 0→1) succeeded. Fast path, no system call.")}
+      else{
+        var old=R.word;R.word=2;
+        if(old===0){th.pc++;th.woken=false;lg(name+": xchg(word, 2) returned 0. Lock acquired (word stays 2: waiters may exist).")}
+        else{lg(name+": "+(th.woken?"retry after wake":"CAS failed")+", xchg(word, 2) returned "+old+". futex_wait(word, 2): thread sleeps in the kernel.");th.st="asleep";th.woken=false}
+      }
+    }else if(op==="load"){th.r=R.counter;th.pc++;lg(name+": load counter ("+R.counter+") into its own register.")}
+    else if(op==="add"){th.r=th.r+1;th.pc++;lg(name+": add 1 in its register, now "+th.r+". Memory still says "+R.counter+".")}
+    else if(op==="store"){R.counter=th.r;th.pc++;lg(name+": store "+th.r+" to counter.")}
+    else if(op==="unlock"){
+      var o=R.word;R.word=0;th.pc++;
+      if(o>1){var other=R.t[1-i];if(other.st==="asleep"){other.st="runnable";other.woken=true;lg(name+": xchg(word, 0) returned 2, so futex_wake(word, 1). The sleeping thread becomes runnable and will retry.")}else lg(name+": xchg(word, 0) returned 2, so glibc still calls futex_wake. Nobody is asleep, so the system call wakes no one: the cost of the word staying 2 after a contended acquire.")}
+      else lg(name+": xchg(word, 0) returned 1. No waiters, so no system call.")
+    }
+    if(th.pc>=P.length){th.st="done"}
+    rDraw();
+  }
+  function thHTML(i){
+    var th=R.t[i],P=prog();
+    var st=th.st==="asleep"?'<span class="st sleep">asleep · futex_wait</span>':th.st==="done"?'<span class="st done">done</span>':'<span class="st run">runnable</span>';
+    var ins=P.map(function(p,k){var c=k===th.pc&&th.st!=="done"?" pc":k<th.pc?" dn":"";return '<div class="ins'+c+'">'+esc(p[1])+'</div>'}).join("");
+    return '<h4>Thread T'+(i+1)+' '+st+'</h4>'+ins+'<div class="reg">register r = '+th.r+'</div><button type="button" data-step="'+i+'">Run T'+(i+1)+"'s next instruction</button>";
+  }
+  function rDraw(){
+    document.getElementById("T1").innerHTML=thHTML(0);
+    document.getElementById("T2").innerHTML=thHTML(1);
+    document.getElementById("rCounter").textContent=R.counter;
+    document.getElementById("rWord").textContent=R.word;
+    document.getElementById("rWordBox").style.display=mutexOn?"":"none";
+    document.getElementById("rMutex").textContent="Mutex: "+(mutexOn?"on":"off");
+    document.getElementById("rMutex").className=mutexOn?"sel":"";
+    var v=document.getElementById("rVerdict"),done=R.t[0].st==="done"&&R.t[1].st==="done";
+    if(done&&R.counter===2){v.className="verdict ok";v.textContent="Both threads finished. counter = 2. Correct."}
+    else if(done){v.className="verdict bad";v.textContent="Both threads finished. counter = "+R.counter+". One update was lost: both loaded the same old value."}
+    else{v.className="verdict idle";v.textContent="Each thread will run counter++ once. Correct final value: 2."}
+    document.getElementById("rLog").innerHTML=R.log.map(function(s){return "<div>"+esc(s)+"</div>"}).join("")||"<div>Click a thread's button to run its next instruction.</div>";
+    [].forEach.call(document.querySelectorAll("[data-step]"),function(b){b.onclick=function(){if(playTimer){clearInterval(playTimer);playTimer=null}stepT(+b.getAttribute("data-step"))}});
+  }
+  document.getElementById("rMutex").onclick=function(){mutexOn=!mutexOn;rReset()};
+  document.getElementById("rReset").onclick=rReset;
+  document.getElementById("rBad").onclick=function(){
+    rReset();
+    var seq=mutexOn?[0,0,1,0,0,0,1,1,1,1,1]:[0,1,0,0,1,1];
+    var k=0;
+    playTimer=setInterval(function(){if(k>=seq.length){clearInterval(playTimer);playTimer=null;return}var i=seq[k++];var th=R.t[i];if(th.st==="asleep"||th.st==="done"){i=1-i}stepT(i)},650);
+  };
+  rReset();
+
+  /* ---------- timeline simulator ---------- */
+  var WL={
+    io:{label:"I/O-bound",clients:[0,1,2,3,4,5].map(function(i){return{arr:i*1,ph:[["cpu",1],["io",10],["cpu",1.5]]}})},
+    cpu:{label:"CPU-bound",clients:[0,1,2,3].map(function(i){return{arr:i*0.5,ph:[["cpu",8]]}})},
+    hol:{label:"Head-of-line",clients:[{arr:0,ph:[["cpu",1],["io",2],["cpu",18]]}].concat([1,2,3,4].map(function(i){return{arr:i*2,ph:[["cpu",1],["io",4],["cpu",1]]}}))}
+  };
+  var DT=0.05,EPS=1e-6;
+  function simThreads(cl,q,cs){
+    var n=cl.length,S=cl.map(function(c){return{st:"no",pi:0,rem:0,lane:[],fin:null}});
+    var queue=[],cur=-1,slice=0,pend=0,last=-1,core=[],switches=0,swTime=0,t=0;
+    while(t<400){
+      for(var i=0;i<n;i++){var s=S[i];
+        if(s.st==="no"&&t+EPS>=cl[i].arr){s.pi=0;s.rem=cl[i].ph[0][1];s.st="ready";queue.push(i)}
+        if(s.st==="io"){s.rem-=DT;if(s.rem<=EPS){s.pi++;if(s.pi>=cl[i].ph.length){s.st="done";s.fin=t}else{s.rem=cl[i].ph[s.pi][1];s.st="ready";queue.push(i)}}}
+      }
+      if(cur<0&&queue.length){cur=queue.shift();slice=q;pend=(last>=0&&last!==cur)?cs:0;if(pend>0){switches++}}
+      var kind="idle",who=-1;
+      if(cur>=0){
+        if(pend>EPS){pend-=DT;swTime+=DT;kind="sw";who=cur}
+        else{var s2=S[cur];s2.st="run";s2.rem-=DT;slice-=DT;kind="run";who=cur;last=cur;
+          if(s2.rem<=EPS){s2.pi++;if(s2.pi>=cl[cur].ph.length){s2.st="done";s2.fin=t+DT}else{s2.rem=cl[cur].ph[s2.pi][1];s2.st=cl[cur].ph[s2.pi][0]==="io"?"io":"ready";if(s2.st==="ready")queue.push(cur)}cur=-1}
+          else if(slice<=EPS&&queue.length){s2.st="ready";queue.push(cur);cur=-1}
+        }
+      }
+      core.push([kind,who]);
+      for(var j=0;j<n;j++){var sj=S[j];var lk=sj.st==="run"&&!(who===j&&kind==="run")?"ready":sj.st;if(who===j&&kind==="run")lk="run";if(who===j&&kind==="sw")lk="ready";if(sj.st==="run"&&who!==j)lk="ready";sj.lane.push(lk)}
+      t+=DT;
+      if(S.every(function(s){return s.st==="done"}))break;
+    }
+    return{core:core,lanes:S.map(function(s){return s.lane}),fin:S.map(function(s){return s.fin}),switches:switches,swTime:swTime,T:t};
+  }
+  function simLoop(cl){
+    var n=cl.length,S=cl.map(function(c){return{st:"no",pi:0,rem:0,lane:[],fin:null}});
+    var queue=[],cur=-1,core=[],t=0;
+    while(t<400){
+      for(var i=0;i<n;i++){var s=S[i];
+        if(s.st==="no"&&t+EPS>=cl[i].arr){s.pi=0;s.rem=cl[i].ph[0][1];s.st="ready";queue.push(i)}
+        if(s.st==="io"){s.rem-=DT;if(s.rem<=EPS){s.pi++;if(s.pi>=cl[i].ph.length){s.st="done";s.fin=t}else{s.rem=cl[i].ph[s.pi][1];s.st="ready";queue.push(i)}}}
+      }
+      if(cur<0&&queue.length){cur=queue.shift()}
+      var kind="idle",who=-1;
+      if(cur>=0){var s2=S[cur];s2.st="run";s2.rem-=DT;kind="run";who=cur;
+        if(s2.rem<=EPS){s2.pi++;if(s2.pi>=cl[cur].ph.length){s2.st="done";s2.fin=t+DT}else{s2.rem=cl[cur].ph[s2.pi][1];s2.st=cl[cur].ph[s2.pi][0]==="io"?"io":"ready";if(s2.st==="ready")queue.push(cur)}cur=-1}}
+      core.push([kind,who]);
+      for(var j=0;j<n;j++){var sj=S[j];sj.lane.push(who===j?"run":(sj.st==="run"?"ready":sj.st))}
+      t+=DT;
+      if(S.every(function(s){return s.st==="done"}))break;
+    }
+    return{core:core,lanes:S.map(function(s){return s.lane}),fin:S.map(function(s){return s.fin}),switches:0,swTime:0,T:t};
+  }
+  function runs(arr){var out=[],st=0;for(var i=1;i<=arr.length;i++){if(i===arr.length||arr[i]!==arr[st]){out.push([st,i,arr[st]]);st=i}}return out}
+  function cssv(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+  var lastA=null,lastB=null,lastCl=null,Tmax=1;
+  function drawGantt(A,B,cl){
+    var n=cl.length;Tmax=Math.max(A.T,B.T);
+    var W=1000,L=118,Rp=12,rowH=16,gap=5,blockH=(n+1)*(rowH+gap)+26,H=blockH*2+34;
+    var sx=function(t){return L+(W-L-Rp)*t/Tmax};
+    var C={thr:cssv("--thr"),loop:cssv("--loop"),sw:cssv("--sw"),io:cssv("--io"),ready:cssv("--ready"),ink:cssv("--ink"),muted:cssv("--muted"),rule:cssv("--rule")};
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Timelines of both models"><title>Threads and event loop timelines</title>';
+    function block(R,y0,name,col){
+      s+='<text x="0" y="'+(y0+12)+'" font-family="Chivo,system-ui,sans-serif" font-weight="700" font-size="14" fill="'+col+'">'+name+'</text>';
+      var y=y0+20;
+      s+='<text x="0" y="'+(y+12)+'" font-family="JetBrains Mono,monospace" font-size="11" fill="'+C.ink+'">CPU core</text>';
+      runs(R.core.map(function(c){return c[0]+":"+c[1]})).forEach(function(r){var k=r[2].split(":");if(k[0]==="idle")return;var fill=k[0]==="sw"?C.sw:col;s+='<rect x="'+sx(r[0]*DT).toFixed(1)+'" y="'+y+'" width="'+Math.max(0.6,sx(r[1]*DT)-sx(r[0]*DT)).toFixed(1)+'" height="'+rowH+'" fill="'+fill+'" rx="2"/>';if(k[0]==="run"&&(r[1]-r[0])*DT>Tmax/28)s+='<text x="'+(sx(r[0]*DT)+3).toFixed(1)+'" y="'+(y+12)+'" font-family="JetBrains Mono,monospace" font-size="10" fill="#fff">'+(name==="Threads"?"T":"cb")+(+k[1]+1)+'</text>'});
+      for(var i=0;i<n;i++){var yy=y+(i+1)*(rowH+gap);
+        s+='<text x="0" y="'+(yy+12)+'" font-family="JetBrains Mono,monospace" font-size="11" fill="'+C.muted+'">req '+(i+1)+'</text>';
+        s+='<line x1="'+L+'" x2="'+(W-Rp)+'" y1="'+(yy+rowH/2)+'" y2="'+(yy+rowH/2)+'" stroke="'+C.rule+'" stroke-width="1"/>';
+        runs(R.lanes[i]).forEach(function(r){var k=r[2];if(k==="no"||k==="done")return;var fill=k==="run"?col:k==="io"?C.io:C.ready;s+='<rect x="'+sx(r[0]*DT).toFixed(1)+'" y="'+(yy+2)+'" width="'+Math.max(0.6,sx(r[1]*DT)-sx(r[0]*DT)).toFixed(1)+'" height="'+(rowH-4)+'" fill="'+fill+'" rx="2"/>'});
+        if(R.fin[i]!=null)s+='<text x="'+Math.min(W-Rp-2,sx(R.fin[i])+4).toFixed(1)+'" y="'+(yy+12)+'" font-family="JetBrains Mono,monospace" font-size="10" fill="'+C.muted+'"'+(sx(R.fin[i])>W-60?' text-anchor="end"':'')+'>✓</text>';
+      }
+    }
+    block(A,0,"Threads",C.thr);
+    block(B,blockH,"Event loop",C.loop);
+    var ay=H-14,step=Tmax>60?20:Tmax>30?10:5;
+    for(var tt=0;tt<=Tmax+EPS;tt+=step){s+='<line x1="'+sx(tt)+'" x2="'+sx(tt)+'" y1="'+(ay-6)+'" y2="'+(ay-2)+'" stroke="'+C.muted+'"/><text x="'+sx(tt)+'" y="'+(ay+10)+'" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="'+C.muted+'">'+tt+' ms</text>'}
+    s+='<line id="cursor" x1="'+L+'" x2="'+L+'" y1="0" y2="'+(H-22)+'" stroke="'+C.ink+'" stroke-width="1.2" stroke-dasharray="3 3"/></svg>';
+    document.getElementById("gantt").innerHTML=s;
+  }
+  function stats(R,cl){var lat=R.fin.map(function(f,i){return f-cl[i].arr});var mean=lat.reduce(function(a,b){return a+b},0)/lat.length;return{mean:mean,max:Math.max.apply(null,lat),all:Math.max.apply(null,R.fin)}}
+  function fmt(x){return (Math.round(x*10)/10).toFixed(1)+" ms"}
+  function runSim(){
+    var w=document.getElementById("wl").value,q=+document.getElementById("q").value,cs=+document.getElementById("cs").value;
+    document.getElementById("qo").textContent=q+" ms";document.getElementById("cso").textContent=cs.toFixed(1)+" ms";
+    var cl=WL[w].clients,A=simThreads(cl,q,cs),B=simLoop(cl);lastA=A;lastB=B;lastCl=cl;
+    var a=stats(A,cl),b=stats(B,cl);
+    document.getElementById("metrics").innerHTML=
+      '<div class="m t"><span>Threads · mean latency</span><b>'+fmt(a.mean)+'</b></div>'+
+      '<div class="m l"><span>Loop · mean latency</span><b>'+fmt(b.mean)+'</b></div>'+
+      '<div class="m t"><span>Threads · worst latency</span><b>'+fmt(a.max)+'</b></div>'+
+      '<div class="m l"><span>Loop · worst latency</span><b>'+fmt(b.max)+'</b></div>'+
+      '<div class="m t"><span>Threads · switches</span><b>'+A.switches+' ('+fmt(A.swTime)+')</b></div>'+
+      '<div class="m l"><span>Loop · switches</span><b>0</b></div>';
+    drawGantt(A,B,cl);
+    var tc=document.getElementById("tc");tc.max=Math.ceil(Tmax*2)/2;if(+tc.value>+tc.max)tc.value=0;cursor();
+  }
+  var LBL={run:"running",ready:"ready, waiting for CPU",io:"waiting on I/O",no:"not arrived",done:"done",sw:"switch"};
+  function cursor(){
+    if(!lastA)return;var t=+document.getElementById("tc").value;document.getElementById("tco").textContent=t+" ms";
+    var c=document.getElementById("cursor");if(c){var W=1000,L=118,Rp=12,x=L+(W-L-Rp)*t/Tmax;c.setAttribute("x1",x);c.setAttribute("x2",x)}
+    var k=Math.min(Math.floor(t/DT),Math.max(lastA.core.length,lastB.core.length)-1);
+    function what(R,nm){var c2=R.core[Math.min(k,R.core.length-1)];if(k>=R.core.length)return nm+": finished";return nm+": core "+(c2[0]==="idle"?"idle (asleep in the kernel)":c2[0]==="sw"?"context switching to T"+(c2[1]+1):(nm==="Threads"?"running T":"running callback ")+(c2[1]+1))}
+    document.getElementById("readout").textContent=what(lastA,"Threads")+"  ·  "+what(lastB,"Loop");
+  }
+  ["wl","q","cs"].forEach(function(id){document.getElementById(id).addEventListener("input",runSim)});
+  document.getElementById("tc").addEventListener("input",cursor);
+  runSim();
+  if(window.matchMedia){var mq=window.matchMedia("(prefers-color-scheme: dark)");if(mq.addEventListener)mq.addEventListener("change",runSim)}
+
+  /* ---------- scale model ---------- */
+  function human(b){var u=["B","KB","MB","GB","TB"],i=0;while(b>=1024&&i<u.length-1){b/=1024;i++}return (b>=100?b.toFixed(0):b>=10?b.toFixed(1):b.toFixed(2))+" "+u[i]}
+  function scale(){
+    var N=Math.round(Math.pow(10,+document.getElementById("nc").value));
+    document.getElementById("nco").textContent=N.toLocaleString();
+    var STACK=8*1024*1024,KST=16*1024,APP=2*1024;
+    var rows=[
+      ["Kernel tasks (threads)",N+1,1,false],
+      ["Reserved user stack (virtual)",(N+1)*STACK,STACK,true],
+      ["Kernel stacks (always resident)",(N+1)*KST,KST,true],
+      ["Per-connection app state (assumed 2 KB)",N*APP,N*APP,true]
+    ];
+    var maxv=Math.max((N+1)*STACK,1);
+    var h='<thead><tr><th>Cost</th><th>Threads</th><th></th><th>Event loop</th><th></th></tr></thead><tbody>';
+    rows.forEach(function(r){var a=r[1],b=r[2],fa=r[3]?human(a):a.toLocaleString(),fb=r[3]?human(b):b.toLocaleString();var den=r[3]?maxv:Math.max(a,1);
+      h+='<tr><td>'+r[0]+'</td><td class="num">'+fa+'</td><td style="width:22%"><div class="bar" style="width:'+Math.max(1,100*a/den).toFixed(1)+'%"></div></td><td class="num">'+fb+'</td><td style="width:22%"><div class="bar l" style="width:'+Math.max(1,100*b/den).toFixed(1)+'%"></div></td></tr>'});
+    h+='</tbody>';
+    document.getElementById("scaleTbl").innerHTML=h;
+  }
+  document.getElementById("nc").addEventListener("input",scale);scale();
+})();
+</script>
+</body>
+</html>
