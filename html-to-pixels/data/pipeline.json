@@ -1,0 +1,1894 @@
+{
+ "chrome": "HeadlessChrome 141.0.7390.37",
+ "scenarios": {
+  "load": {
+   "code": "page.goto(...) \u00b7 the first load",
+   "events": [
+    {
+     "name": "Commit",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "ParseHTML",
+     "t": 91.322,
+     "dur": 2.156,
+     "thread": "CrRendererMain",
+     "args": {
+      "startLine": 0,
+      "parsed_tokens": 46,
+      "parsed_bytes": 450
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 91.493,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 95.096,
+     "dur": 2.26,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 15
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 96.624,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 97.365,
+     "dur": 29.174,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 23,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 126.759,
+     "dur": 0.363,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 130.28,
+     "dur": 1.408,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 131.603,
+     "dur": 0.082,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "DIV id='mover' class='card mover'"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 132.276,
+     "dur": 0.242,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 132.549,
+     "dur": 0.816,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 132.972,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "ParseHTML",
+     "t": 133.4,
+     "dur": 0.01,
+     "thread": "CrRendererMain",
+     "args": {
+      "startLine": 14,
+      "parsed_tokens": 1,
+      "parsed_bytes": 1
+     }
+    },
+    {
+     "name": "ParseHTML",
+     "t": 133.693,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {
+      "startLine": 14,
+      "parsed_tokens": 0,
+      "parsed_bytes": 0
+     }
+    },
+    {
+     "name": "MarkDOMContent",
+     "t": 133.748,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "MarkLoad",
+     "t": 133.831,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 136.632,
+     "dur": 2.109,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 138.752,
+     "dur": 1.483,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 140.263,
+     "dur": 1.485,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 141.998,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 142.123,
+     "dur": 0.013,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 142.137,
+     "dur": 0.044,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 142.356,
+     "dur": 0.007,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 142.401,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 142.41,
+     "dur": 0.017,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 143.751,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "firstContentfulPaint",
+     "t": 145.496,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 1,
+    "Paint": 2,
+    "RasterTask": 3,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 29.174,
+   "styleMs": 2.26
+  },
+  "color": {
+   "code": "card.style.color = 'crimson'",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 10.255,
+     "dur": 0.236,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 10.53,
+     "dur": 0.38,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 10.924,
+     "dur": 0.012,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 10.996,
+     "dur": 0.127,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 11.026,
+     "dur": 0.094,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "HTML"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 11.159,
+     "dur": 0.182,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 11.352,
+     "dur": 0.052,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 11.411,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 12.067,
+     "dur": 0.382,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 12.609,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 12.747,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 26.793,
+     "dur": 0.007,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 26.895,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 26.918,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 26.926,
+     "dur": 0.034,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 0,
+    "Paint": 2,
+    "RasterTask": 1,
+    "Commit": 3,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0,
+   "styleMs": 0.38
+  },
+  "width": {
+   "code": "card.style.width = '300px'",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.547,
+     "dur": 0.221,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.736,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.777,
+     "dur": 0.126,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 0.947,
+     "dur": 0.098,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 1.076,
+     "dur": 0.077,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 1.1,
+     "dur": 0.05,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "HTML"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 1.186,
+     "dur": 0.035,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.233,
+     "dur": 0.05,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.34,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 1.852,
+     "dur": 0.163,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 2.019,
+     "dur": 0.576,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 2.748,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 2.861,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 10.186,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 10.196,
+     "dur": 0.02,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 10.289,
+     "dur": 0.029,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 10.36,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 10.382,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 10.389,
+     "dur": 0.016,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 26.872,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 27.085,
+     "dur": 0.024,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 27.123,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 27.13,
+     "dur": 0.02,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 1,
+    "Paint": 2,
+    "RasterTask": 2,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0.126,
+   "styleMs": 0.221
+  },
+  "transform": {
+   "code": "mover.style.transform = 'translateX(80px)'   // mover has will-change: transform",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.645,
+     "dur": 1.901,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 2.568,
+     "dur": 0.142,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 2.761,
+     "dur": 0.074,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 2.848,
+     "dur": 0.06,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 2.922,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 3.164,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 3.272,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 14.529,
+     "dur": 0.041,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 14.606,
+     "dur": 0.01,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 14.644,
+     "dur": 0.002,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 14.653,
+     "dur": 0.027,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 31.248,
+     "dur": 0.011,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 31.363,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 31.386,
+     "dur": 0.002,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 31.395,
+     "dur": 0.045,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 0,
+    "Paint": 0,
+    "RasterTask": 0,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0,
+   "styleMs": 1.901
+  },
+  "append": {
+   "code": "ul.appendChild(newLi)",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.437,
+     "dur": 0.215,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 2
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.614,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.66,
+     "dur": 0.237,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 8,
+      "totalObjects": 27
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 0.924,
+     "dur": 0.063,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 1.017,
+     "dur": 0.099,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 1.059,
+     "dur": 0.054,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "HTML"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 1.149,
+     "dur": 0.024,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.185,
+     "dur": 0.062,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.274,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 1.708,
+     "dur": 0.183,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 1.958,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 2.086,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 16.848,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 16.858,
+     "dur": 0.016,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 16.933,
+     "dur": 0.029,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 16.992,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 17.013,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 17.021,
+     "dur": 0.035,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 33.513,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 33.634,
+     "dur": 0.011,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 33.675,
+     "dur": 0.002,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 33.684,
+     "dur": 0.116,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 1,
+    "Paint": 2,
+    "RasterTask": 1,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0.237,
+   "styleMs": 0.215
+  },
+  "thrash": {
+   "code": "for 20 times: card.style.width = \u2026; h += card.offsetHeight",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.117,
+     "dur": 0.136,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.158,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.263,
+     "dur": 0.108,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.405,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.41,
+     "dur": 0.025,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.417,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.438,
+     "dur": 0.013,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.457,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.46,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.463,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.468,
+     "dur": 0.011,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.484,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.486,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.489,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.494,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.507,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.509,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.512,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.517,
+     "dur": 0.013,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.536,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.538,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.54,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.545,
+     "dur": 0.01,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.56,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.562,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.565,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.569,
+     "dur": 0.04,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.616,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.619,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.622,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.628,
+     "dur": 0.027,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.663,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.665,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.67,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.675,
+     "dur": 0.007,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.687,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.689,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.692,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.696,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.731,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.734,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.738,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.745,
+     "dur": 0.011,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.763,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.766,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.771,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.776,
+     "dur": 0.016,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.798,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.8,
+     "dur": 0.007,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.803,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.808,
+     "dur": 0.012,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.825,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.827,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.83,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.834,
+     "dur": 0.007,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.856,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.858,
+     "dur": 0.012,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.861,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.872,
+     "dur": 0.011,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.975,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.98,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.984,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.991,
+     "dur": 0.014,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 1.012,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 1.015,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 1.018,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 1.022,
+     "dur": 0.01,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 1.037,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 1.039,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 1.042,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 1.049,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 1.063,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 1.065,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 1.067,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 1.072,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 1.085,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 1.087,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 1.09,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 1.094,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 1.375,
+     "dur": 0.179,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 1.555,
+     "dur": 0.02,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 1.671,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 1.702,
+     "dur": 0.141,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 1.795,
+     "dur": 0.046,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "HTML"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 1.875,
+     "dur": 0.023,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.91,
+     "dur": 0.059,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 1.939,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 1.947,
+     "dur": 0.002,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.99,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 2.473,
+     "dur": 0.076,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 2.551,
+     "dur": 0.768,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 3.416,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 3.504,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 13.85,
+     "dur": 0.031,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 13.912,
+     "dur": 0.009,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 13.935,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 13.943,
+     "dur": 0.026,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 30.661,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 30.788,
+     "dur": 0.018,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 30.82,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 30.828,
+     "dur": 0.127,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 20,
+    "Layout": 20,
+    "Paint": 2,
+    "RasterTask": 2,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0.353,
+   "styleMs": 0.285
+  },
+  "batched": {
+   "code": "for 20 times: card.style.width = \u2026;  then once: card.offsetHeight",
+   "events": [
+    {
+     "name": "ScheduleStyleRecalculation",
+     "t": 0.0,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "UpdateLayoutTree",
+     "t": 0.054,
+     "dur": 0.084,
+     "thread": "CrRendererMain",
+     "args": {
+      "elementCount": 1
+     }
+    },
+    {
+     "name": "InvalidateLayout",
+     "t": 0.103,
+     "dur": 0.0,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layout",
+     "t": 0.148,
+     "dur": 0.112,
+     "thread": "CrRendererMain",
+     "args": {
+      "dirtyObjects": 4,
+      "totalObjects": 23
+     }
+    },
+    {
+     "name": "PrePaint",
+     "t": 1.493,
+     "dur": 0.096,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "HitTest",
+     "t": 1.59,
+     "dur": 0.019,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 1.705,
+     "dur": 0.005,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Paint",
+     "t": 1.742,
+     "dur": 0.076,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "#document"
+     }
+    },
+    {
+     "name": "Paint",
+     "t": 1.765,
+     "dur": 0.05,
+     "thread": "CrRendererMain",
+     "args": {
+      "nodeName": "HTML"
+     }
+    },
+    {
+     "name": "Layerize",
+     "t": 1.849,
+     "dur": 0.028,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.888,
+     "dur": 0.104,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 1.989,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 2.158,
+     "dur": 0.077,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "RasterTask",
+     "t": 2.238,
+     "dur": 0.011,
+     "thread": "ThreadPoolForegroundWorker",
+     "args": {}
+    },
+    {
+     "name": "ActivateLayerTree",
+     "t": 2.299,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "DrawFrame",
+     "t": 2.395,
+     "dur": 0.0,
+     "thread": "Compositor",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 12.632,
+     "dur": 0.036,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 12.7,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 12.723,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 12.73,
+     "dur": 0.027,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "FunctionCall",
+     "t": 29.33,
+     "dur": 0.006,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "PrePaint",
+     "t": 29.43,
+     "dur": 0.008,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Layerize",
+     "t": 29.447,
+     "dur": 0.001,
+     "thread": "CrRendererMain",
+     "args": {}
+    },
+    {
+     "name": "Commit",
+     "t": 29.453,
+     "dur": 0.016,
+     "thread": "CrRendererMain",
+     "args": {}
+    }
+   ],
+   "counts": {
+    "UpdateLayoutTree": 1,
+    "Layout": 1,
+    "Paint": 2,
+    "RasterTask": 2,
+    "Commit": 4,
+    "DrawFrame": 1
+   },
+   "layoutMs": 0.112,
+   "styleMs": 0.084
+  }
+ }
+}

@@ -42,6 +42,8 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 - **Capture real data when we can run the system.** Run the real thing locally (a real browser, compiler or kernel tool), record its own logs and bytes, and keep the scripts that reproduce the capture in `<folder>/data/`. Say on the page how it was captured and how the lab differs from the real world (for example a self-signed certificate, or a server on the same machine so round trips cost nothing).
 - **When the model and the real system disagree, find out why in the source and teach it.** Do not tune the model until the numbers match. Example: the CORS lab disagreed with Chrome on 40 of 2,880 cases, and the reason was a Chrome feature flag that leaves a spec rule unshipped; the page now teaches the difference.
 - Before publishing captured data, check it for local paths, tokens, proxy settings or anything else private.
+- **When the real system is the reader's browser, let the page check itself live.** Example: the parser lab's "Check against this browser" button parses the same text with the browser's own `DOMParser` and compares trees, so every reader re-runs the verification on their own machine.
+- **Cross-check a model against a number the real system reports.** Example: the tokenizer model's 46 tokens for the traced page against Chrome's own `parsed_tokens: 46`.
 
 ## Reading material
 
@@ -88,6 +90,7 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 
 ## Changelog
 
+- **2026-10-09**: Browser track page 2 (`html-to-pixels`). New rules: live in-browser checks, and cross-checking against numbers the real system reports.
 - **2026-10-09**: Added the Browser track and its first page (`fetch-to-the-wire`). New rules: real captures with reproducible scripts in `data/`, teach model-versus-reality differences found in the source, tracks. Inline code in the lede, 60-second box and exam questions now wraps on phones.
 - **2026-10-09**: Versioned asset links (`tools/stamp-assets.py`) and fallback attributes on diagrams, after a cached old stylesheet made the new diagrams render as large black shapes.
 - **2026-10-09**: Added the 60-second version, exam practice with self-marking, per-section mistake reports, issue templates, SEO metadata, preview images and the sitemap. Wrote this guide.

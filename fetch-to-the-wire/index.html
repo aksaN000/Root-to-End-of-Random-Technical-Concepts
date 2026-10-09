@@ -222,6 +222,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="journey" aria-label="Stages this page follows">
     <a class="st-js" href="#blink">our fetch()</a><i>→</i><a class="st-cors" href="#netsvc">network service</a><i>→</i><a class="st-dns" href="#dns">DNS</a><i>→</i><a class="st-tcp" href="#tcp">TCP</a><i>→</i><a class="st-tls" href="#tls">TLS 1.3</a><i>→</i><a class="st-http" href="#http">HTTP</a><i>→</i><a class="st-cors" href="#cors">CORS</a><i>→</i><a class="st-js" href="#back">res.json()</a>
   </div>
+  <p style="font-size:.9rem;margin:0">Browser track: <b>1 · What fetch() really sends</b> · next: <a href="../html-to-pixels/">2 · From HTML bytes to pixels →</a></p>
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#replay">Replay</a><a href="#blink">Blink</a><a href="#netsvc">Network service</a><a href="#dns">DNS</a><a href="#tcp">TCP</a><a href="#tls">TLS</a><a href="#http">HTTP</a><a href="#cors">CORS</a><a href="#back">Back</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
@@ -912,7 +913,7 @@ bool IsCorsSafelistedHeader(const std::string& name,
   }
 };</script>
 
-<script src="../assets/reading.js?v=8ff78d5c"></script>
+<script src="../assets/reading.js?v=8a4f638d"></script>
 <script src="wire-model.js?v=b4128530"></script>
 <script src="captured.js?v=6523d196"></script>
 <script>

@@ -148,6 +148,17 @@ footer a{color:var(--accent)}
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="html-to-pixels/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>From HTML bytes to pixels</h3>
+        <p>Blink's HTML tokenizer and tree builder, stepped token by token on any HTML we type, with a model that builds the same tree as Chrome on 7,183 inputs. Then the rendering lifecycle: real traces showing which stages a color, width or transform change runs, and why a read-after-write loop forced 20 layouts.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>bytes</span><i>→</i><span>tokens</span><i>→</i><span>DOM</span><i>→</i><span>style · layout</span><i>→</i><span>paint · composite</span><i>→</i><span class="you">pixels</span>
+        </div>
+        <div class="meta"><span class="tag">Browser track 2/3</span><span class="tag">DOM</span><span class="tag">rendering</span><span class="tag">Blink</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
   </section>
 
   <section>
@@ -155,8 +166,8 @@ footer a{color:var(--accent)}
     <p class="maplede">Three pages that follow one interaction through the browser, each picking up where the last one stops. They connect to the event-loop page, which shows when each piece of our JavaScript gets to run.</p>
     <nav class="map" aria-label="Browser track">
       <a href="fetch-to-the-wire/">1 · fetch() → the wire → our promise<small>live</small></a><i>→</i>
-      <span class="soon">2 · HTML bytes → DOM → pixels<small>next</small></span><i>→</i>
-      <span class="soon">3 · a click → hit test → our listener<small>planned</small></span>
+      <a href="html-to-pixels/">2 · HTML bytes → DOM → pixels<small>live</small></a><i>→</i>
+      <span class="soon">3 · a click → hit test → our listener<small>next</small></span>
     </nav>
   </section>
 
