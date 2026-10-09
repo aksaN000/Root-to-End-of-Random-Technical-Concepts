@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>One Core, Two Ways to Wait</title>
-<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to our server, with simulators.">
+<title>Threads vs Event Loop, Traced Through the Linux Kernel and glibc | Root to End</title>
+<meta name="description" content="Multi-threading versus event-driven concurrency from schedule(), clone flags, context_switch, futex mutexes and epoll, with a race-condition stepper, a one-core timeline simulator and exam practice.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../assets/root-kit.css">
@@ -137,6 +137,24 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
 }
 </style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/threads-vs-event-loop/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="Threads vs Event Loop, Traced Through the Linux Kernel and glibc">
+<meta property="og:description" content="Multi-threading versus event-driven concurrency from schedule(), clone flags, context_switch, futex mutexes and epoll, with a race-condition stepper, a one-core timeline simulator and exam practice.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/threads-vs-event-loop/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/threads-vs-event-loop.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Threads vs Event Loop, Traced Through the Linux Kernel and glibc">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Threads vs Event Loop, Traced Through the Linux Kernel and glibc">
+<meta name="twitter:description" content="Multi-threading versus event-driven concurrency from schedule(), clone flags, context_switch, futex mutexes and epoll, with a race-condition stepper, a one-core timeline simulator and exam practice.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/threads-vs-event-loop.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "Threads vs Event Loop, Traced Through the Linux Kernel and glibc", "description": "Multi-threading versus event-driven concurrency from schedule(), clone flags, context_switch, futex mutexes and epoll, with a race-condition stepper, a one-core timeline simulator and exam practice.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/threads-vs-event-loop/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "threads, event loop, epoll, futex, context switch, operating systems", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
 </head>
 <body>
 <div class="wrap">
@@ -153,6 +171,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#scale"><b>At 10,000 connections</b>memory model</a></li>
     <li><a href="#notes"><b>Sharpening the report</b>precision notes</a></li>
     <li><a href="#try"><b>Verify on our machine</b>quizzes, tools, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
     <li><a href="#reading"><b>Reading list</b>by depth</a></li>
   </ol>
   <div class="base">— bottom: CPU / kernel</div>
@@ -174,11 +193,19 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#sim">our server</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+    <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
   <p style="font-size:.92rem">Read the original: <a href="assignment/CSE321_Theory_Assignment_01_Report.pdf">our submitted report (PDF, 10 pages)</a>.</p>
   <p class="muted" style="font-size:.86rem">Kernel, glibc and libuv excerpts were fetched from their upstream repositories in October 2026 and trimmed with <code>// …</code>. The two small servers in the second section are our own example programs. Highlighted lines are the ones each explanation hinges on.</p>
 </header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol><li><span>Both models wait the same way: a kernel task puts itself on a wait queue, marks itself asleep and calls <code>schedule()</code>.</span></li><li><span><b>Threads:</b> one kernel task per connection, each blocked in <code>read()</code>. The kernel chooses who runs, and every hop is a context switch.</span></li><li><span><b>Event loop:</b> one task blocked in <code>epoll_wait()</code> on every socket. Our loop chooses who runs, and every hop is a plain function call.</span></li><li><span>The trade-off: threads use many cores and keep cheap requests moving, but cost a stack and a switch each. A loop is cheap per connection, but one slow callback blocks everyone behind it.</span></li></ol>
+  <figure><svg viewBox="0 0 360 214" role="img" aria-label="Threads: one blocked kernel task per socket. Event loop: one task waiting on all sockets through epoll"><title>Threads: one blocked kernel task per socket. Event loop: one task waiting on all sockets through epoll</title><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m" d="M0 0L10 5L0 10z"/></marker><marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m hot" d="M0 0L10 5L0 10z"/></marker><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m bad" d="M0 0L10 5L0 10z"/></marker></defs><text class="tl-t s" x="90" y="14" text-anchor="middle">thread per connection</text><text class="tl-t s" x="270" y="14" text-anchor="middle">event loop</text><rect class="tl-box warm" x="14" y="26" width="96" height="34" rx="8"/><text class="tl-t b" x="62" y="47" text-anchor="middle">T1 read()</text><rect class="tl-box warm" x="14" y="70" width="96" height="34" rx="8"/><text class="tl-t b" x="62" y="91" text-anchor="middle">T2 read()</text><rect class="tl-box warm" x="14" y="114" width="96" height="34" rx="8"/><text class="tl-t b" x="62" y="135" text-anchor="middle">T3 read()</text><circle class="tl-box" cx="150" cy="43" r="15"/><text class="tl-t" x="150" y="47" text-anchor="middle">s1</text><circle class="tl-box" cx="150" cy="87" r="15"/><text class="tl-t" x="150" y="91" text-anchor="middle">s2</text><circle class="tl-box" cx="150" cy="131" r="15"/><text class="tl-t" x="150" y="135" text-anchor="middle">s3</text><path class="tl-a " d="M110 43 H131" marker-end="url(#ah)"/><path class="tl-a " d="M110 87 H131" marker-end="url(#ah)"/><path class="tl-a " d="M110 131 H131" marker-end="url(#ah)"/><rect class="tl-box hot" x="196" y="70" width="110" height="46" rx="8"/><text class="tl-t b" x="251" y="90" text-anchor="middle">one thread</text><text class="tl-t s" x="251" y="104" text-anchor="middle">epoll_wait()</text><circle class="tl-box" cx="332" cy="43" r="15"/><text class="tl-t" x="332" y="47" text-anchor="middle">s1</text><circle class="tl-box" cx="332" cy="87" r="15"/><text class="tl-t" x="332" y="91" text-anchor="middle">s2</text><circle class="tl-box" cx="332" cy="131" r="15"/><text class="tl-t" x="332" y="135" text-anchor="middle">s3</text><path class="tl-a hot" d="M306 93 L315 48" marker-end="url(#ahh)"/><path class="tl-a hot" d="M306 93 L315 92" marker-end="url(#ahh)"/><path class="tl-a hot" d="M306 93 L315 136" marker-end="url(#ahh)"/><text class="tl-t s" x="90" y="178" text-anchor="middle">kernel picks who runs:</text><text class="tl-t s" x="90" y="192" text-anchor="middle">context switch per hop</text><text class="tl-t s" x="270" y="178" text-anchor="middle">our loop picks who runs:</text><text class="tl-t s" x="270" y="192" text-anchor="middle">a function call per hop</text></svg><figcaption>N sleepers on N queues versus one sleeper on one queue</figcaption></figure>
+  <div class="tl-more">Each sentence is backed by the real code below: <a href="#root"><code>sk_wait_data</code> and <code>ep_poll</code></a>, <a href="#thread">glibc's clone flags</a>, <a href="#switch"><code>context_switch</code></a>, <a href="#mutex">futex locks</a>, and the <a href="#sim">one-core simulator</a>.</div>
+</aside>
+
 
 <section id="root" data-deeper="ostep-threads,lkd,silberschatz">
   <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>Both models end in the same place: a sleeping task and <code>schedule()</code></h2></div>
@@ -392,6 +419,34 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li>In the epoll server, add a 200 ms busy loop to the handler for one client. Connect three clients with <code>nc</code> and observe the head-of-line blocking from the simulator's third workload. Then move the busy work to a thread and explain what changed.</li>
     <li>Read <code>ep_poll_callback</code> in full and find where <code>EPOLLEXCLUSIVE</code> limits wakeups. Explain the "thundering herd" problem it solves when many processes wait on one listening socket.</li>
   </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a CSE321 theory exam on concurrency. Write our answer on paper first, then open the model answer and mark ourselves honestly. The marks follow the usual pattern of university theory exams; they are not copied from any real paper.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="4" data-kind="Trace">
+      <div class="q">Two threads each run <code>counter++</code> three times with no lock; <code>counter</code> starts at 0 and each increment is load, add, store. Give the largest and the smallest possible final value, and an interleaving that produces the smallest.</div>
+      <div class="a"><p><b>Largest: 6</b> (no overlap). <b>Smallest: 2.</b></p><ol><li>T1 loads 0 (its first increment) and is preempted.</li><li>T2 completes two increments: counter = 2.</li><li>T1 stores 1: counter = 1, wiping out T2's work.</li><li>T2 loads 1 (its third increment) and is preempted.</li><li>T1 completes its second and third increments: counter = 3.</li><li>T2 adds and stores 2: counter = 2.</li></ol><p>Why it cannot be 1: the thread that makes the final store did its earlier increments first, so the value it loads for its last increment was written by some store, and every store writes at least 1. Adding 1 gives at least 2.</p><p class="rub">Marking: 1 for 6, 1 for 2, 2 for a valid interleaving.</p></div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Trace">
+      <div class="q">A glibc mutex's futex word is 0 (free), 1 (locked, no waiters) or 2 (locked, maybe waiters). Threads A, B and C use one mutex: A locks; B tries to lock; C tries to lock; A unlocks; B (now woken) gets the lock and later unlocks. Give the word after each step and say which steps make a system call.</div>
+      <div class="a"><table><thead><tr><th>Step</th><th>Word</th><th>Syscall?</th></tr></thead><tbody><tr><td>A locks: CAS 0 → 1 succeeds</td><td>1</td><td>no</td></tr><tr><td>B: CAS fails; <code>__lll_lock_wait</code> exchanges the word to 2, gets 1 back, sleeps</td><td>2</td><td>yes, <code>futex_wait</code></td></tr><tr><td>C: CAS fails; word is already 2, so it goes straight to sleep</td><td>2</td><td>yes, <code>futex_wait</code></td></tr><tr><td>A unlocks: exchange to 0, old value was 2</td><td>0</td><td>yes, <code>futex_wake</code></td></tr><tr><td>B wakes, exchanges to 2, gets 0 back: B owns the lock</td><td>2</td><td>no (returning from the wait)</td></tr><tr><td>B unlocks: exchange to 0, old value 2</td><td>0</td><td>yes, <code>futex_wake</code> (wakes C)</td></tr></tbody></table><p>B sets 2 rather than 1 when it takes the lock because it cannot know whether C is still waiting. That costs at most one unnecessary wake, which is cheaper than losing one.</p><p class="rub">Marking: 3 for the word values, 2 for identifying the four system calls.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Calculate">
+      <div class="q">A thread-per-connection server holds 10,000 idle connections. Each pthread has the default 8 MiB stack and each kernel task a 16 KiB kernel stack. Compute the reserved user stack space and the kernel stack memory. Why is the server's resident memory far below the first figure?</div>
+      <div class="a"><p>User stacks: 10,000 × 8 MiB = 80,000 MiB ≈ <b>78 GiB of reserved virtual address space</b>.</p><p>Kernel stacks: 10,000 × 16 KiB = 160,000 KiB ≈ <b>156 MiB</b>, always resident, plus a <code>task_struct</code> per thread.</p><p>The 8 MiB is a reservation made with <code>mmap</code>. Linux backs pages lazily on first touch, so an idle thread that has used only a few KiB of stack has only those pages resident. A 64-bit address space easily holds 78 GiB of reservations, so the real limits are the kernel memory, the scheduler and <code>ulimit</code> or <code>threads-max</code> settings.</p><p class="rub">Marking: 1 per figure, 2 for "reserved, not resident; pages faulted in lazily".</p></div>
+    </div>
+    <div class="exq" data-marks="6" data-kind="Schedule">
+      <div class="q">One core. At t = 0, requests arrive in the order A (30 ms of CPU), B (2 ms), C (2 ms); none does I/O. (a) Give each finish time and the mean for an event loop that runs each callback to completion. (b) The same for threads under round robin with a 10 ms time slice and zero switch cost. (c) Name the effect that (a) shows.</div>
+      <div class="a"><p>(a) Event loop: A 0–30, B 30–32, C 32–34. Finish times <b>30, 32, 34</b>; mean <b>32 ms</b>.</p><p>(b) Round robin: A 0–10, B 10–12 (done), C 12–14 (done), A 14–34 (done). Finish times A 34, B 12, C 14; mean <b>20 ms</b>.</p><p>(c) <b>Head-of-line blocking</b>: the cheap requests wait behind the expensive callback because nothing can preempt it. The total work and the last finish time are the same, but the mean latency is much worse. Load the third workload in the <a href="#sim">simulator</a> to see it.</p><p class="rub">Marking: 2 + 2 for the schedules and means, 2 for the effect and its cause.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q">On Linux, <code>pthread_create</code> calls <code>clone</code>. Which flags make the new task a thread of the same process, and what does each new thread still get of its own?</div>
+      <div class="a"><p>glibc passes <code>CLONE_VM</code> (share the address space), <code>CLONE_FS</code> (cwd, root, umask), <code>CLONE_FILES</code> (file descriptor table), <code>CLONE_SIGHAND</code> (signal handlers), <code>CLONE_THREAD</code> (same thread group, so the same PID from <code>getpid()</code>), <code>CLONE_SYSVSEM</code>, <code>CLONE_SETTLS</code>, <code>CLONE_PARENT_SETTID</code> and <code>CLONE_CHILD_CLEARTID</code>.</p><p>Each thread still has its own kernel task (<code>task_struct</code>) and thread ID, its own registers and program counter, its own user stack (mapped by glibc) and kernel stack, its own thread-local storage, and its own signal mask.</p><p class="rub">Marking: 2 for the key flags with meanings (VM, FILES, SIGHAND, THREAD at least), 2 for the per-thread state.</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="reading">

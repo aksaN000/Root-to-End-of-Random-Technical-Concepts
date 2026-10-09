@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/sitemap.xml

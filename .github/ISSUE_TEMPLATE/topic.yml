@@ -1,0 +1,16 @@
+name: Suggest a topic
+description: A concept you would like traced from the root to our code.
+labels: ["topic-request"]
+body:
+  - type: input
+    id: topic
+    attributes:
+      label: Topic
+      placeholder: What happens when we type a URL and press Enter
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: What confuses people about it?
+      description: Which course it is from, and what the usual explanations leave out.

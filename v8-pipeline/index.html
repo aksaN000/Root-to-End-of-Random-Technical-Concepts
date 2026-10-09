@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Inside V8's Pipeline</title>
-<meta name="description" content="How V8 runs our JavaScript: scanner, precedence-climbing parser, Ignition bytecode, inline caches, tiering and deoptimization, traced through real V8 source and real Node output.">
+<title>How V8 Compiles JavaScript: Parser, Ignition Bytecode, Inline Caches, TurboFan | Root to End</title>
+<meta name="description" content="Follow one JavaScript expression through V8&#x27;s scanner, parser, Ignition bytecode and interpreter, then hidden classes, inline caches, tiering and deoptimization. The bytecode model matches Node&#x27;s V8 exactly.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../assets/root-kit.css">
@@ -165,6 +165,24 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
 }
 </style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/v8-pipeline/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="How V8 Compiles JavaScript: Parser, Ignition Bytecode, Inline Caches, TurboFan">
+<meta property="og:description" content="Follow one JavaScript expression through V8&#x27;s scanner, parser, Ignition bytecode and interpreter, then hidden classes, inline caches, tiering and deoptimization. The bytecode model matches Node&#x27;s V8 exactly.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/v8-pipeline/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/v8-pipeline.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="How V8 Compiles JavaScript: Parser, Ignition Bytecode, Inline Caches, TurboFan">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How V8 Compiles JavaScript: Parser, Ignition Bytecode, Inline Caches, TurboFan">
+<meta name="twitter:description" content="Follow one JavaScript expression through V8&#x27;s scanner, parser, Ignition bytecode and interpreter, then hidden classes, inline caches, tiering and deoptimization. The bytecode model matches Node&#x27;s V8 exactly.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/v8-pipeline.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "How V8 Compiles JavaScript: Parser, Ignition Bytecode, Inline Caches, TurboFan", "description": "Follow one JavaScript expression through V8's scanner, parser, Ignition bytecode and interpreter, then hidden classes, inline caches, tiering and deoptimization. The bytecode model matches Node's V8 exactly.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/v8-pipeline/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "V8, JavaScript engine, bytecode, Ignition, TurboFan, JIT compiler", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
 </head>
 <body>
 <div class="wrap">
@@ -180,6 +198,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#tiers"><b>Tiering up</b>Sparkplug · Maglev · TurboFan</a></li>
     <li><a href="#deopt"><b>When speculation fails</b>deoptimization</a></li>
     <li><a href="#try"><b>Try it ourselves</b>flags, quizzes, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
     <li><a href="#reading"><b>Reading list</b>everything cited here</a></li>
   </ol>
   <div class="base">— bottom: source text</div>
@@ -200,10 +219,18 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#deopt" style="--c:var(--bad)"><b>Deopt</b><span>back to bytecode</span></a>
   </nav>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#handoff">Handoff</a><a href="#tokens">Tokens</a><a href="#parse">Parse</a><a href="#bytecode">Bytecode</a><a href="#ignition">Ignition</a><a href="#shapes">Shapes</a><a href="#tiers">Tiers</a><a href="#deopt">Deopt</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+    <a href="#handoff">Handoff</a><a href="#tokens">Tokens</a><a href="#parse">Parse</a><a href="#bytecode">Bytecode</a><a href="#ignition">Ignition</a><a href="#shapes">Shapes</a><a href="#tiers">Tiers</a><a href="#deopt">Deopt</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
   <p class="muted" style="font-size:.86rem">V8 excerpts come from <code>v8/v8</code> main, fetched October 2026. Every "real output" box was produced by running Node v22.22.0 (V8 12.4) with the flags shown. The live lab below is a model of V8's parser and bytecode generator; we tested it against Node's <code>--print-bytecode</code> on 746 expressions and it matched every one byte for byte. Small numbered tags like <a class="rd" data-r="hinkelmann-bytecode"></a> open reading notes.</p>
 </header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol><li><span>V8 turns our source into tokens (scanner), a tree (parser), then compact <b>bytecode</b> that the Ignition interpreter runs at once.</span></li><li><span>While it runs, every operation records <b>feedback</b>: which types and object shapes it actually saw.</span></li><li><span>Functions that are hot and stable get compiled to machine code that <b>bets on that feedback</b>, for example "a and b are always small integers".</span></li><li><span>When a bet fails, V8 <b>deoptimizes</b> back to bytecode and learns. Code that keeps types and shapes stable stays fast.</span></li></ol>
+  <figure><svg viewBox="0 0 360 214" role="img" aria-label="V8 pipeline: source to tokens to AST to bytecode, feedback, optimized machine code, and deoptimization back to bytecode"><title>V8 pipeline: source to tokens to AST to bytecode, feedback, optimized machine code, and deoptimization back to bytecode</title><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m" d="M0 0L10 5L0 10z"/></marker><marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m hot" d="M0 0L10 5L0 10z"/></marker><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m bad" d="M0 0L10 5L0 10z"/></marker></defs><rect class="tl-box " x="6" y="16" width="78" height="40" rx="8"/><text class="tl-t b" x="45" y="40" text-anchor="middle">source</text><rect class="tl-box " x="98" y="16" width="78" height="40" rx="8"/><text class="tl-t b" x="137" y="33" text-anchor="middle">tokens</text><text class="tl-t s" x="137" y="47" text-anchor="middle">scanner</text><rect class="tl-box " x="190" y="16" width="74" height="40" rx="8"/><text class="tl-t b" x="227" y="33" text-anchor="middle">AST</text><text class="tl-t s" x="227" y="47" text-anchor="middle">parser</text><rect class="tl-box hot" x="276" y="16" width="78" height="40" rx="8"/><text class="tl-t b" x="315" y="33" text-anchor="middle">bytecode</text><text class="tl-t s" x="315" y="47" text-anchor="middle">Ignition</text><path class="tl-a " d="M84 36 H94" marker-end="url(#ah)"/><path class="tl-a " d="M176 36 H186" marker-end="url(#ah)"/><path class="tl-a " d="M264 36 H272" marker-end="url(#ah)"/><rect class="tl-box warm" x="220" y="96" width="134" height="40" rx="8"/><text class="tl-t b" x="287" y="113" text-anchor="middle">type feedback</text><text class="tl-t s" x="287" y="127" text-anchor="middle">per slot</text><path class="tl-a " d="M315 56 V92" marker-end="url(#ah)"/><rect class="tl-box good" x="160" y="166" width="194" height="40" rx="8"/><text class="tl-t b" x="257" y="183" text-anchor="middle">machine code</text><text class="tl-t s" x="257" y="197" text-anchor="middle">Sparkplug · Maglev · TurboFan</text><path class="tl-a hot" d="M287 136 V162" marker-end="url(#ahh)"/><path class="tl-a bad" d="M160 180 C 60 170, 120 60, 272 50" marker-end="url(#ahb)"/><text class="tl-t s" x="14" y="112">deopt when</text><text class="tl-t s" x="14" y="126">a guess fails</text><text class="tl-t s" x="280" y="146" text-anchor="end">hot and</text><text class="tl-t s" x="280" y="158" text-anchor="end">stable?</text></svg><figcaption>From <code>a + b</code> to machine code and back</figcaption></figure>
+  <div class="tl-more">Try it in the <a href="#expr">expression lab</a>: every frame below updates as we type, and the bytecode matches what Node's V8 prints.</div>
+</aside>
+
 
 <section id="handoff" data-deeper="v8-preparser,v8-launch,kosaka-browser">
   <div class="sechead"><span class="eyebrow">Frame 0 · the handoff</span><h2>Where V8 gets our code</h2></div>
@@ -431,6 +458,51 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li>Run <code>node --maglev --trace-opt deopt.js</code>. Does <code>add</code> go to Maglev first? Read <code>ShouldOptimize</code> above and explain what you see.</li>
     <li>Extend the lab's grammar on paper with unary minus. Where in <code>ParseBinaryExpression</code> would it be handled, and what bytecode do you expect for <code>-a * b</code>? Check with Node.</li>
   </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a compilers or programming-languages exam. Write our answer on paper first, then open the model answer and mark ourselves honestly. The marks follow the usual pattern of university theory exams; they are not copied from any real paper.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="5" data-kind="Generate">
+      <div class="q">Write the Ignition bytecode V8 generates for the body of the function below, with the feedback slot numbers. Explain what the accumulator holds after each instruction.<pre>function f(a, b, c) { return (a + b) * (a - c); }</pre></div>
+      <div class="a"><pre>Ldar a1            ; acc = b
+Add a0, [1]        ; acc = a + b         feedback slot 1
+Star0              ; r0 = a + b
+Ldar a2            ; acc = c
+Sub a0, [2]        ; acc = a - c         feedback slot 2
+Mul r0, [0]        ; acc = r0 * acc      feedback slot 0
+Return</pre><p>Ignition is an accumulator machine: the right operand is in the accumulator and the left one is named, so <code>Add a0</code> computes <code>a0 + acc</code>. The left product operand must survive while the right side is computed, so it is parked in register <code>r0</code>. Slot 0 belongs to the multiplication because the generator allocates the outer operation's slot before visiting its children. (Checked against <code>node --print-bytecode</code>.)</p><p class="rub">Marking: 3 for the instruction sequence, 1 for the register spill, 1 for the slot order.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Generate">
+      <div class="q">Give the bytecode for <code>return a - 2 * b;</code> and explain why it uses <code>MulSmi</code> even though the literal is on the left, and why the subtraction is not <code>SubSmi</code>.</div>
+      <div class="a"><pre>Ldar a1
+MulSmi [2], [1]
+Sub a0, [0]
+Return</pre><p>Multiplication is commutative, so the generator may swap <code>2 * b</code> into <code>b * 2</code> and use the Smi-immediate form, which needs no register for the constant. Subtraction is not commutative and its right operand <code>2 * b</code> is not a literal, so it uses the general <code>Sub</code> with <code>a</code> as the named operand.</p><p class="rub">Marking: 2 for the code, 1 for the commutative swap, 1 for why Sub is general.</p></div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Parse">
+      <div class="q">Using precedence climbing with V8's precedences (<code>+</code> 12, <code>*</code> 13, <code>**</code> 14, right-associative), draw the AST for <code>a + b * c ** d ** 2</code> and explain how the parser makes <code>**</code> group to the right.</div>
+      <div class="a"><p>AST: <code>a + (b * (c ** (d ** 2)))</code>.</p><pre>      +
+     / \
+    a   *
+       / \
+      b   **
+         /  \
+        c    **
+            /  \
+           d    2</pre><p>After reading an operator of precedence p, <code>ParseBinaryContinuation</code> parses the right side with minimum precedence p + 1 for left-associative operators, so a second <code>*</code> would not be absorbed. For <code>**</code> it parses the right side with minimum precedence p itself, so another <code>**</code> is absorbed into the right operand, which makes it right-associative.</p><p class="rub">Marking: 3 for the tree, 2 for the p versus p + 1 explanation.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q"><code>function getX(o) { return o.x; }</code> is called once each with <code>{x:1}</code>, <code>{x:1, y:2}</code>, <code>{y:2, x:1}</code>, <code>{x:1, z:3}</code> and <code>{x:1, w:4}</code>, in that order. Give the inline cache state after each call and explain why.</div>
+      <div class="a"><p>After calls 1 to 5: <b>monomorphic</b>, <b>polymorphic (2 maps)</b>, <b>polymorphic (3)</b>, <b>polymorphic (4)</b>, <b>megamorphic</b>.</p><p>All five objects have different hidden classes (maps). <code>{x, y}</code> and <code>{y, x}</code> differ because maps record the order in which properties were added. V8 keeps at most 4 maps in a polymorphic IC (<code>DEFAULT_MAX_POLYMORPHIC_MAP_COUNT</code>); the fifth map makes it give up on per-map handlers and use the generic megamorphic stub cache.</p><p class="rub">Marking: 2 for the sequence, 1 for "property order matters", 1 for the limit of 4.</p></div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Explain">
+      <div class="q"><code>function add(a, b) { return a + b; }</code> is optimized by TurboFan after many calls with small integers. Then it is called with <code>add(2147483647, 1)</code> and later with <code>add("x", 1)</code>. Describe what happens each time and what V8 does afterwards.</div>
+      <div class="a"><p>The optimized code assumes both inputs are Smis and the sum fits a Smi, with checks guarding those assumptions.</p><p><code>add(2147483647, 1)</code>: the inputs pass the Smi check but the 32-bit add overflows, so the overflow check fails and V8 deoptimizes with reason <b>"overflow"</b>. Execution continues in Ignition, which produces the heap number 2147483648, and the feedback slot widens to Number.</p><p><code>add("x", 1)</code>: the type check on the input fails and V8 deoptimizes with reason <b>"not a Number or Oddball"</b> (or similar). Feedback widens again.</p><p>Afterwards the function is still hot, so V8 can optimize it again using the wider feedback, producing slower but more general code. Code that sees mixed types keeps paying for these transitions.</p><p class="rub">Marking: 2 per call (correct check and reason), 1 for re-optimization with wider feedback.</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="reading">

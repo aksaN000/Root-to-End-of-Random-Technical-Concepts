@@ -1,0 +1,34 @@
+name: Report a mistake or something unclear
+description: A wrong fact, a broken simulator, outdated code, or a part that did not make sense.
+labels: ["content"]
+body:
+  - type: input
+    id: page
+    attributes:
+      label: Page and section
+      description: The "Tell us" link on each section fills this in for you.
+      placeholder: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/#loop
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What is wrong or unclear?
+      description: Quote the sentence or describe what the simulator did.
+    validations:
+      required: true
+  - type: textarea
+    id: fix
+    attributes:
+      label: What it should say (if you know)
+      description: A source link helps a lot, for example a line in the real code or a textbook section.
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Kind of problem
+      options:
+        - Factually wrong
+        - Unclear or too fast
+        - Simulator or quiz behaves wrongly
+        - Code excerpt is outdated
+        - Broken link or layout

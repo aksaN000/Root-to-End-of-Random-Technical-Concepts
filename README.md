@@ -21,3 +21,12 @@ Each simulation is a static HTML page with a few shared files in `assets/`. Open
 - Show real code: excerpts come from the actual source (Chromium, V8, libuv, Linux, compilers, network stacks), trimmed and linked to the original.
 - Make it steppable: every simulation can be walked through one step at a time.
 - Read deeper, then test: numbered markers open curated reading (start here / go deeper / primary sources) right in the text, and each page ends with predict-first quizzes. The shared catalog lives in `assets/reading.js`.
+
+## Every page has
+
+- A **60-second version** at the top, then the full trace from the real source.
+- An **interactive lab or simulator**, checked against the real system (`<folder>/verify/`).
+- **Reading markers** in the text, **quizzes**, **exam-style questions** with model answers, and a reading list.
+- A **"Tell us" link** on every section to report a mistake or something unclear.
+
+How pages are written and built is in [STYLE.md](STYLE.md). Found a mistake? [Report it](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml). Want a topic? [Suggest it](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml).

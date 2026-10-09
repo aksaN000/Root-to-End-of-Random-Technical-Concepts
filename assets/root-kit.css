@@ -69,3 +69,52 @@ a.rd:hover,a.rd[aria-expanded="true"]{background:var(--accent);color:var(--surfa
 /* long code and paths wrap instead of widening the page on phones */
 .quiz code,ol.ex code,.prose code,.callout code,.src-list a,td code{overflow-wrap:anywhere}
 .ctl label{max-width:100%;flex-wrap:wrap}.ctl select{max-width:100%;min-width:0}
+
+/* the 60-second version, right under the hero */
+.tldr{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:18px 20px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px 24px;align-items:center;margin-top:28px;position:relative}
+.tldr .tl-head{grid-column:1/-1;display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.tldr .tl-head b{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);font-weight:600}
+.tldr .tl-head span{font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.tldr ol{margin:0;padding:0;list-style:none;counter-reset:tl;display:flex;flex-direction:column;gap:10px}
+.tldr ol li{counter-increment:tl;display:grid;grid-template-columns:1.9em minmax(0,1fr);gap:8px;font-size:.98rem;line-height:1.55}
+.tldr ol li::before{content:counter(tl);font-family:var(--mono);font-size:.78rem;font-weight:600;color:var(--surface);background:var(--accent);border-radius:999px;width:1.65em;height:1.65em;display:grid;place-items:center;margin-top:2px}
+.tldr figure{margin:0;min-width:0}
+.tldr svg{display:block;width:100%;height:auto}
+.tldr figcaption{font-size:.78rem;color:var(--muted);margin-top:6px;text-align:center}
+.tldr .tl-more{grid-column:1/-1;font-size:.88rem;color:var(--muted);border-top:1px dashed var(--rule);padding-top:10px}
+@media (max-width:760px){.tldr{grid-template-columns:1fr}}
+/* diagram parts (inline SVG): use classes so both themes work */
+.tl-box{fill:var(--bg);stroke:var(--rule);stroke-width:1.5}
+.tl-box.hot{fill:var(--accent-soft);stroke:var(--accent)}
+.tl-box.warm{fill:var(--trace-bg);stroke:var(--trace)}
+.tl-box.good{fill:var(--ok-bg);stroke:var(--ok)}
+.tl-box.bad{fill:var(--bad-bg);stroke:var(--bad)}
+.tl-t{fill:var(--ink);font-family:var(--mono);font-size:12px}
+.tl-t.s{fill:var(--muted);font-size:10.5px}
+.tl-t.b{font-weight:600}
+.tl-a{stroke:var(--muted);stroke-width:1.5;fill:none}
+.tl-a.hot{stroke:var(--accent)}.tl-a.bad{stroke:var(--bad);stroke-dasharray:4 3}
+.tl-head-m{fill:var(--muted)}.tl-head-m.hot{fill:var(--accent)}.tl-head-m.bad{fill:var(--bad)}
+
+/* exam-style practice */
+.exam{display:flex;flex-direction:column;gap:12px;max-width:820px}
+.exam-bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-size:.86rem;color:var(--muted)}
+.exam-bar .tally{font-family:var(--mono);font-size:.8rem;color:var(--ink);background:var(--code);border-radius:999px;padding:3px 10px}
+.exq{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.exq .eh{display:flex;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.exq .eh .mk{color:var(--trace);font-weight:600}
+.exq .q{font-size:.97rem;line-height:1.6}
+.exq .q pre,.exq .a pre{margin:8px 0 0;background:var(--code);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:.8rem;line-height:1.55;overflow-x:auto}
+.exq .a{border-top:1px dashed var(--rule);padding-top:10px;font-size:.93rem;line-height:1.6;display:flex;flex-direction:column;gap:8px}
+.exq .a[hidden]{display:none}
+.exq .a .rub{font-size:.84rem;color:var(--muted)}
+.exq .a table{font-size:.82rem}
+.exq .btns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.exq .btns button{font-size:.8rem;padding:4px 10px}
+.exq .btns .lbl{font-size:.8rem;color:var(--muted)}
+.exq .btns button.on{border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+
+/* report-a-mistake links */
+.rk-report{font-size:.78rem;color:var(--muted);text-decoration:none;font-family:var(--mono);align-self:flex-start}
+.rk-report:hover{color:var(--accent);text-decoration:underline}
+.rk-foot{margin-top:56px;border-top:1px solid var(--rule);padding-top:16px;font-size:.88rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px}

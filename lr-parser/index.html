@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Shift, Reduce, Accept</title>
-<meta name="description" content="LR parsing from grammar to parse tree: FIRST/FOLLOW, LR(0) items, the SLR table and a step-by-step parse, checked against the Dragon Book and real GNU Bison output.">
+<title>LR Parsing Step by Step: SLR Table Builder, Parse Trace and Bison | Root to End</title>
+<meta name="description" content="Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the parsing table and a step-by-step parse with a growing tree, checked against the Dragon Book and real GNU Bison.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../assets/root-kit.css">
@@ -151,6 +151,24 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
 }
 </style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/lr-parser/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="LR Parsing Step by Step: SLR Table Builder, Parse Trace and Bison">
+<meta property="og:description" content="Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the parsing table and a step-by-step parse with a growing tree, checked against the Dragon Book and real GNU Bison.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/lr-parser/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/lr-parser.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="LR Parsing Step by Step: SLR Table Builder, Parse Trace and Bison">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="LR Parsing Step by Step: SLR Table Builder, Parse Trace and Bison">
+<meta name="twitter:description" content="Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the parsing table and a step-by-step parse with a growing tree, checked against the Dragon Book and real GNU Bison.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/lr-parser.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "LR Parsing Step by Step: SLR Table Builder, Parse Trace and Bison", "description": "Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the parsing table and a step-by-step parse with a growing tree, checked against the Dragon Book and real GNU Bison.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/lr-parser/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "LR parsing, SLR parser, LALR, Bison, compiler design, parsing table", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
 </head>
 <body>
 <div class="wrap">
@@ -165,6 +183,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#bison"><b>Inside real Bison</b>yyparse()</a></li>
     <li><a href="#conflicts"><b>Conflicts</b>dangling else, SLR vs LALR</a></li>
     <li><a href="#try"><b>Try it ourselves</b>quizzes, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
     <li><a href="#reading"><b>Reading list</b>everything cited here</a></li>
   </ol>
   <div class="base">— bottom: the grammar</div>
@@ -178,10 +197,18 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="lede">The <a href="../v8-pipeline/">V8 page</a> shows a hand-written parser. Most language tools instead <em>generate</em> their parser from a grammar: Bison, yacc, and the parsers inside PostgreSQL, Bash and GCC's old C front end. This page builds an SLR parser in front of us from any grammar we type: FIRST and FOLLOW sets, LR(0) item sets, the parsing table, and a step-by-step parse that grows its tree. Then we open real Bison and see the same machine in C.</p>
   <div class="ministack" aria-hidden="true"><span class="lab">stack</span><span>0</span><span class="anim">id 5</span><span class="anim">F 3</span><span class="anim">T 2</span><span class="anim">E 1</span></div>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#why">Why</a><a href="#sets">Sets</a><a href="#items">Items</a><a href="#table">Table</a><a href="#run">Run</a><a href="#bison">Bison</a><a href="#conflicts">Conflicts</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+    <a href="#why">Why</a><a href="#sets">Sets</a><a href="#items">Items</a><a href="#table">Table</a><a href="#run">Run</a><a href="#bison">Bison</a><a href="#conflicts">Conflicts</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
   <p class="muted" style="font-size:.86rem">The construction follows the Dragon Book (2nd ed., Sections 4.4.2 and 4.6). For the expression grammar it reproduces the book's twelve states, SLR table (Fig. 4.37) and moves for <code>id * id + id</code> (Fig. 4.38) exactly; we checked that before publishing. The Bison boxes are real files and real output from GNU Bison 3.8.2.</p>
 </header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol><li><span>An LR parser reads tokens left to right, <b>shifting</b> them onto a stack until the top matches a rule's right-hand side, then <b>reducing</b> it to the rule's left-hand side.</span></li><li><span>When to reduce is precomputed: LR(0) item sets form an automaton, and a table maps (state, next token) to shift, reduce, accept or error.</span></li><li><span>SLR places reduce actions on the FOLLOW set of the rule's left side. Bison's LALR(1) uses sharper per-state lookaheads, so it accepts more grammars.</span></li><li><span>A cell with two actions is a <b>conflict</b>. The dangling <code>else</code> is the classic one; Bison resolves it by shifting.</span></li></ol>
+  <figure><svg viewBox="0 0 360 214" role="img" aria-label="An LR parser: the state on top of the stack and the next token pick an action from the table"><title>An LR parser: the state on top of the stack and the next token pick an action from the table</title><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m" d="M0 0L10 5L0 10z"/></marker><marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m hot" d="M0 0L10 5L0 10z"/></marker><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m bad" d="M0 0L10 5L0 10z"/></marker></defs><text class="tl-t s" x="44" y="14" text-anchor="middle">stack</text><rect class="tl-box " x="14" y="24" width="60" height="30" rx="8"/><text class="tl-t b" x="44" y="43" text-anchor="middle">0</text><rect class="tl-box " x="14" y="58" width="60" height="30" rx="8"/><text class="tl-t b" x="44" y="77" text-anchor="middle">E 1</text><rect class="tl-box " x="14" y="92" width="60" height="30" rx="8"/><text class="tl-t b" x="44" y="111" text-anchor="middle">+ 6</text><rect class="tl-box hot" x="14" y="126" width="60" height="34" rx="8"/><text class="tl-t b" x="44" y="140" text-anchor="middle">id 5</text><text class="tl-t s" x="44" y="154" text-anchor="middle">top</text><text class="tl-t s" x="250" y="14" text-anchor="middle">input</text><rect class="tl-box good" x="160" y="24" width="40" height="30" rx="8"/><text class="tl-t b" x="180" y="43" text-anchor="middle">*</text><rect class="tl-box " x="204" y="24" width="40" height="30" rx="8"/><text class="tl-t b" x="224" y="43" text-anchor="middle">id</text><rect class="tl-box " x="248" y="24" width="40" height="30" rx="8"/><text class="tl-t b" x="268" y="43" text-anchor="middle">$</text><rect class="tl-box warm" x="150" y="96" width="200" height="50" rx="8"/><text class="tl-t b" x="250" y="118" text-anchor="middle">ACTION[5, *] = r6</text><text class="tl-t s" x="250" y="132" text-anchor="middle">reduce F → id</text><path class="tl-a hot" d="M74 143 H146" marker-end="url(#ahh)"/><path class="tl-a hot" d="M180 54 V92" marker-end="url(#ahh)"/><text class="tl-t s" x="250" y="176" text-anchor="middle">shift: push token and state</text><text class="tl-t s" x="250" y="192" text-anchor="middle">reduce: pop |rhs|, push GOTO</text><text class="tl-t s" x="250" y="208" text-anchor="middle">accept · or error if blank</text></svg><figcaption>One step of the driver, for <code>id * id</code></figcaption></figure>
+  <div class="tl-more">Type any grammar into the <a href="#lab">grammar lab</a> and every frame below rebuilds: <a href="#sets">FIRST and FOLLOW</a>, <a href="#items">item sets</a>, <a href="#table">the table</a> and a <a href="#run">step-by-step parse</a>.</div>
+</aside>
+
 
 <section id="why" data-deeper="haberman-lr,dragon-lr,knuth-lr">
   <div class="sechead"><span class="eyebrow">Frame 0 · the idea</span><h2>Why parse bottom-up</h2></div>
@@ -320,6 +347,39 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li>Write a grammar with a reduce/reduce conflict, for example two nonterminals that both derive <code>id</code> in the same context. Find the red cell in the lab and explain which reduction Bison picks (hint: the rule that appears first).</li>
     <li>Open PostgreSQL's <code>gram.y</code> and find its <code>%left</code>/<code>%right</code> precedence declarations. Which conflicts do they exist to resolve?</li>
   </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a CSE420 exam. Every answer was produced or checked with this page's engine or real Bison. Write our answer on paper first, then open the model answer and mark ourselves honestly. The marks follow the usual pattern of university theory exams; they are not copied from any real paper.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Construct">
+      <div class="q">For the grammar <code>S → S S + | S S * | a</code>: augment it, construct the canonical collection of LR(0) items, and build the SLR parsing table. Is the grammar SLR(1)? (Dragon Book exercise 4.6.2.)</div>
+      <div class="a"><p>Augmented: 0 <code>S' → S</code>, 1 <code>S → S S +</code>, 2 <code>S → S S *</code>, 3 <code>S → a</code>. FOLLOW(S) = { $, a, +, * }.</p><pre>I0: S&#x27; → ·S    S → ·S S +   S → ·S S *   S → ·a
+I1: S&#x27; → S·    S → S ·S +   S → S ·S *   S → ·S S +   S → ·S S *   S → ·a
+I2: S → a·
+I3: S → S S ·+   S → S S ·*   S → S ·S +   S → S ·S *   S → ·S S +   S → ·S S *   S → ·a
+I4: S → S S +·
+I5: S → S S *·</pre><table><thead><tr><th>State</th><th>+</th><th>*</th><th>a</th><th>$</th><th>S</th></tr></thead><tbody><tr><td>0</td><td></td><td></td><td>s2</td><td></td><td>1</td></tr><tr><td>1</td><td></td><td></td><td>s2</td><td>acc</td><td>3</td></tr><tr><td>2</td><td>r3</td><td>r3</td><td>r3</td><td>r3</td><td></td></tr><tr><td>3</td><td>s4</td><td>s5</td><td>s2</td><td></td><td>3</td></tr><tr><td>4</td><td>r1</td><td>r1</td><td>r1</td><td>r1</td><td></td></tr><tr><td>5</td><td>r2</td><td>r2</td><td>r2</td><td>r2</td><td></td></tr></tbody></table><p><b>Yes, it is SLR(1)</b>: no cell has two actions. (Generated by this page's engine; paste the grammar into the lab to see it.)</p><p class="rub">Marking: 1 for augmenting and numbering, 2 for the six item sets, 2 for the table, 1 for the conclusion.</p></div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Parse">
+      <div class="q">Using the table from the previous question, show the moves of the parser on input <code>a a + a *</code>.</div>
+      <div class="a"><table><thead><tr><th>Stack</th><th>Input</th><th>Action</th></tr></thead><tbody><tr><td>0</td><td>a a + a * $</td><td>shift 2</td></tr><tr><td>0 a2</td><td>a + a * $</td><td>reduce S → a, goto 1</td></tr><tr><td>0 S1</td><td>a + a * $</td><td>shift 2</td></tr><tr><td>0 S1 a2</td><td>+ a * $</td><td>reduce S → a, goto 3</td></tr><tr><td>0 S1 S3</td><td>+ a * $</td><td>shift 4</td></tr><tr><td>0 S1 S3 +4</td><td>a * $</td><td>reduce S → S S +, goto 1</td></tr><tr><td>0 S1</td><td>a * $</td><td>shift 2</td></tr><tr><td>0 S1 a2</td><td>* $</td><td>reduce S → a, goto 3</td></tr><tr><td>0 S1 S3</td><td>* $</td><td>shift 5</td></tr><tr><td>0 S1 S3 *5</td><td>$</td><td>reduce S → S S *, goto 1</td></tr><tr><td>0 S1</td><td>$</td><td>accept</td></tr></tbody></table><p class="rub">Marking: 4 for the moves, 1 for showing the GOTO after each reduce.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compute">
+      <div class="q">For <code>S → A a | b A c | d c | b d a</code> and <code>A → d</code>, compute FIRST and FOLLOW of S and A, and show that the grammar is not SLR(1).</div>
+      <div class="a"><p>FIRST(S) = { b, d }, FIRST(A) = { d }. FOLLOW(S) = { $ }, FOLLOW(A) = { a, c }.</p><p>The state reached on <code>d</code> from I0 contains <code>S → d · c</code> and <code>A → d ·</code>. SLR puts "reduce A → d" on every token in FOLLOW(A), including <code>c</code>, which collides with the shift on <code>c</code>. Likewise, after <code>b d</code> the state holds <code>S → b d · a</code> and <code>A → d ·</code>, with a conflict on <code>a</code>. So there are two shift/reduce conflicts.</p><p>The grammar is still LALR(1): in the first state the only valid lookahead for <code>A → d ·</code> is <code>a</code>, and in the second it is <code>c</code>, so per-state lookaheads separate the actions.</p><p class="rub">Marking: 2 for the sets, 2 for locating and explaining a conflict.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q">Explain the shift/reduce conflict in <code>S → if E then S | if E then S else S | other</code>. How does yacc/Bison resolve it by default, and how can the grammar author state the choice explicitly?</div>
+      <div class="a"><p>After <code>if E then if E then S</code>, with <code>else</code> as the next token, the parser can either reduce the inner <code>if E then S</code> (so the <code>else</code> belongs to the outer <code>if</code>) or shift <code>else</code> (so it belongs to the inner one). Both choices give a valid parse, so the grammar is ambiguous and the table cell has two actions.</p><p>Bison reports "1 shift/reduce conflict" and resolves it by <b>shifting</b>, which matches each <code>else</code> with the nearest unmatched <code>if</code>, the rule in C and Java. To say this explicitly, declare <code>%nonassoc THEN</code> and then <code>%nonassoc ELSE</code>: <code>ELSE</code> gets higher precedence than the rule ending in <code>THEN</code>, so the conflict is resolved as a shift without a warning. The alternative is rewriting the grammar with matched and unmatched statements.</p><p class="rub">Marking: 2 for the two derivations, 1 for the default, 1 for a precedence fix.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compare">
+      <div class="q">Why does <code>S → L = R | R</code>, <code>L → * R | id</code>, <code>R → L</code> have an SLR conflict, even though it is unambiguous? Why does LALR(1) not have it?</div>
+      <div class="a"><p>In the state reached on <code>L</code> from the start, the items are <code>S → L · = R</code> and <code>R → L ·</code>. SLR reduces <code>R → L</code> on every token in FOLLOW(R). Because of <code>S → L = R</code> and <code>L → * R</code>, <code>=</code> is in FOLLOW(R), so the cell for <code>=</code> holds both "shift" and "reduce": a shift/reduce conflict.</p><p>But in <em>this</em> state, reducing to <code>R</code> can only finish a whole statement <code>S → R</code>, so the only valid lookahead is <code>$</code>. LALR(1) computes lookaheads per state, so it reduces only on <code>$</code>. Bison builds this grammar without warnings; its state 4 says <code>'=' shift</code> and <code>$default reduce using rule 5 (R)</code>.</p><p class="rub">Marking: 2 for locating the conflict via FOLLOW(R), 2 for the per-state lookahead explanation.</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="reading">

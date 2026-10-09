@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Power Button to .then()</title>
+<title>JavaScript Event Loop from Chrome&#x27;s Source: Tasks, Microtasks, Promises | Root to End</title>
+<meta name="description" content="How fetch().then() really runs in Chrome: the renderer thread, the line that starts the event loop, the kernel wait and V8&#x27;s microtask queue, plus a playground that steps through our own async code and checks it against real V8.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="../assets/root-kit.css">
@@ -173,6 +174,24 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 @keyframes pgpop{from{transform:translateY(-4px);opacity:0}to{transform:none;opacity:1}}
 .pgkind{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:2px}
 </style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="JavaScript Event Loop from Chrome&#x27;s Source: Tasks, Microtasks, Promises">
+<meta property="og:description" content="How fetch().then() really runs in Chrome: the renderer thread, the line that starts the event loop, the kernel wait and V8&#x27;s microtask queue, plus a playground that steps through our own async code and checks it against real V8.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/js-event-loop.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="JavaScript Event Loop from Chrome&#x27;s Source: Tasks, Microtasks, Promises">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="JavaScript Event Loop from Chrome&#x27;s Source: Tasks, Microtasks, Promises">
+<meta name="twitter:description" content="How fetch().then() really runs in Chrome: the renderer thread, the line that starts the event loop, the kernel wait and V8&#x27;s microtask queue, plus a playground that steps through our own async code and checks it against real V8.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/js-event-loop.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "JavaScript Event Loop from Chrome's Source: Tasks, Microtasks, Promises", "description": "How fetch().then() really runs in Chrome: the renderer thread, the line that starts the event loop, the kernel wait and V8's microtask queue, plus a playground that steps through our own async code and checks it against real V8.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "JavaScript event loop, microtasks, promises, async await, Chromium, V8", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
 </head>
 <body>
 
@@ -193,6 +212,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#react"><b>Where React fits</b>our useEffect</a></li>
     <li><a href="#node"><b>Node.js is different</b>uv_run</a></li>
     <li><a href="#try"><b>See it on our machine</b>quizzes, tools, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
     <li><a href="#reading"><b>Reading list</b>by depth</a></li>
   </ol>
   <div class="base">— bottom: CPU / kernel</div>
@@ -217,10 +237,18 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#trace" class="you">our callback</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#playground">Playground</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+    <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#playground">Playground</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
   <p class="muted" style="font-size:.86rem">Every excerpt below is copied from the current source of Chromium, V8, libuv or Node (fetched October 2026) and trimmed with <code>// …</code> where unrelated code was removed. File paths link to the originals at the bottom of the page. Highlighted lines are the ones the explanation hinges on.</p>
 </header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol><li><span>Our JavaScript runs on one OS thread, <code>CrRendererMain</code>, in the tab's renderer process. One piece of code runs at a time, to completion.</span></li><li><span>That thread loops forever: run <b>one task</b>, then run <b>every</b> microtask, then maybe render, then sleep in the kernel until something wakes it.</span></li><li><span>Timers, network replies and clicks arrive as <b>tasks</b>. Promise callbacks and the code after <code>await</code> run as <b>microtasks</b>.</span></li><li><span>So all pending microtasks run before the next task: <code>log(1); setTimeout(log 2); Promise.then(log 3); log(4)</code> prints <b>1 4 3 2</b>.</span></li></ol>
+  <figure><svg viewBox="0 0 360 214" role="img" aria-label="The event loop cycle: run one task, drain all microtasks, render if due, sleep until woken"><title>The event loop cycle: run one task, drain all microtasks, render if due, sleep until woken</title><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m" d="M0 0L10 5L0 10z"/></marker><marker id="ahh" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m hot" d="M0 0L10 5L0 10z"/></marker><marker id="ahb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path class="tl-head-m bad" d="M0 0L10 5L0 10z"/></marker></defs><rect class="tl-box hot" x="14" y="18" width="150" height="50" rx="8"/><text class="tl-t b" x="89" y="40" text-anchor="middle">1 · run ONE task</text><text class="tl-t s" x="89" y="54" text-anchor="middle">setTimeout, I/O, click</text><rect class="tl-box good" x="196" y="18" width="150" height="50" rx="8"/><text class="tl-t b" x="271" y="40" text-anchor="middle">2 · drain ALL</text><text class="tl-t s" x="271" y="54" text-anchor="middle">promise callbacks</text><rect class="tl-box " x="196" y="140" width="150" height="50" rx="8"/><text class="tl-t b" x="271" y="162" text-anchor="middle">3 · render if due</text><text class="tl-t s" x="271" y="176" text-anchor="middle">style, layout, paint</text><rect class="tl-box warm" x="14" y="140" width="150" height="50" rx="8"/><text class="tl-t b" x="89" y="162" text-anchor="middle">4 · sleep in kernel</text><text class="tl-t s" x="89" y="176" text-anchor="middle">until a task arrives</text><path class="tl-a hot" d="M164 43 H192" marker-end="url(#ahh)"/><path class="tl-a " d="M271 68 V136" marker-end="url(#ah)"/><path class="tl-a " d="M196 165 H168" marker-end="url(#ah)"/><path class="tl-a " d="M89 140 V72" marker-end="url(#ah)"/><path class="tl-a" d="M300 18 C 318 -4, 346 6, 334 20" marker-end="url(#ah)"/><text class="tl-t s" x="300" y="10" text-anchor="end">until empty</text></svg><figcaption>The loop in <code>MessagePumpDefault::Run</code>, as seen by our code</figcaption></figure>
+  <div class="tl-more">The rest of the page proves each sentence from source: the line that starts the loop (<a href="#renderermain">RendererMain</a>), the <a href="#loop"><code>for (;;)</code></a>, the <a href="#sleep">kernel wait</a>, and <a href="#v8">V8's microtask queue</a>. Or jump straight to the <a href="#playground">playground</a>.</div>
+</aside>
+
 
 <section id="os" data-deeper="ostep-api,silberschatz,tlpi">
   <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>The OS gives Chrome a process</h2></div>
@@ -565,6 +593,53 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li>Write <code>Promise.resolve().then(function loop(){ Promise.resolve().then(loop) })</code>. Predict what happens to the page, using the rule that a checkpoint drains until the ring buffer is empty. Then check with a <code>setTimeout</code> that never fires.</li>
     <li>Run the same <code>fetch().then()</code> in Node 18+ with <code>node -e</code>. Using <code>uv_run</code>, explain why the process exits on its own after printing.</li>
   </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions on the event loop. Write our answer on paper first, then open the model answer and mark ourselves honestly. The marks follow the usual pattern of university theory exams; they are not copied from any real paper.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="5" data-kind="Trace">
+      <div class="q">What does this print? For each line, say whether it ran in the script task, in a microtask, or in a later task.<pre>console.log(&quot;A&quot;);
+setTimeout(() =&gt; console.log(&quot;B&quot;), 0);
+Promise.resolve()
+  .then(() =&gt; { console.log(&quot;C&quot;); setTimeout(() =&gt; console.log(&quot;D&quot;), 0); })
+  .then(() =&gt; console.log(&quot;E&quot;));
+queueMicrotask(() =&gt; console.log(&quot;F&quot;));
+const g = async () =&gt; { console.log(&quot;G&quot;); await null; console.log(&quot;H&quot;); };
+g();
+console.log(&quot;I&quot;);</pre></div>
+      <div class="a"><p><b>Output:</b> <code>A G I C F H E B D</code> (checked in the playground model and in Node).</p><table><thead><tr><th>Line</th><th>Runs in</th><th>Why</th></tr></thead><tbody><tr><td>A, G, I</td><td>script task</td><td>An async function runs synchronously up to its first <code>await</code>, so G prints before I.</td></tr><tr><td>C</td><td>microtask 1</td><td>The promise is already fulfilled, so <code>.then</code> queues its callback at once.</td></tr><tr><td>F</td><td>microtask 2</td><td><code>queueMicrotask</code> runs after it in queue order.</td></tr><tr><td>H</td><td>microtask 3</td><td><code>await null</code> queued the rest of <code>g</code> third.</td></tr><tr><td>E</td><td>microtask 4</td><td>Queued only when C's callback returned and fulfilled the second promise, which happens after H was queued.</td></tr><tr><td>B</td><td>task</td><td>Timer registered during the script.</td></tr><tr><td>D</td><td>later task</td><td>Timer registered during C, so it is due after B.</td></tr></tbody></table><p class="rub">Marking: 1 for A G I, 2 for C F H E in that order, 1 for B before D, 1 for the reasons.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q">A button's click handler runs a loop that takes 3 seconds. Using the renderer's run loop, explain why the page cannot repaint or handle another click during those 3 seconds. Name one thing that may still work.</div>
+      <div class="a"><p>The click handler is one task. <code>DoWork</code> calls <code>RunTask</code>, and it does not return until our handler returns. The <code>for (;;)</code> in <code>MessagePumpDefault::Run</code> only picks the next task, runs the microtask checkpoint, or reaches a rendering opportunity <em>between</em> tasks, so for 3 seconds nothing else on <code>CrRendererMain</code> can run: no input tasks, no timers, no paint.</p><p>What may still work: scrolling of already painted content, because the <b>compositor thread</b> handles it off the main thread (unless a non-passive wheel or touch listener forces it to wait for the main thread). Input still reaches the renderer through <code>Chrome_ChildIOThread</code>; it simply queues until the task ends.</p><p class="rub">Marking: 2 for "one task runs to completion, the loop cannot interleave", 1 for naming where (RunTask / DoWork / the pump), 1 for the compositor.</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compare">
+      <div class="q">Distinguish a <b>task</b> from a <b>microtask</b>. Give two sources of each and state exactly when the microtask checkpoint runs.</div>
+      <div class="a"><p>A task is a unit the event loop picks one at a time from its task queues. A microtask is a job in V8's microtask queue; the queue is drained completely at each checkpoint, including microtasks queued during the drain.</p><p>Task sources: timer callbacks (<code>setTimeout</code>), network responses, user input events, <code>postMessage</code>. Microtask sources: promise reactions (<code>.then</code>, <code>.catch</code>), the continuation after <code>await</code>, <code>queueMicrotask</code>, <code>MutationObserver</code> callbacks.</p><p>The checkpoint runs after each task finishes (Chromium reaches it from <code>DidRunTask</code>), and also whenever the JavaScript stack empties after a callback, for example between two event listeners of one click.</p><p class="rub">Marking: 1 for the definitions, 1 for task sources, 1 for microtask sources, 1 for the timing.</p></div>
+    </div>
+    <div class="exq" data-marks="6" data-kind="Rewrite">
+      <div class="q">Rewrite this function using only <code>.then</code> (no <code>async</code>/<code>await</code>). Then describe what happens to <code>load</code>'s stack frame at the <code>await</code>, and what wakes it up again.<pre>async function load() {
+  console.log(&quot;start&quot;);
+  const r = await fetch(&quot;/a&quot;);
+  console.log(&quot;got&quot;, r.status);
+  return r.status;
+}</pre></div>
+      <div class="a"><pre>function load() {
+  console.log(&quot;start&quot;);
+  return fetch(&quot;/a&quot;).then(r =&gt; {
+    console.log(&quot;got&quot;, r.status);
+    return r.status;
+  });
+}</pre><p>At <code>await</code>, <code>load</code> returns its promise to the caller and its frame is popped off the call stack. V8 keeps the rest of the function in a suspended generator-like object and stores a <code>PromiseReaction</code> on the <code>fetch</code> promise; nothing is queued while the request is in flight.</p><p>The network process receives the response, sends it over Mojo to the renderer's IO thread, which posts a task to <code>CrRendererMain</code>. That task fulfills the fetch promise, <code>TriggerPromiseReactions</code> queues our continuation as a microtask, and at the checkpoint after that task <code>load</code> resumes with <code>r</code>.</p><p class="rub">Marking: 2 for a correct rewrite that returns the status, 2 for "frame popped, reaction stored, nothing queued", 2 for the wake chain (task fulfills promise, microtask resumes).</p></div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Short note">
+      <div class="q">Why does a Node.js script with one pending <code>setTimeout</code> stay alive and exit right after the timer fires, while a browser tab never exits on its own?</div>
+      <div class="a"><p>Node runs our script first and then calls <code>uv_run</code> in <code>SpinEventLoop</code>. <code>uv_run</code> loops only while <code>uv_loop_alive</code> reports active handles or requests. The pending timer is an active handle, so the loop sleeps in <code>epoll_wait</code> until it is due, runs it, finds nothing left alive, returns, and the process exits.</p><p>A renderer's loop is started by <code>run_loop.Run()</code> in <code>RendererMain</code> before any page script exists, and it only returns when the browser process tells the renderer to quit. An empty queue just means the thread sleeps waiting for the next task.</p><p class="rub">Marking: 2 for Node (uv_run, loop alive), 2 for the browser (run_loop.Run until told to quit).</p></div>
+    </div>
+  </div>
 </section>
 
 <section id="reading">

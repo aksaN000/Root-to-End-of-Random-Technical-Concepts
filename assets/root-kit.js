@@ -3,6 +3,8 @@
    - <section data-deeper="id1,id2">        appends a "Go deeper" strip at the end of the section
    - <div id="reading-list"></div>          filled with every reference used on the page, grouped by level
    - <div class="quiz"><script type="application/json">{...}</script></div>   predict-the-output quiz
+   - <div class="exq" data-marks="5"><div class="q">…</div><div class="a">…</div></div>   exam question, answer hidden
+   - every main section gets a "report a mistake" link; main gets a footer with issue links
    Requires assets/reading.js (window.ROOT_READING) to be loaded first. */
 (function () {
   "use strict";
@@ -111,6 +113,67 @@
     render();
   });
   function updateScores() { [].forEach.call(document.querySelectorAll(".quiz .score"), function (s) { s.textContent = scoreText(); }); }
+
+  /* 7. exam-style questions: answer hidden until asked, then self-marking */
+  var exqs = [].slice.call(document.querySelectorAll(".exq")), got = {}, totalMarks = 0;
+  var tallyEls = [].slice.call(document.querySelectorAll(".exam-bar .tally"));
+  function tally() {
+    var sum = 0, done = 0;
+    Object.keys(got).forEach(function (k) { sum += got[k]; done++; });
+    tallyEls.forEach(function (t) { t.textContent = done ? "Self-marked " + done + " of " + exqs.length + " · " + (Math.round(sum * 2) / 2) + " / " + totalMarks + " marks" : exqs.length + " questions · " + totalMarks + " marks"; });
+  }
+  exqs.forEach(function (q, idx) {
+    var marks = +q.getAttribute("data-marks") || 0; totalMarks += marks;
+    var a = q.querySelector(".a"); if (!a) return;
+    a.hidden = true;
+    var head = document.createElement("div"); head.className = "eh";
+    head.innerHTML = "<span>Question " + (idx + 1) + (q.getAttribute("data-kind") ? " · " + esc(q.getAttribute("data-kind")) : "") + '</span><span class="mk">' + marks + " mark" + (marks === 1 ? "" : "s") + "</span>";
+    q.insertBefore(head, q.firstChild);
+    var btns = document.createElement("div"); btns.className = "btns";
+    btns.innerHTML = '<button type="button" class="show">Show model answer</button>';
+    q.insertBefore(btns, a);
+    btns.querySelector(".show").addEventListener("click", function () {
+      a.hidden = !a.hidden;
+      this.textContent = a.hidden ? "Show model answer" : "Hide model answer";
+      if (!a.hidden && !btns.querySelector(".self")) {
+        var self = document.createElement("span"); self.className = "self";
+        self.innerHTML = '<span class="lbl">How did we do?</span> <button type="button" data-f="1">Full marks</button> <button type="button" data-f="0.5">Partly</button> <button type="button" data-f="0">Missed it</button>';
+        btns.appendChild(self);
+        [].forEach.call(self.querySelectorAll("button"), function (b) {
+          b.addEventListener("click", function () {
+            [].forEach.call(self.querySelectorAll("button"), function (x) { x.classList.toggle("on", x === b); });
+            got[idx] = marks * +b.getAttribute("data-f"); tally();
+          });
+        });
+      }
+    });
+  });
+  tally();
+
+  /* 8. report-a-mistake links */
+  var REPO = "https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts";
+  var pageUrl = location.href.split("#")[0];
+  var pageTitle = (document.querySelector("h1") || {}).textContent || document.title;
+  function issueUrl(where, anchor) {
+    var body = "Page: " + pageUrl + (anchor ? "#" + anchor : "") + "\nSection: " + where + "\n\nWhat is wrong or unclear:\n\n\nWhat it should say (if you know):\n";
+    return REPO + "/issues/new?labels=" + encodeURIComponent("content") + "&title=" + encodeURIComponent("[" + document.title + "] " + where) + "&body=" + encodeURIComponent(body);
+  }
+  [].slice.call(document.querySelectorAll("main section[id]")).forEach(function (sec) {
+    if (/^(reading|sources)$/.test(sec.id)) return;
+    var h = sec.querySelector("h2"); if (!h) return;
+    var a = document.createElement("a");
+    a.className = "rk-report"; a.target = "_blank"; a.rel = "noopener";
+    a.href = issueUrl(h.textContent.trim(), sec.id);
+    a.textContent = "Something wrong or unclear in this section? Tell us →";
+    var strip = sec.querySelector(":scope > .deeper");
+    (strip || sec).appendChild(a);
+  });
+  var main = document.querySelector("main");
+  if (main && !document.querySelector(".rk-foot")) {
+    var f = document.createElement("footer"); f.className = "rk-foot";
+    f.innerHTML = '<span>Found a mistake, or still confused after reading?</span><a href="' + esc(issueUrl("General", "")) + '" target="_blank" rel="noopener">Report it on GitHub</a><a href="' + REPO + '/issues/new?labels=topic-request&title=' + encodeURIComponent("Topic request: ") + '" target="_blank" rel="noopener">Suggest a topic</a><a href="../">All topics</a>';
+    main.appendChild(f);
+  }
 
   /* 6. reading progress bar */
   var bar = document.createElement("div");
