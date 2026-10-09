@@ -130,7 +130,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
     <div class="starts">
       <a href="js-event-loop/"><b>We are learning JavaScript</b><span>Start with the event loop: why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8. Then V8 and the Browser track.</span></a>
       <a href="lr-parser/"><b>We are taking a compilers course</b><span>Start with LR parsing (grammar to SLR table to parse tree), then follow a real compiler in V8: scanner, parser, bytecode, JIT.</span></a>
-      <a href="fetch-to-the-wire/"><b>We want to know what the browser does</b><span>The Browser track: one <code>fetch()</code> down to the bytes on the wire, then HTML bytes up to pixels.</span></a>
+      <a href="fetch-to-the-wire/"><b>We want to know what the browser does</b><span>The Browser track: one <code>fetch()</code> down to the bytes on the wire, HTML bytes up to pixels, then a click back down to our listener.</span></a>
     </div>
   </section>
 
@@ -219,15 +219,27 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="click-to-listener/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>From a click to our listener</h3>
+        <p>One mouse press from the USB report and the Linux kernel through Chrome's browser process, compositor and main thread, the hit test that picks the element, and capture-target-bubble dispatch into our listener. Click a stage of boxes and a set of listeners for real: the hit-test model matches Chrome at 40,320 points and the dispatch model on 1,609 programs, including where the microtasks run.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>input_event</span><i>→</i><span>browser process</span><i>→</i><span>compositor</span><i>→</i><span>hit test</span><i>→</i><span>dispatch</span><i>→</i><span class="you">our listener</span>
+        </div>
+        <div class="meta"><span class="tag">Browser track 3/3</span><span class="tag">DOM events</span><span class="tag">input</span><span class="tag">Chromium</span><span class="tag">About 20 min</span></div>
+        <p class="need">Needs: basic DOM events. The event-loop page explains the microtask part.</p>
+      </div>
+      <span class="go">Open →</span>
+    </a>
   </section>
 
   <section>
     <h2>Browser track</h2>
-    <p class="maplede">Three pages that follow one interaction through the browser, each picking up where the last one stops. They connect to the event-loop page, which shows when each piece of our JavaScript gets to run.</p>
+    <p class="maplede">Three pages that follow one page through the browser, each picking up where the last one stops: the request goes out, the response becomes pixels, and a click on those pixels comes back to our code. They connect to the event-loop page, which shows when each piece of our JavaScript gets to run.</p>
     <nav class="map" aria-label="Browser track">
       <a href="fetch-to-the-wire/">1 · fetch() → the wire → our promise<small>live</small></a><i>→</i>
       <a href="html-to-pixels/">2 · HTML bytes → DOM → pixels<small>live</small></a><i>→</i>
-      <span class="soon">3 · a click → hit test → our listener<small>next</small></span>
+      <a href="click-to-listener/">3 · a click → hit test → our listener<small>live</small></a>
     </nav>
   </section>
 

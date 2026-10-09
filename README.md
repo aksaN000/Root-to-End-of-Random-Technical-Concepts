@@ -13,17 +13,17 @@ Interactive simulations I build while learning computer science, each one tracin
 | [LR parser we can step through](lr-parser/) | Any grammar → FIRST/FOLLOW → LR(0) item sets → SLR table → step-by-step parse with a growing tree, then real GNU Bison: `yyparse`, default reductions, the dangling-else conflict, and why LALR beats SLR | [lr-parser/index.html](lr-parser/index.html) |
 | [What fetch() really sends](fetch-to-the-wire/) | Browser track 1/3: one `fetch()` through real Chromium (Blink, network service, DNS, TCP, post-quantum TLS 1.3, HTTP/1.1, CORS), with captured bytes, a NetLog replay, and a CORS model that matches Chrome on 2,880 cases (`fetch-to-the-wire/verify/`) | [fetch-to-the-wire/index.html](fetch-to-the-wire/index.html) |
 | [From HTML bytes to pixels](html-to-pixels/) | Browser track 2/3: Blink's tokenizer and tree builder stepped on any HTML (model matches Chrome on 8,929 distinct inputs, `html-to-pixels/verify/`), then real traces of style, layout, paint and compositing for color, width, transform and forced-layout changes | [html-to-pixels/index.html](html-to-pixels/index.html) |
+| [From a click to our listener](click-to-listener/) | Browser track 3/3: one mouse press from the USB report and the kernel's `input_event` through Chrome's browser process, compositor and main thread, hit testing (model matches Chrome's `elementFromPoint` at 40,320 points) and DOM dispatch (model matches Chrome on 1,609 programs, including where microtasks run), with a real trace of the whole trip | [click-to-listener/index.html](click-to-listener/index.html) |
 | [Threads vs event loop](threads-vs-event-loop/) | Multi-threading vs event-driven concurrency from the kernel's `schedule()` through glibc `clone` flags, `context_switch`, futex mutexes and `epoll`, with a race stepper and a one-core timeline simulator (CSE321 Assignment 01 companion) | [threads-vs-event-loop/index.html](threads-vs-event-loop/index.html) |
 
 ## Roadmap
 
 Planned, roughly in order. New topics come at our own pace; [suggest one](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml).
 
-1. **Browser track 3/3: from a click to our listener.** Input events from the OS to the browser process, hit testing, event dispatch through the DOM, and how our handler gets to run.
-2. **`hello.c` to `main`.** Compiler, linker, the ELF file, `execve`, the dynamic loader and `_start`.
-3. **`malloc` to a page fault.** glibc's allocator, `brk` and `mmap`, page tables and the kernel's fault handler.
-4. **Containers.** Namespaces, cgroups and what `docker run` actually asks the kernel for.
-5. **Autograd.** A computation graph and backpropagation, from the chain rule to a real framework's source.
+1. **`hello.c` to `main`.** Compiler, linker, the ELF file, `execve`, the dynamic loader and `_start`.
+2. **`malloc` to a page fault.** glibc's allocator, `brk` and `mmap`, page tables and the kernel's fault handler.
+3. **Containers.** Namespaces, cgroups and what `docker run` actually asks the kernel for.
+4. **Autograd.** A computation graph and backpropagation, from the chain rule to a real framework's source.
 
 ## How to view
 

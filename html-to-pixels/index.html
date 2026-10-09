@@ -197,7 +197,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="journey" aria-label="Stages this page follows">
     <a class="st-parse" href="#tokens">bytes → tokens</a><i>→</i><a class="st-parse" href="#tree">DOM</a><i>→</i><a class="st-style" href="#lifecycle">style</a><i>→</i><a class="st-layout" href="#lifecycle">layout</a><i>→</i><a class="st-paint" href="#compose">paint</a><i>→</i><a class="st-comp" href="#compose">composite → pixels</a>
   </div>
-  <p style="font-size:.9rem;margin:0">Browser track: <a href="../fetch-to-the-wire/">← 1 · What fetch() really sends</a> · <b>2 · From HTML bytes to pixels</b> · next: 3 · From a click to our listener (coming next)</p>
+  <p style="font-size:.9rem;margin:0">Browser track: <a href="../fetch-to-the-wire/">← 1 · What fetch() really sends</a> · <b>2 · From HTML bytes to pixels</b> · next: <a href="../click-to-listener/">3 · From a click to our listener →</a></p>
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#tokens">Tokens</a><a href="#lab">Parser lab</a><a href="#tree">DOM</a><a href="#lifecycle">Lifecycle</a><a href="#cost">Cost</a><a href="#forced">Forced layout</a><a href="#compose">Composite</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
@@ -710,7 +710,7 @@ void HTMLTreeBuilder::ProcessFakePEndTagIfPInButtonScope() {
     Lifecycle().AdvanceTo(DocumentLifecycle::kLayoutClean);
   // …</script>
 
-<script src="../assets/reading.js?v=8a4f638d"></script>
+<script src="../assets/reading.js?v=c7d4c5c6"></script>
 <script src="html-model.js?v=f372f311"></script>
 <script src="pipeline.js?v=7d461d82"></script>
 <script>

@@ -6,12 +6,13 @@ Every page makes claims about real systems: what V8 emits, what Chrome parses, h
 
 Open the site: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/
 
-Two pages check themselves against **your** browser while you use them:
+Three pages check themselves against **your** browser while you use them:
 
 | Page | What to do | What it proves |
 |---|---|---|
 | [Event loop](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/#playground) | Write any code in the playground (or pick an example) and wait a second | The bar under the playground runs the same code in a Web Worker with your browser's real JavaScript engine and says whether the output matches the model |
 | [HTML to pixels](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/#lab) | Type any HTML in the parser lab and press **Check against this browser** | Your browser's own HTML parser builds the tree, and the page compares it with the model's tree |
+| [Click to listener](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/#hitlab) | Click the hit-test stage; in the dispatch lab press **Check in this browser** and, for a "by user" program, click the dashed box | Your browser's `elementFromPoint` and your browser's real event dispatch, compared with the models |
 
 Try to break them. Odd inputs are the most useful: misnested tags, unusual entities, chains of `await`.
 
@@ -54,9 +55,11 @@ PASS Event-loop playground vs Node
 PASS DNS/TLS byte dissectors vs scapy
 PASS CORS model vs real Chromium (2,880 cases)
 PASS HTML parser model vs real Chrome
+PASS Event-dispatch model vs real Chromium (real clicks and script dispatches)
+PASS Hit-test model vs Chromium's elementFromPoint
 PASS Every page loads cleanly (desktop and phone width)
 
-7 passed, 0 failed, 0 skipped
+9 passed, 0 failed, 0 skipped
 ```
 
 Other commands:
@@ -64,7 +67,7 @@ Other commands:
 | Command | What it does |
 |---|---|
 | `npm run test:quick` | Same checks with fewer random cases (does not overwrite the saved results) |
-| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html pages`) |
+| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit pages`) |
 | `npm run test:pages` | Only the page checks, on your local copy |
 | `npm run test:live` | The page checks against the published site |
 | `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
@@ -79,6 +82,8 @@ Other commands:
 | Packet dissectors | `fetch-to-the-wire/wire-model.js` | scapy parsing the same captured DNS and TLS bytes | `fetch-to-the-wire/verify/check-dissectors.py` |
 | CORS | `fetch-to-the-wire/wire-model.js` | Real Chromium: 2,880 combinations of request and server policy, recording whether a preflight was sent and whether `fetch()` succeeded | `fetch-to-the-wire/verify/cors-matrix.js` |
 | HTML parsing | `html-to-pixels/html-model.js` | Real Chrome's `DOMParser` on hand-picked and random HTML (four seeded batches, duplicates removed), compared tree by tree | `html-to-pixels/verify/compare-with-chrome.js [count] [seed]` or `[count:seed …]` |
+| Event dispatch | `click-to-listener/dispatch-model.js` | Real Chromium with real listeners on the lab presets and 1,600 seeded random programs; half are clicked for real through the browser's input path, half dispatched from script. Listener order, phases, microtask placement and `defaultPrevented` | `click-to-listener/verify/compare-dispatch.js [count] [seed]` |
+| Hit testing | `click-to-listener/hit-model.js` | `document.elementFromPoint` at 40 points in each of 1,008 scenes | `click-to-listener/verify/compare-hit-test.js [count] [seed]` |
 | Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes, and axe-core (WCAG 2.2 A/AA) in light and dark mode | `tools/check-pages.js [--live] [--browser=…]` |
 
 ### Results and failures

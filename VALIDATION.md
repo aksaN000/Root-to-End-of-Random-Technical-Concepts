@@ -14,7 +14,9 @@ To rerun everything: `npm test` (setup in [TESTING.md](TESTING.md)). When a chec
 | [DNS and TLS byte dissectors](#dns-and-tls-byte-dissectors) | scapy 2.8.0 (Python 3.13.16) | 18 | ✅ 18 / 18 match | 2026-10-09 |
 | [CORS decision model](#cors-decision-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 2,880 | ✅ 2,880 / 2,880 match | 2026-10-09 |
 | [HTML parser model](#html-parser-model) | Chrome 141.0.7390.37 DOMParser | 8,929 | ✅ 8,929 / 8,929 match | 2026-10-09 |
-| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 14 | ✅ 14 / 14 match | 2026-10-09 |
+| [Event dispatch model](#event-dispatch-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 1,609 | ✅ 1,609 / 1,609 match | 2026-10-09 |
+| [Hit-test model](#hit-test-model) | Chromium 141.0.7390.37 document.elementFromPoint | 40,320 | ✅ 40,320 / 40,320 match | 2026-10-09 |
+| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 16 | ✅ 16 / 16 match | 2026-10-09 |
 
 ## V8 bytecode model
 
@@ -119,6 +121,28 @@ ok   NetLog says the same cipher
 - **Random batches:** 1,000 with seed 7, 3,000 with seed 2026, 3,000 with seed 99, 2,000 with seed 4242, plus 61 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd html-to-pixels && node verify/compare-with-chrome.js 1000:7 3000:2026 3000:99 2000:4242`
 
+## Event dispatch model
+
+- **Our code:** `click-to-listener/dispatch-model.js`: the DOM standard's dispatch as Blink's `EventDispatcher` and `FireEventListeners` run it, including where V8's microtask checkpoint falls (page: [click-to-listener](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/))
+- **Reference:** Chromium 141.0.7390.37 (Playwright 1.56.0)
+- **Method:** The lab's presets and random programs (a tree, listeners with capture/once/passive and actions such as stopPropagation, preventDefault, queueing a microtask, adding or removing listeners mid-dispatch, and one dispatch) run in the model and in real Chromium with real listeners (`click-to-listener/dispatch-real.js`). "By user" programs are clicked with Playwright's mouse, which enters Chrome at the browser process; "by script" programs call `dispatchEvent` from a script.
+- **What "match" means:** The full log is identical: which listeners ran, in what order, with which `eventPhase` and `currentTarget`, where each microtask ran, and the final `defaultPrevented`.
+- **Not covered:** Shadow DOM and retargeting, `relatedTarget`, default actions, listeners that throw, `handleEvent` objects, `AbortSignal`, and the other events a real click fires (pointerdown, mousedown, …), which the programs do not listen to.
+- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 1,609 of 1,609. 799 real clicks through the browser's input path and 810 script dispatches.
+- **Random batches:** 400 with seed 7, 400 with seed 2026, 400 with seed 99, 400 with seed 4242, plus 10 hand-picked cases. The same seeds always generate the same inputs.
+- **Command:** `cd click-to-listener && node verify/compare-dispatch.js`
+
+## Hit-test model
+
+- **Our code:** `click-to-listener/hit-model.js`: the CSS painting order for positioned boxes, walked backwards, with stacking contexts, overflow clipping and inherited `pointer-events` and `visibility` (page: [click-to-listener](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/))
+- **Reference:** Chromium 141.0.7390.37 document.elementFromPoint
+- **Method:** The lab's presets and random scenes are drawn exactly as the lab draws them, and the model's answer is compared with `document.elementFromPoint` at 40 whole-pixel points per scene.
+- **What "match" means:** The same element (by id) at every point, or both say the stage.
+- **Not covered:** Transforms, opacity, filters and other stacking-context triggers, in-flow content and text, rounded corners, scrollbars, iframes, and fractional points.
+- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 40,320 of 40,320. 1008 distinct scenes (8 presets + 1000 random), 40 points each; 1008 scenes match at every point.
+- **Random batches:** 250 with seed 7, 250 with seed 2026, 250 with seed 99, 250 with seed 4242, plus 8 hand-picked cases. The same seeds always generate the same inputs.
+- **Command:** `cd click-to-listener && node verify/compare-hit-test.js`
+
 ## Pages in a real browser
 
 - **Our code:** Every page of the site
@@ -126,7 +150,7 @@ ok   NetLog says the same cipher
 - **Method:** Each page is loaded in real Chromium at 1300 px and 390 px wide. The check fails on script errors, failed requests, sideways scrolling, missing components, quizzes or exam answers that do not respond, stale asset hashes, and accessibility violations found by axe-core in light and dark mode.
 - **What "match" means:** Zero problems on every page at both widths.
 - **Not covered:** Real phones with touch input, screen-reader testing by people, and whether the explanations are clear.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 14 of 14. 7 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
+- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 16 of 16. 8 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
 
 <details><summary>Per page</summary>
 
@@ -134,6 +158,8 @@ ok   NetLog says the same cipher
 |---|---|---|---|
 | home | 1300 px | 0 | 0 |
 | home | 390 px | 0 | 0 |
+| click-to-listener | 1300 px | 0 | 0 |
+| click-to-listener | 390 px | 0 | 0 |
 | fetch-to-the-wire | 1300 px | 0 | 0 |
 | fetch-to-the-wire | 390 px | 0 | 0 |
 | html-to-pixels | 1300 px | 0 | 0 |

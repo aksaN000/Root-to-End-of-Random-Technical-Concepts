@@ -1,0 +1,32 @@
+{
+ "id": "hit-test",
+ "date": "2026-10-09T09:32:59.195Z",
+ "platform": "linux 6.18.44-fc-v80 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "Chromium 141.0.7390.37 document.elementFromPoint",
+ "cases": 40320,
+ "matched": 40320,
+ "passed": true,
+ "handPicked": 8,
+ "seeds": [
+  {
+   "count": 250,
+   "seed": 7
+  },
+  {
+   "count": 250,
+   "seed": 2026
+  },
+  {
+   "count": 250,
+   "seed": 99
+  },
+  {
+   "count": 250,
+   "seed": 4242
+  }
+ ],
+ "detail": "1008 distinct scenes (8 presets + 1000 random), 40 points each; 1008 scenes match at every point",
+ "failureCount": 0
+}

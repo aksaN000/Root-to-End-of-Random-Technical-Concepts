@@ -1,0 +1,27 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>click</title>
+<style>
+body{margin:0;font:16px sans-serif}
+#card{position:absolute;left:40px;top:40px;width:320px;height:160px;background:#eef}
+#btn{position:absolute;left:40px;top:40px;width:120px;height:40px}
+#a,#b{position:absolute;top:110px;width:100px;height:30px;background:#dde}
+#a{left:20px}#b{left:180px}
+</style></head>
+<body>
+<div id="card"><button id="btn">Save</button><span id="a">A</span><span id="b">B</span></div>
+<script>
+// Every listener logs "type phase currentTarget"; click listeners also queue a microtask,
+// so the log shows whether microtasks ran between listeners.
+window.LOG = [];
+const PH = ["none", "capture", "target", "bubble"];
+const name = t => t === window ? "window" : t === document ? "document" : t.id ? "#" + t.id : t.nodeName.toLowerCase();
+for (const target of [window, document, document.body, document.getElementById("card"), document.getElementById("btn"), document.getElementById("a"), document.getElementById("b")])
+  for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"])
+    for (const capture of [true, false])
+      target.addEventListener(type, e => {
+        const who = name(e.currentTarget); // read now: currentTarget is null once dispatch is over
+        LOG.push(type + " " + PH[e.eventPhase] + " " + who + (capture ? " (capture listener)" : ""));
+        if (type === "click") Promise.resolve().then(() => LOG.push("  microtask queued by " + who + (capture ? " capture" : "")));
+      }, capture);
+</script>
+</body></html>

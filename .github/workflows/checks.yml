@@ -1,6 +1,6 @@
 # Reruns the verifications on every push and every night, so a claim on the site cannot silently go stale.
 # fast:    the checks that need no browser (V8 bytecode, LR + Bison, event loop, packet dissectors)
-# browser: the checks that drive real Chromium (CORS matrix, HTML parser, every page incl. axe-core)
+# browser: the checks that drive real Chromium (CORS matrix, HTML parser, event dispatch, hit testing, every page incl. axe-core)
 # Versions are pinned: Node 22.22.0 (V8 12.4, which the bytecode check needs), Playwright 1.56.0
 # (Chromium 141), axe-core 4.13.0, scapy 2.8.0 with cryptography 50.0.1. Random checks use fixed seeds, so every run tests the same inputs.
 # When anything fails, the failing inputs (validation/failures/) and the results are uploaded as an artifact.
@@ -45,7 +45,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: node tools/run-all-checks.js --only=cors,html,pages
+      - run: node tools/run-all-checks.js --only=cors,html,dispatch,hit,pages
       - if: always()
         uses: actions/upload-artifact@v5
         with:

@@ -1,0 +1,93 @@
+[
+ {
+  "slug": "home",
+  "h": "Root to End",
+  "sub": "CS concepts traced from the kernel up to our code",
+  "chain": [
+   "event loop",
+   "V8",
+   "LR parsing",
+   "threads"
+  ]
+ },
+ {
+  "slug": "js-event-loop",
+  "h": "From the power button to .then()",
+  "sub": "The JavaScript event loop, traced through Chromium and V8",
+  "chain": [
+   "RendererMain",
+   "MessagePumpDefault",
+   "microtasks",
+   "our callback"
+  ]
+ },
+ {
+  "slug": "threads-vs-event-loop",
+  "h": "One core, two ways to wait",
+  "sub": "Threads vs the event loop, traced through Linux and glibc",
+  "chain": [
+   "schedule()",
+   "clone",
+   "futex",
+   "epoll_wait"
+  ]
+ },
+ {
+  "slug": "v8-pipeline",
+  "h": "How V8 turns a + b into machine code",
+  "sub": "V8's pipeline, from scanner to TurboFan and back",
+  "chain": [
+   "scanner",
+   "Ignition",
+   "feedback",
+   "TurboFan"
+  ]
+ },
+ {
+  "slug": "fetch-to-the-wire",
+  "h": "What fetch() really sends",
+  "sub": "DNS, TCP, TLS 1.3, HTTP and CORS, captured from real Chrome",
+  "chain": [
+   "DNS",
+   "TCP",
+   "TLS 1.3",
+   "HTTP",
+   "CORS"
+  ]
+ },
+ {
+  "slug": "html-to-pixels",
+  "h": "From HTML bytes to pixels",
+  "sub": "The HTML parser, the DOM, and the rendering lifecycle in Chrome",
+  "chain": [
+   "tokenizer",
+   "tree builder",
+   "style",
+   "layout",
+   "paint"
+  ]
+ },
+ {
+  "slug": "lr-parser",
+  "h": "Shift, reduce, accept",
+  "sub": "LR parsing from grammar to parse tree, with real Bison",
+  "chain": [
+   "FIRST/FOLLOW",
+   "LR(0) items",
+   "SLR table",
+   "yyparse()"
+  ]
+ },
+ {
+  "slug": "click-to-listener",
+  "h": "From a click to our listener",
+  "sub": "Input, hit testing and event dispatch, traced through Linux and Chrome",
+  "chain": [
+   "kernel",
+   "browser",
+   "hit test",
+   "dispatch",
+   "our listener"
+  ]
+ }
+]

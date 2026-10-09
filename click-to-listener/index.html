@@ -1,0 +1,1040 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome | Root to End</title>
+<meta name="description" content="One mouse click traced from the USB report and the kernel through Chrome&#x27;s browser process, compositor and main thread, hit testing and DOM event dispatch to our listener, with models checked against Chrome.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
+<style>
+/* Layout: the shared source-trace grid. Signature elements: a hit-test stage we can click for real, and a dispatch lab whose user programs we can also click for real. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --s-k:#9a5a00; --s-k-bg:#fff0d4; --s-b:#6d3fc4; --s-b-bg:#ece5fb; --s-c:#0b6b65; --s-c-bg:#dcf2ef; --s-m:#2445d0; --s-m-bg:#e3e8fb; --s-j:#1b7a4b; --s-j-bg:#dff3e8;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.7rem);font-weight:800;letter-spacing:-.02em}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+.journey{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.76rem}
+.journey a{text-decoration:none;border:1px solid var(--c);border-radius:6px;padding:3px 9px;color:var(--c);background:var(--cb)}
+.journey i{font-style:normal;color:var(--muted)}
+.st-k{--c:var(--s-k);--cb:var(--s-k-bg)}.st-b{--c:var(--s-b);--cb:var(--s-b-bg)}.st-c{--c:var(--s-c);--cb:var(--s-c-bg)}.st-m{--c:var(--s-m);--cb:var(--s-m-bg)}.st-j{--c:var(--s-j);--cb:var(--s-j-bg)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button,select,textarea,input{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill:empty{display:none}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.bytes{font-family:var(--mono);font-size:.8rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:6px}
+.bytes div{border:1px solid var(--rule);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.bytes b{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.bytes .hot{border-color:var(--s-k);background:var(--s-k-bg)}
+
+/* labs */
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:4px 9px}
+.lab textarea{width:100%;min-height:7em;font-family:var(--mono);font-size:.86rem;line-height:1.55;resize:vertical;background:var(--code)}
+.labgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.labgrid{grid-template-columns:1fr}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-width:0;background:var(--bg)}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.err{font-size:.88rem;color:var(--bad);min-height:1.2em}
+.chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.chip{font-family:var(--mono);font-size:.76rem;padding:2px 8px;border-radius:5px;background:var(--code);border:1px solid transparent}
+.chip.hit{background:var(--accent);color:var(--surface)}
+.chip.ran{border-color:var(--s-j);color:var(--s-j)}
+.chips i{font-style:normal;color:var(--muted);font-size:.76rem}
+.walk{margin:0;padding-left:1.3em;font-family:var(--mono);font-size:.78rem;display:flex;flex-direction:column;gap:2px}
+.walk .h{color:var(--ok);font-weight:600}
+.walk .s{color:var(--muted)}
+.stagewrap{position:relative;overflow:auto;border-radius:8px;max-width:100%}
+.stagewrap #stage{cursor:crosshair}
+.mark{position:absolute;width:15px;height:15px;margin:-7px 0 0 -7px;border:2px solid #141a22;border-radius:50%;box-shadow:0 0 0 2px #fff;pointer-events:none;display:none}
+.xy{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.84rem}
+.xy input{width:5.5em;font-family:var(--mono)}
+.out{font-size:.92rem}
+.loglist{list-style:none;margin:0;padding:0;font-family:var(--mono);font-size:.8rem;display:flex;flex-direction:column;gap:2px}
+.loglist li{padding:2px 8px;border-radius:5px;border-left:3px solid var(--rule)}
+.loglist li.capture{border-left-color:var(--s-b)}.loglist li.target{border-left-color:var(--s-m);background:var(--accent-soft)}.loglist li.bubble{border-left-color:var(--s-c)}
+.loglist li.micro{border-left-color:var(--s-j);color:var(--s-j);margin-left:18px}
+.loglist li .n{color:var(--muted);display:inline-block;min-width:2.2em}
+.steps{margin:0;padding-left:1.2em;font-size:.84rem;display:flex;flex-direction:column;gap:3px}
+.steps .micro{color:var(--s-j)}.steps .skip,.steps .note{color:var(--trace)}
+.realbox{border:1px dashed var(--rule);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.realbox iframe{width:100%;height:210px;border:1px solid var(--rule);border-radius:8px;background:#fff}
+/* trace */
+.lanes{display:flex;flex-wrap:wrap;gap:8px;font-size:.8rem}
+.lanes span{display:inline-flex;align-items:center;gap:6px}
+.lanes i{width:12px;height:12px;border-radius:3px;display:inline-block;background:var(--c)}
+.evrows{border:1px solid var(--rule);border-radius:8px;max-height:26em;overflow:auto;background:var(--bg)}
+.evrows table td{font-family:var(--mono);font-size:.74rem;padding:3px 8px;vertical-align:top}
+.evrows td:nth-child(1){white-space:nowrap;text-align:right}
+.evrows td:nth-child(2),.evrows td:nth-child(4){white-space:nowrap}
+.evrows tr td:nth-child(2){color:var(--c);font-weight:600}
+.evrows tr.big td{background:var(--accent-soft)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome">
+<meta property="og:description" content="One mouse click traced from the USB report and the kernel through Chrome&#x27;s browser process, compositor and main thread, hit testing and DOM event dispatch to our listener, with models checked against Chrome.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/click-to-listener.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome">
+<meta name="twitter:description" content="One mouse click traced from the USB report and the kernel through Chrome&#x27;s browser process, compositor and main thread, hit testing and DOM event dispatch to our listener, with models checked against Chrome.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/click-to-listener.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome", "description": "One mouse click traced from the USB report and the kernel through Chrome's browser process, compositor and main thread, hit testing and DOM event dispatch to our listener, with models checked against Chrome.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "DOM events, event bubbling, event capturing, hit testing, z-index, stacking context, microtasks, input pipeline, Chrome", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Click to listener</span><span>top = our code</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#wire"><b>The mouse and the kernel</b>USB report, evdev</a></li>
+    <li><a href="#browser"><b>The browser process</b>route, send, wait for the ack</a></li>
+    <li><a href="#renderer"><b>Compositor, then main thread</b>which events wait for a frame</a></li>
+    <li><a href="#hittest"><b>Hit testing</b>paint order, backwards</a></li>
+    <li><a href="#hitlab"><b>Hit-test lab</b>click the stage</a></li>
+    <li><a href="#events"><b>One press, one release</b>pointer, mouse, click</a></li>
+    <li><a href="#dispatch"><b>Event dispatch</b>capture, target, bubble</a></li>
+    <li><a href="#displab"><b>Dispatch lab</b>listeners, step by step</a></li>
+    <li><a href="#listener"><b>Into our listener</b>and the microtasks after it</a></li>
+    <li><a href="#trace"><b>The whole trip</b>a real trace</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes, tools, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
+  </ol>
+  <div class="base">— bottom: a button closes a circuit</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Browser track · 3 of 3 · dispatch checked against Chrome 141 on 1,609 programs, hit testing on 40,320 points</span>
+  <h1>From a click to our listener</h1>
+  <p class="lede">The <a href="../html-to-pixels/">previous page</a> turned HTML into pixels. Now someone clicks those pixels. We follow one press of a mouse button from the USB report and the Linux kernel, through Chrome's browser process, the renderer's compositor and main threads, the hit test that decides which element was under the pointer, and the DOM's capture-target-bubble dispatch, into our <code>addEventListener</code> callback, and then into the microtasks that run right after it.</p>
+  <div class="journey" aria-label="Layers this page follows">
+    <a class="st-k" href="#wire">kernel</a><i>→</i><a class="st-b" href="#browser">browser process</a><i>→</i><a class="st-c" href="#renderer">compositor thread</a><i>→</i><a class="st-m" href="#hittest">main thread: hit test</a><i>→</i><a class="st-m" href="#dispatch">dispatch</a><i>→</i><a class="st-j" href="#listener">our listener</a>
+  </div>
+  <p style="font-size:.9rem;margin:0">Browser track: <a href="../fetch-to-the-wire/">1 · What fetch() really sends</a> · <a href="../html-to-pixels/">2 · From HTML bytes to pixels</a> · <b>3 · From a click to our listener</b></p>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#wire">Kernel</a><a href="#browser">Browser</a><a href="#renderer">Renderer</a><a href="#hittest">Hit test</a><a href="#hitlab">Hit lab</a><a href="#events">Events</a><a href="#dispatch">Dispatch</a><a href="#displab">Dispatch lab</a><a href="#listener">Listener</a><a href="#trace">Trace</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">How this was checked: the dispatch model gives the same listener order, phases, microtask placement and <code>defaultPrevented</code> as Chrome 141 on 1,609 distinct programs (799 of them clicked for real through the browser's input path), and the hit-test model picks the same element as Chrome's <code>elementFromPoint</code> at 40,320 points in 1,008 scenes. The trace and the listener logs are real captures from headless Chromium 141; they are in the folder's <code>data/</code> directory with the script that made them. Chromium excerpts are from upstream (October 2026) and Linux excerpts from the mainline kernel, trimmed with <code>// …</code>.</p>
+</header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol>
+    <li><span>The mouse sends a few bytes; the kernel turns the button bit into a 24-byte <code>input_event</code> (<code>EV_KEY</code>, <code>BTN_LEFT</code>, value 1). The window system passes it to Chrome's <b>browser process</b>, which picks the renderer for that spot and sends it a <code>WebMouseEvent</code> over Mojo, then <b>waits for an acknowledgement</b>.</span></li>
+    <li><span>In the renderer, the <b>compositor thread</b> receives it first. A press or release is queued for the <b>main thread</b> at once; mouse moves wait to be batched with the next frame.</span></li>
+    <li><span>On the main thread, <b>hit testing</b> walks the painting order backwards and stops at the first box under the pointer that accepts pointer events. One press gives <code>pointerdown</code> and <code>mousedown</code>; one release gives <code>pointerup</code>, <code>mouseup</code> and <code>click</code>, which goes to the nearest element that contains both the pressed and the released element.</span></li>
+    <li><span><b>Dispatch</b> builds the path once, runs capture listeners from <code>window</code> down, then the target, then bubble listeners back up. Each listener is called from C++ with no script on the stack, so <b>microtasks run after every listener</b> of a real click, but only at the end for <code>btn.click()</code> from script. Both are real Chrome logs below.</span></li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 360 230" width="360" height="230" style="max-width:100%;height:auto" font-family="monospace" role="img" aria-label="A click goes from the kernel to the browser process, the compositor thread and the main thread, where hit testing finds the target and dispatch runs capture down the path and bubble back up"><title>A click from the kernel to our listener</title>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="tl-head-m" fill="#8a94a3" d="M0 0L10 5L0 10z"/></marker></defs>
+      <rect class="tl-box warm" fill="none" stroke="#8a94a3" x="4" y="8" width="78" height="40" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="43" y="25" text-anchor="middle">kernel</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="43" y="39" text-anchor="middle">input_event</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="94" y="8" width="78" height="40" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="133" y="25" text-anchor="middle">browser</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="133" y="39" text-anchor="middle">route + ack</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="184" y="8" width="82" height="40" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="225" y="25" text-anchor="middle">compositor</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="225" y="39" text-anchor="middle">queue it</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="278" y="8" width="78" height="40" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="317" y="25" text-anchor="middle">main</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="317" y="39" text-anchor="middle">hit test</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M82 28 H90" marker-end="url(#ah)"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M172 28 H180" marker-end="url(#ah)"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M266 28 H274" marker-end="url(#ah)"/>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="20" y="78">window</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="20" y="102">document</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="20" y="126">div#card</text><text class="tl-t b" fill="#8a94a3" font-size="11" x="20" y="152">button#btn</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M118 70 V146" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="126" y="92">1 capture</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="126" y="106">listeners</text>
+      <circle class="tl-box warm" fill="none" stroke="#8a94a3" cx="174" cy="148" r="6"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="186" y="152">2 target</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M244 146 V70" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="252" y="92">3 bubble</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="252" y="106">listeners</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="180" y="186" text-anchor="middle">real click: microtasks after each listener</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="180" y="202" text-anchor="middle">btn.click(): all microtasks at the end</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="180" y="222" text-anchor="middle">path is fixed before the first listener runs</text>
+    </svg>
+    <figcaption>One click: four stops, then one path</figcaption>
+  </figure>
+  <div class="tl-more">The <a href="#hitlab">hit-test lab</a> lets us click a stage of boxes and compares the model with this browser. The <a href="#displab">dispatch lab</a> runs any set of listeners, and its "by user" programs can be clicked for real. The <a href="#trace">trace</a> shows the whole trip with real timings.</div>
+</aside>
+
+<section id="wire" data-deeper="kdoc-input,kdoc-event-codes,usb-hid,libinput">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>A button closes a circuit, and the kernel writes 24 bytes</h2></div>
+  <div class="prose">
+    <p>A USB mouse in boot protocol sends a short report every time something changes. Byte 0 holds the buttons, one bit each; bytes 1 and 2 are the X and Y movement. The kernel's driver gets the report in an interrupt handler and turns each bit into a call to <code>input_report_key</code>. Then <code>input_sync</code> marks the end of one consistent report.<a class="rd" data-r="usb-hid,kdoc-input"></a></p>
+    <p>The evdev handler copies each of those values into a <code>struct input_event</code> in a per-reader ring buffer and wakes anyone reading <code>/dev/input/eventN</code>. On desktop Linux the reader is the window system (a Wayland compositor through libinput, or the X server), which sends Chrome a pointer-button message for its window. On ChromeOS, Chrome reads evdev itself; that is the <code>EventConverterEvdevImpl</code> code below, the same <code>input_event</code> structs going into Chrome's <code>ui::Event</code> system.<a class="rd" data-r="kdoc-event-codes,libinput,wayland-pointer"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">linux · drivers/hid/usbhid/usbmouse.c · usb_mouse_irq()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-usb"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">linux · include/uapi/linux/input.h · struct input_event</span><span class="note">64-bit user space</span></figcaption>
+      <pre data-code="c-ievent"></pre>
+    </figure>
+  </div>
+  <figure class="src" data-kind="illustration">
+    <figcaption><span class="path">One left press, as a reader of /dev/input/eventN sees it (x86-64)</span><span class="note">worked out from the headers above, not captured</span></figcaption>
+    <div style="padding:12px 14px;display:flex;flex-direction:column;gap:10px">
+      <div class="bytes">
+        <div><b>bytes 0–7 · time.tv_sec</b>seconds</div><div><b>bytes 8–15 · time.tv_usec</b>microseconds</div>
+        <div class="hot"><b>bytes 16–17 · type</b>01 00 = EV_KEY</div><div class="hot"><b>bytes 18–19 · code</b>10 01 = BTN_LEFT (0x110)</div><div class="hot"><b>bytes 20–23 · value</b>01 00 00 00 = pressed</div>
+      </div>
+      <p class="muted" style="font-size:.84rem;margin:0">Followed by a second 24-byte event with type <code>EV_SYN</code> (0), code <code>SYN_REPORT</code> (0), value 0: "this report is complete". Little-endian, so 0x0110 is stored as <code>10 01</code>.</p>
+    </div>
+  </figure>
+  <figure class="src">
+    <figcaption><span class="path">ui/events/ozone/evdev/event_converter_evdev_impl.cc · ProcessEvents(), OnButtonChange()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-evdev"></pre>
+  </figure>
+  <p class="callout">Nothing at this layer knows about pages or elements. It knows a button changed state at a time, and where the cursor is in screen coordinates. Everything after this is Chrome deciding <b>which</b> part of which page that position means.</p>
+</section>
+
+<section id="browser" data-deeper="cr-input-life,inside-browser-4">
+  <div class="sechead"><span class="eyebrow">Frame 1 · the browser process</span><h2>Route it to the right renderer, send it, and wait for the answer</h2></div>
+  <div class="prose">
+    <p>The window system's event reaches Chrome's browser process as a <code>ui::MouseEvent</code> on the window (Aura on Linux and Windows). <code>RenderWidgetHostViewEventHandler::OnMouseEvent</code> converts it to a <code>blink::WebMouseEvent</code> and asks the input event router where it should go. With site isolation a page can contain iframes from other sites, each drawn by a different renderer process, so the router first hit-tests <b>surfaces</b>: the regions each renderer's frames cover, as reported to the GPU process (Viz). With only one renderer on screen it skips that work, as the code shows.<a class="rd" data-r="cr-input-life"></a></p>
+    <p>Then <code>RenderWidgetHostImpl::ForwardMouseEvent</code> hands it to the input router, which sends it over Mojo with <code>WidgetInputHandler::DispatchEvent</code>. A press is <b>blocking</b>: the browser keeps it in flight until the renderer replies with whether a listener consumed it. That reply is how the browser knows, for example, whether to start a drag or show a context menu.<a class="rd" data-r="inside-browser-4"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">content/browser/renderer_host/render_widget_host_view_event_handler.cc · OnMouseEvent()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-aura"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">components/input/render_widget_host_input_event_router.cc · FindViewAtLocation()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-route"></pre>
+    </figure>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">content/browser/renderer_host/render_widget_host_impl.cc · ForwardMouseEventWithLatencyInfo()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-forward"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">components/input/input_router_impl.cc · FilterAndSendWebInputEvent()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-send"></pre>
+    </figure>
+  </div>
+  <p class="callout">In our trace, the browser's <code>ForwardMouseEvent</code> and the Mojo send take well under a tenth of a millisecond, and the renderer's compositor thread picks the message up a few tenths of a millisecond later. The answer comes back as <code>InputRouterImpl::MouseEventHandled</code> after the main thread has run every listener: the browser really does wait for our JavaScript.</p>
+</section>
+
+<section id="renderer" data-deeper="inside-browser-4">
+  <div class="sechead"><span class="eyebrow">Frame 2 · the renderer</span><h2>The compositor thread sees it first, and a press does not wait for a frame</h2></div>
+  <div class="prose">
+    <p>Mojo delivers <code>DispatchEvent</code> on the renderer's <b>compositor thread</b>, not the main thread. That thread can handle some input alone: it can scroll a layer while the main thread is busy, unless a non-passive wheel or touch listener might cancel the scroll. A mouse press is not something it can handle, so <code>MainThreadEventQueue</code> queues it for <code>CrRendererMain</code>.<a class="rd" data-r="inside-browser-4"></a></p>
+    <p>The queue treats event types differently. Mouse moves, wheel and touch moves are <b>rAF-aligned</b>: they are held and coalesced until the next frame begins, so a mouse that reports 1,000 times a second does not run our <code>mousemove</code> listener 1,000 times. A press or release is not in that list, so it is posted to the main thread right away.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/platform/widget/input/main_thread_event_queue.cc · IsRafAlignedEvent()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-raf"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/platform/widget/input/widget_base_input_handler.cc · HandleInputEvent()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-widget"></pre>
+    </figure>
+  </div>
+  <p class="callout">This is the same main thread as the <a href="../js-event-loop/">event-loop page</a>. The input arrives as a <b>task</b> on <code>CrRendererMain</code>. If a long task is running, our click waits behind it, and the browser's acknowledgement waits too. That waiting is part of what the INP (Interaction to Next Paint) metric measures.</p>
+</section>
+
+<section id="hittest" data-deeper="css-zindex,mdn-stacking,mdn-pointer-events,mdn-elementfrompoint">
+  <div class="sechead"><span class="eyebrow">Frame 3 · hit testing</span><h2>Which element is under the pointer? Walk the painting order backwards</h2></div>
+  <div class="prose">
+    <p><code>EventHandler::HandleMousePressEvent</code> asks for the target with <code>GetMouseEventTarget</code>, which ends in <code>LayoutView::HitTest</code>. The question "what is under this point?" must give the answer we <b>see</b>, so hit testing follows the same order as painting, in reverse: whatever was painted last is on top and is tested first.<a class="rd" data-r="css-zindex"></a></p>
+    <p><code>PaintLayer::HitTestLayer</code> does this per stacking context: first the children with positive <code>z-index</code> (highest first), then the normal-flow and <code>z-index: 0</code>/<code>auto</code> children, then the layer's own foreground, then negative <code>z-index</code> children, then its own background. A box is skipped when the point is outside it, when an ancestor's <code>overflow</code> clips it there, or when it has <code>pointer-events: none</code> or <code>visibility: hidden</code>. Both of those are inherited, and a descendant can set them back.<a class="rd" data-r="mdn-stacking,mdn-pointer-events"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/core/input/event_handler.cc · PerformHitTest()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-perform"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/core/paint/paint_layer.cc · HitTestLayer()</span><span class="note">trimmed to the order</span></figcaption>
+      <pre data-code="c-layer"></pre>
+    </figure>
+  </div>
+  <p class="callout">In the real trace, the press's <code>HitTest</code> event reports <code>nodeName: #text</code>: the pointer was over the letters of "Save". Events are not fired at text nodes, so Blink uses the nearest element, the <code>&lt;button&gt;</code>. Hit testing also updates <code>:hover</code> and <code>:active</code>, which is why it runs even when no listener exists.<a class="rd" data-r="mdn-elementfrompoint"></a></p>
+</section>
+
+<section id="hitlab" data-deeper="css-zindex,mdn-stacking">
+  <div class="sechead"><span class="eyebrow">Lab · hit testing</span><h2>Click the stage: the model and this browser each say what we hit</h2></div>
+  <div class="prose"><p>Each line is one absolutely positioned box: <code>box ID LEFT TOP WIDTH HEIGHT</code>, then optional <code>in PARENT</code>, <code>z=N</code>, <code>pe=none</code> or <code>pe=auto</code>, <code>hidden</code> or <code>visible</code>, and <code>clip</code> (<code>overflow: hidden</code>). The stage is a 360 × 240 stacking context. Click anywhere on it, or type a point and press <b>Test point</b>. The model walks its painting order from the front; this browser answers with <code>document.elementFromPoint</code> on the very same boxes.</p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our hit tester: the CSS painting order for positioned boxes walked backwards, with stacking contexts from <code>z-index</code>, overflow clipping, and inherited <code>pointer-events</code> and <code>visibility</code>.</p><p><b>Checked against.</b> Chrome 141's <code>elementFromPoint</code> at 40,320 points in 1,008 scenes (8 presets and 1,000 random scenes, 40 whole-pixel points each), all identical (<code>verify/compare-hit-test.js</code>). Live: every click on the stage asks your browser too.</p><p><b>Not covered.</b> Transforms, opacity, filters and other properties that also create stacking contexts; in-flow (non-positioned) content and text; rounded corners; scrollbars; iframes; and how a fractional point is rounded, so the lab and the check use whole pixels.</p></div>
+  <div class="lab">
+    <div class="presets" id="hPresets"></div>
+    <textarea id="hSrc" spellcheck="false" aria-label="Boxes, one per line"></textarea>
+    <div class="err" id="hErr" role="status"></div>
+    <div class="labgrid">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="stagewrap" id="hWrap"><div id="hHost"></div><div class="mark" id="hMark"></div></div>
+        <div class="xy"><label>x <input type="number" id="hX" min="0" max="359" value="150"></label><label>y <input type="number" id="hY" min="0" max="239" value="100"></label><button type="button" id="hTest" class="go">Test point</button></div>
+        <div class="out" id="hOut" aria-live="polite"></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="box"><h5>Painting order, back to front</h5><div class="chips" id="hOrder"></div></div>
+        <div class="box"><h5>Hit test: front to back, first one that qualifies</h5><ol class="walk" id="hWalk"></ol></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="events" data-deeper="uievents,pointerevents">
+  <div class="sechead"><span class="eyebrow">Frame 4 · which events</span><h2>One press gives two events; one release gives three</h2></div>
+  <div class="prose">
+    <p>For a press, Blink fires a <code>pointerdown</code> (Pointer Events) and then the compatibility <code>mousedown</code>, both at the hit element. If the element can take focus, focus moves next (<code>focus</code>, <code>focusin</code>). For a release it fires <code>pointerup</code>, <code>mouseup</code>, and then possibly a <code>click</code>.<a class="rd" data-r="pointerevents,uievents"></a></p>
+    <p>The click is not simply "the element under the release". <code>MouseEventManager::DispatchMouseClickIfNeeded</code> takes the element that got the <code>mousedown</code> and the element under the <code>mouseup</code> and sends the click to their <b>common ancestor</b>. We captured that: press on <code>#a</code>, drag to <code>#b</code>, release, and the click landed on <code>#card</code>, which contains both. That is why dragging off a button before releasing does not click it.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">blink/renderer/core/input/mouse_event_manager.cc · DispatchMouseClickIfNeeded()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-click"></pre>
+  </figure>
+  <figure class="src real">
+    <figcaption><span class="path">data/order.json · press on #a, release on #b</span><span class="note">real Chrome 141 log, bubble listeners only</span></figcaption>
+    <pre id="splitlog"></pre>
+  </figure>
+</section>
+
+<section id="dispatch" data-deeper="dom-dispatch,mdn-bubbling,mdn-addeventlistener">
+  <div class="sechead"><span class="eyebrow">Frame 5 · event dispatch</span><h2>Capture down, target, bubble up: <code>EventDispatcher::Dispatch</code></h2></div>
+  <div class="prose">
+    <p>Dispatch starts by building the <b>event path</b>: the target, each ancestor, the document and the window. It is fixed now; moving the target to another place during dispatch does not change who is visited. Then <code>DispatchEventAtCapturing</code> walks the path from the window down and runs <b>capture</b> listeners; at the target it runs only the target's capture listeners. <code>DispatchEventAtBubbling</code> walks back up: the target's other listeners first, then, if the event <code>bubbles</code>, each ancestor's non-capture listeners.<a class="rd" data-r="dom-dispatch"></a></p>
+    <p>At each target, <code>FireEventListeners</code> takes a <b>snapshot</b> of that target's listener list. A listener added now does not run in this pass. A listener removed now is skipped, because it is marked removed. A <code>once</code> listener is removed just before it runs. <code>stopPropagation()</code> lets the rest of the current target's listeners run; <code>stopImmediatePropagation()</code> stops at once. A <code>passive</code> listener's <code>preventDefault()</code> is ignored.<a class="rd" data-r="mdn-addeventlistener,mdn-bubbling"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/core/dom/events/event_dispatcher.cc · DispatchEventAtCapturing()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-capture"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/core/dom/events/event_dispatcher.cc · DispatchEventAtBubbling()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-bubble"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">blink/renderer/core/dom/events/event_target.cc · FireEventListeners()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-fire"></pre>
+  </figure>
+  <p class="callout">At the target, capture listeners run before the others whatever order we registered them in. Chrome changed this in version 89; before that, listeners on the target ran in registration order. The comment "To match Mozilla, the AT_TARGET phase fires both…" in <code>FireEventListeners</code> still describes the old behaviour. The "Capture runs first at the target" preset below shows the current order, and the check confirms it against Chrome 141.</p>
+</section>
+
+<section id="displab" data-deeper="dom-dispatch,jake-tasks">
+  <div class="sechead"><span class="eyebrow">Lab · dispatch</span><h2>Write listeners, dispatch an event, see exactly what runs</h2></div>
+  <div class="prose">
+    <p>A program is a tree of tags with ids, some <code>listen</code> lines, and one <code>dispatch</code> line. Listener options: <code>capture</code>, <code>once</code>, <code>passive</code>. Actions after a colon: <code>stop</code>, <code>stopNow</code> (stopImmediatePropagation), <code>prevent</code>, <code>micro</code> (queue a microtask), <code>add TARGET TYPE [capture]</code>, <code>remove L2</code>. Listeners are named <code>L1</code>, <code>L2</code>, … in order, and every listener logs itself when it runs.</p>
+    <p><code>dispatch click at btn by user</code> is a real click. <code>by script</code> is <code>dispatchEvent</code> from a script; add <code>nobubble</code> or <code>nocancel</code> for an event that does not bubble or cannot be cancelled. <b>Check in this browser</b> runs the same program with real listeners: a script dispatch runs immediately, and for a user program we click the dashed box ourselves.</p>
+  </div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our implementation of the DOM standard's dispatch as Blink's <code>EventDispatcher</code> and <code>FireEventListeners</code> run it: the path, the three phases, listener snapshots, <code>once</code>, <code>passive</code>, stopping, adding and removing during dispatch, and where the microtask checkpoint falls.</p><p><b>Checked against.</b> Chrome 141 on 1,609 distinct programs (10 presets and 1,599 random, from four seeded batches), with identical logs and <code>defaultPrevented</code>; 799 were clicked for real through the browser's input path and 810 were script dispatches (<code>verify/compare-dispatch.js</code>). Live: <b>Check in this browser</b>.</p><p><b>Not covered.</b> Shadow DOM and retargeting, <code>relatedTarget</code>, default actions (a link navigating, a checkbox toggling), listeners that throw, <code>handleEvent</code> objects, <code>AbortSignal</code>, and the extra events a real click also fires (<code>pointerdown</code>, <code>mousedown</code>, …), which these programs do not listen to.</p></div>
+  <div class="lab">
+    <div class="presets" id="dPresets"></div>
+    <textarea id="dSrc" spellcheck="false" aria-label="Tree, listeners and dispatch"></textarea>
+    <div class="err" id="dErr" role="status"></div>
+    <div class="box"><h5>Event path (fixed before the first listener)</h5><div class="chips" id="dPath"></div></div>
+    <div class="labgrid">
+      <div class="box"><h5>What ran, in order</h5><ol class="loglist" id="dLog"></ol><p class="out" id="dRes" style="margin-top:8px"></p></div>
+      <div class="box"><h5>Why</h5><ol class="steps" id="dSteps"></ol></div>
+    </div>
+    <div class="realbox">
+      <div class="ctl"><button type="button" id="dCheck">Check in this browser</button><span class="pill" id="dPill"></span></div>
+      <p class="muted" id="dHint" style="font-size:.86rem;margin:0"></p>
+      <iframe id="dFrame" title="Real DOM for this program" hidden></iframe>
+    </div>
+  </div>
+</section>
+
+<section id="listener" data-deeper="html-cleanup,jake-tasks">
+  <div class="sechead"><span class="eyebrow">Frame 6 · our listener</span><h2>Into V8, and why microtasks run between the listeners of a real click</h2></div>
+  <div class="prose">
+    <p>A listener is called through <code>JSBasedEventListener::Invoke</code>, which, through the generated callback bindings, ends in <code>V8ScriptRunner::CallFunction</code>. That function opens a <code>V8RunMicrotasksScope</code> around the call. When the scope closes, V8 performs a <b>microtask checkpoint</b>, but only if no other script is still running underneath: <code>ShouldPerformCheckpoint</code> requires the scope depth to be back at zero.<a class="rd" data-r="html-cleanup"></a></p>
+    <p>For a real click, the listener was called from C++ input handling with an empty JavaScript stack, so the depth is zero and the microtasks queued by that listener run before the next listener. For <code>btn.click()</code> our own script is still on the stack, the depth stays above zero, and all the microtasks wait until that script finishes. The HTML standard says the same thing in "clean up after running script".<a class="rd" data-r="jake-tasks"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">blink/renderer/bindings/core/v8/v8_script_runner.cc · CallFunction()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-call"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">v8 · src/api/api.cc and src/execution/microtask-queue.cc</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-micro"></pre>
+    </figure>
+  </div>
+  <div class="cols">
+    <figure class="src real">
+      <figcaption><span class="path">data/order.json · a real click on #btn</span><span class="note">click listeners only</span></figcaption>
+      <pre id="reallog"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">data/order.json · btn.click() from script</span><span class="note">same listeners</span></figcaption>
+      <pre id="scriptlog"></pre>
+    </figure>
+  </div>
+  <p class="callout">The capture script hit a real bug in its own first version, and it teaches the same lesson. Its microtasks read <code>event.currentTarget</code>. In the real click they ran during dispatch and saw the right element; after <code>btn.click()</code> they ran after dispatch had finished, when <code>currentTarget</code> is already <code>null</code>, and threw. Code that works for a real click can break for a scripted one.</p>
+</section>
+
+<section id="trace" data-deeper="inside-browser-4,cr-input-life">
+  <div class="sechead"><span class="eyebrow">Real output · the whole trip</span><h2>One click in a real Chrome trace, from the browser process to our listeners</h2></div>
+  <div class="prose"><p>We recorded a trace while Playwright pressed and released the mouse over the button. Playwright's mouse goes into Chrome through the DevTools protocol and enters the normal input path at the browser process's <code>RenderWidgetHostImpl::ForwardMouseEvent</code>, the same place an event from the window system arrives. Everything below is a real trace event.</p></div>
+  <div class="scope" data-kind="observed"><p><b>What it is.</b> Trace events from headless Chromium 141 on Linux (<code>data/trace.json</code>, which opens in DevTools or Perfetto), filtered to the input path by <code>data/flow.js</code>.</p><p><b>Checked against.</b> It is the real system. Recapturing gives the same events in the same order; the times vary by machine.</p><p><b>Not covered.</b> The kernel and window system (Playwright enters at the browser process), and a GPU-accelerated desktop: this ran headless, so frame and input timings are only indicative.</p></div>
+  <div class="panel">
+    <div class="ctl" id="tBtns"><button type="button" data-k="down" class="sel">The press (MouseDown)</button><button type="button" data-k="up">The release (MouseUp)</button></div>
+    <div class="lanes"><span class="st-b"><i></i>browser process, CrBrowserMain</span><span class="st-c"><i></i>renderer, Compositor thread</span><span class="st-m"><i></i>renderer, CrRendererMain</span></div>
+    <div class="evrows"><table><thead><tr><th>ms</th><th>thread</th><th>event</th><th>took</th><th>details</th></tr></thead><tbody id="tRows"></tbody></table></div>
+    <p class="verdict" id="tSum" aria-live="polite"></p>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 7 · practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"Listeners on <code>#btn</code> are registered in this order: a bubble listener B, then a capture listener C. The user clicks <code>#btn</code>. In Chrome 141, which runs first?","options":["B, because it was registered first","C, because capture listeners at the target run in the capturing pass","Both at once","Neither: listeners on the target only run in the bubble phase"],"answer":1,"explain":"DispatchEventAtCapturing runs only capture listeners at the target, and DispatchEventAtBubbling runs the rest. Registration order only matters within the same pass. Try the preset \"Capture runs first at the target\"."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Two click listeners each queue a microtask. Which output does <code>btn.click()</code> called from a script produce?","options":["L1, micro1, L2, micro2","L1, L2, micro1, micro2","micro1, micro2, L1, L2","It depends on the CPU"],"answer":1,"explain":"Our script is still on the stack, so the microtask scope depth never returns to zero between listeners. The checkpoint happens when our script ends. A real click gives L1, micro1, L2, micro2."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"We press the mouse on <code>#a</code>, drag, and release on <code>#b</code>. Both are children of <code>#card</code>. Where does <code>click</code> go?","options":["#a","#b","#card","Nowhere: a drag cancels the click"],"answer":2,"explain":"DispatchMouseClickIfNeeded uses the common ancestor of the mousedown element and the mouseup element. Our capture shows the click landing on #card."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Box A has <code>z-index: 1</code> and contains a child with <code>z-index: 100</code>. A sibling box B has <code>z-index: 2</code> and overlaps the child. What does a click on the overlap hit?","options":["The child, because 100 > 2","B, because the child's z-index only counts inside A's stacking context","A","The stage"],"answer":1,"explain":"A z-index makes A a stacking context. A paints, with all its descendants, as one unit at level 1, below B at level 2. Compare the presets \"Stacking contexts trap z-index\" and \"z-index: auto lets children escape\"."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"A listener on <code>card</code> runs in the capture phase and adds a new click listener to <code>btn</code>, the target. Does the new listener run in this dispatch?","options":["No, listeners added during dispatch never run","Yes: btn's listener list is copied only when dispatch reaches btn","Only if it is a capture listener on an ancestor","Only in Firefox"],"answer":1,"explain":"FireEventListeners takes its snapshot per target, when dispatch arrives there. Adding to a target that has not been reached yet works; adding to the target being processed waits for the next dispatch. See the preset \"Adding listeners mid-dispatch\"."}</script></div>
+  </div>
+  <h3>See it on our own machine</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Raw kernel events</td><td>On Linux: <code>sudo evtest</code>, pick the mouse, click. Each line is one <code>input_event</code>: <code>type 1 (EV_KEY), code 272 (BTN_LEFT), value 1</code>, then a <code>SYN_REPORT</code>. (272 is 0x110.)</td></tr>
+      <tr><td>The listeners on an element</td><td>DevTools → Elements → <b>Event Listeners</b> tab: every listener on the node and its ancestors, with capture, passive and once flags. In the console, <code>getEventListeners(el)</code> gives the same.</td></tr>
+      <tr><td>Every event that fires</td><td>In the console, <code>monitorEvents(document.body, ["mouse", "pointer"])</code>, then click. <code>unmonitorEvents(document.body)</code> to stop.</td></tr>
+      <tr><td>The input path in a trace</td><td>DevTools → Performance → record a click: the <b>Interactions</b> track shows input delay, processing and presentation. Our raw trace is <code>data/trace.json</code>; load it there or in <a href="https://ui.perfetto.dev/" target="_blank" rel="noopener">Perfetto</a>.</td></tr>
+      <tr><td>Hit testing by hand</td><td><code>document.elementFromPoint(x, y)</code> and <code>document.elementsFromPoint(x, y)</code>, which lists everything under the point, front to back.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>In the dispatch lab, write a program where a capture listener on the window calls <code>stop</code>. Which listeners still run? Then try it by user and press Check.</li>
+    <li>Build a hit-test scene where a <code>pe=none</code> overlay covers a button, but a hole in the overlay with <code>pe=auto</code> catches clicks. Which box does a click on the hole hit, and why?</li>
+    <li>Add <code>listen window click capture: micro</code> to the "Microtasks: a real click" preset. Predict where its microtask appears, check it by clicking for real, then change <code>by user</code> to <code>by script</code> and predict again.</li>
+    <li>Record a Performance trace while clicking a button whose listener runs a 200 ms loop. Find the input delay of the next click made during that loop.</li>
+    <li>Read <code>data/flow.json</code>. How long did the press spend between the browser's <code>ForwardMouseEvent</code> and <code>MouseEventHandled</code>, and how much of that was our listeners?</li>
+  </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a web systems or operating systems exam. Write our answer first, then open the model answer and mark ourselves honestly. Answers that list listener orders were produced by the dispatch model and checked with the lab's real-browser check.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Trace">
+      <div class="q">The tree is <code>&lt;div id=card&gt;&lt;div id=row&gt;&lt;button id=btn&gt;&lt;/button&gt;&lt;/div&gt;&lt;/div&gt;</code>. Listeners, in order: L1 card capture; L2 btn, which calls <code>stopPropagation()</code>; L3 btn; L4 row; L5 card. The user clicks the button. List what runs, with each phase, and explain why L3 runs but L4 does not.</div>
+      <div class="a">
+        <pre>L1 capture card
+L2 target btn      (stopPropagation)
+L3 target btn</pre>
+        <p>The capture pass walks window → document → html → body → card → row → btn and runs card's capture listener (L1). At the target, the bubbling pass runs btn's non-capture listeners in order. <code>stopPropagation()</code> in L2 sets a flag that is checked <b>after</b> the current target's listeners finish, so L3 still runs. The loop in <code>DispatchEventAtBubbling</code> then returns, so row (L4) and card (L5) never run. With <code>stopImmediatePropagation()</code>, L3 would not run either.</p>
+        <p class="rub">Marking: 2 for the order, 1 for the phases, 2 for "the flag is checked between targets", 1 for contrasting stopImmediatePropagation.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Explain">
+      <div class="q">Explain why, for a real click, a microtask queued in the first listener runs before the second listener, but for <code>btn.click()</code> called from a script it runs after both. Name the mechanism in Blink and V8.</div>
+      <div class="a">
+        <p>Each listener is called through <code>V8ScriptRunner::CallFunction</code>, which opens a <code>V8RunMicrotasksScope</code>. When a scope closes, V8 performs a checkpoint only if <code>ShouldPerformCheckpoint</code> is true, which requires the microtask scope depth to be zero (no script still running). A real click is dispatched from C++ input handling, so after each listener the depth is zero and the queued microtasks run immediately. With <code>btn.click()</code>, our script's own scope is still open, so the depth is at least one during the whole dispatch; the checkpoint happens when our script's scope closes, after <code>click()</code> returns. The HTML standard's "clean up after running script" states the same rule.</p>
+        <p class="rub">Marking: 1 for the scope, 2 for the depth-zero condition, 1 for each case.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Calculate">
+      <div class="q">A stage contains: <code>a</code> at (20, 20) size 200 × 160 with <code>z-index: 1</code>; inside it <code>a1</code> at (20, 20) relative to <code>a</code>, size 140 × 80, <code>z-index: 100</code>; and <code>b</code> at (120, 60) size 200 × 160 with <code>z-index: 2</code>. Which element does a click at (150, 90) hit? What changes if <code>a</code> has no z-index?</div>
+      <div class="a">
+        <p>The point (150, 90) is inside <code>a</code> (20–220, 20–180), inside <code>a1</code> (40–180, 40–120) and inside <code>b</code> (120–320, 60–220). With <code>z-index: 1</code>, <code>a</code> is a stacking context, so <code>a1</code>'s 100 only orders it inside <code>a</code>. The stage paints a's whole group at level 1, then <code>b</code> at level 2. Backwards: <code>b</code> is first and contains the point, so it is the hit.</p>
+        <p>Without a z-index, <code>a</code> does not form a stacking context, so <code>a1</code> takes part in the stage's order at level 100, above <code>b</code>. The hit becomes <code>a1</code>. (Both are the lab's presets; the model and <code>elementFromPoint</code> agree.)</p>
+        <p class="rub">Marking: 1 for the containment check, 2 for the stacking-context argument, 2 for the second case.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Short note">
+      <div class="q">Write a short note on why Chrome sends mouse presses to the main thread at once but delays mouse moves, and what that means for a <code>mousemove</code> listener.</div>
+      <div class="a">
+        <p><code>MainThreadEventQueue::IsRafAlignedEvent</code> returns true for mouse moves, wheel and touch moves. Those events are held until the next frame and coalesced, so a 1,000 Hz mouse produces about one <code>mousemove</code> dispatch per frame (a <code>pointermove</code> event's <code>getCoalescedEvents()</code> returns the reports that were merged). Presses and releases are discrete and their order matters, so they are posted to the main thread immediately. A <code>mousemove</code> listener therefore runs about once per frame, just before rendering, and should not expect one call per hardware report.</p>
+        <p class="rub">Marking: 1 for naming the queue, 1 for coalescing, 1 for why presses are not delayed, 1 for the consequence.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Trace">
+      <div class="q">Trace a left mouse press from the USB report to the first JavaScript listener, naming one function or structure at each layer: kernel, browser process, renderer compositor thread, renderer main thread before dispatch, and dispatch.</div>
+      <div class="a">
+        <p><b>Kernel:</b> <code>usb_mouse_irq</code> reads bit 0 of byte 0 and calls <code>input_report_key(dev, BTN_LEFT, 1)</code>; evdev stores a <code>struct input_event</code> (EV_KEY, BTN_LEFT, 1) followed by SYN_REPORT. <b>Browser process:</b> the window system's event becomes a <code>ui::MouseEvent</code>; <code>RenderWidgetHostImpl::ForwardMouseEvent</code> sends a <code>WebMouseEvent</code> through <code>InputRouterImpl</code> as a blocking Mojo <code>DispatchEvent</code>. <b>Compositor thread:</b> <code>WidgetInputHandlerImpl::DispatchEvent</code>, then <code>MainThreadEventQueue</code> queues it for the main thread (not rAF-aligned). <b>Main thread:</b> <code>WidgetBaseInputHandler::HandleInputEvent</code> → <code>EventHandler::HandleMousePressEvent</code> → hit test through <code>LayoutView::HitTest</code>. <b>Dispatch:</b> <code>EventDispatcher::Dispatch</code> fires <code>pointerdown</code>; the first capture listener on the path is called by <code>FireEventListeners</code>.</p>
+        <p class="rub">Marking: 1 per layer with a correct name.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for the specifications and kernel documentation the code implements.</p>
+  <div id="reading-list"></div>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files and data</h2></div>
+  <ul class="src-list">
+    <li><a href="https://github.com/torvalds/linux/blob/master/drivers/hid/usbhid/usbmouse.c">linux: drivers/hid/usbhid/usbmouse.c</a></li>
+    <li><a href="https://github.com/torvalds/linux/blob/master/include/uapi/linux/input.h">linux: include/uapi/linux/input.h</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:ui/events/ozone/evdev/event_converter_evdev_impl.cc">ui/events/ozone/evdev/event_converter_evdev_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/browser/renderer_host/render_widget_host_view_event_handler.cc">content/…/render_widget_host_view_event_handler.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:components/input/render_widget_host_input_event_router.cc">components/input/render_widget_host_input_event_router.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:content/browser/renderer_host/render_widget_host_impl.cc">content/…/render_widget_host_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:components/input/input_router_impl.cc">components/input/input_router_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/platform/widget/input/main_thread_event_queue.cc">blink/…/widget/input/main_thread_event_queue.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/platform/widget/input/widget_base_input_handler.cc">blink/…/widget/input/widget_base_input_handler.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/input/event_handler.cc">blink/renderer/core/input/event_handler.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/paint/paint_layer.cc">blink/renderer/core/paint/paint_layer.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/input/mouse_event_manager.cc">blink/renderer/core/input/mouse_event_manager.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/dom/events/event_dispatcher.cc">blink/renderer/core/dom/events/event_dispatcher.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/dom/events/event_target.cc">blink/renderer/core/dom/events/event_target.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/bindings/core/v8/v8_script_runner.cc">blink/renderer/bindings/core/v8/v8_script_runner.cc</a></li>
+    <li><a href="https://github.com/v8/v8/blob/main/src/api/api.cc">v8: src/api/api.cc</a></li>
+    <li><a href="https://github.com/v8/v8/blob/main/src/execution/microtask-queue.cc">v8: src/execution/microtask-queue.cc</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/click-to-listener/data">Our trace, logs, test page and capture script (data/)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">Chromium and V8 code is used under their BSD-style licenses and Linux code under GPL-2.0, all quoted for study. Blink paths are relative to <code>third_party/blink/renderer/</code>.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-usb">static void usb_mouse_irq(struct urb *urb)
+{
+	struct usb_mouse *mouse = urb->context;
+	signed char *data = mouse->data;
+	struct input_dev *dev = mouse->dev;
+	// …
+»	input_report_key(dev, BTN_LEFT,   data[0] & 0x01);
+	input_report_key(dev, BTN_RIGHT,  data[0] & 0x02);
+	input_report_key(dev, BTN_MIDDLE, data[0] & 0x04);
+	// …
+	input_report_rel(dev, REL_X,     data[1]);
+	input_report_rel(dev, REL_Y,     data[2]);
+	input_report_rel(dev, REL_WHEEL, data[3]);
+
+»	input_sync(dev);
+	// …</script>
+
+<script type="text/plain" id="c-ievent">struct input_event {
+	// … (64-bit user space)
+	struct timeval time;
+	// …
+»	__u16 type;
+»	__u16 code;
+»	__s32 value;
+};</script>
+
+<script type="text/plain" id="c-evdev">void EventConverterEvdevImpl::ProcessEvents(const input_event* inputs,
+                                            int count) {
+  for (int i = 0; i < count; ++i) {
+    const input_event& input = UNSAFE_TODO(inputs[i]);
+»   switch (input.type) {
+      // …
+»     case EV_KEY:
+        ConvertKeyEvent(input);
+        last_scan_code_ = 0;
+        break;
+      case EV_REL:
+        ConvertMouseMoveEvent(input);
+        break;
+      case EV_SYN:
+        if (input.code == SYN_DROPPED)
+          OnLostSync();
+»       else if (input.code == SYN_REPORT)
+          FlushEvents(input);
+        // …
+    }
+  }
+}
+
+void EventConverterEvdevImpl::OnButtonChange(int code,
+                                             bool down,
+                                             base::TimeTicks timestamp) {
+  int button_offset = code - BTN_MOUSE;
+  // …
+  mouse_button_state_.set(button_offset, down);
+
+» dispatcher_->DispatchMouseButtonEvent(MouseButtonEventParams(
+      input_device_.id, EF_NONE, cursor_->GetLocation(), code, down,
+      MouseButtonMapType::kMouse, PointerDetails(EventPointerType::kMouse),
+      timestamp));
+}</script>
+
+<script type="text/plain" id="c-aura">      // …
+»     blink::WebMouseEvent mouse_event = ui::MakeWebMouseEvent(*event);
+      ModifyEventMovementAndCoords(*event, &mouse_event);
+      if (ShouldRouteEvents()) {
+»       host_->GetInputEventRouter()->RouteMouseEvent(host_view_, &mouse_event,
+                                                      *event->latency());
+      } else {
+        ProcessMouseEvent(mouse_event, *event->latency());
+      }</script>
+
+<script type="text/plain" id="c-route">RenderWidgetTargetResult RenderWidgetHostInputEventRouter::FindViewAtLocation(
+    RenderWidgetHostViewInput* root_view,
+    const gfx::PointF& point,
+    viz::EventSource source,
+    gfx::PointF* transformed_point) const {
+  // Short circuit if owner_map has only one RenderWidgetHostView, no need for
+  // hit testing.
+» if (owner_map_.size() <= 1) {
+    *transformed_point = point;
+    return {root_view, /*should_query_view=*/false, *transformed_point};
+  }
+  // …
+» viz::HitTestQuery* query =
+      GetHitTestQuery(hit_test_provider_, root_view->GetRootFrameSinkId());
+  // …</script>
+
+<script type="text/plain" id="c-forward">void RenderWidgetHostImpl::ForwardMouseEventWithLatencyInfo(
+    const WebMouseEvent& mouse_event,
+    const ui::LatencyInfo& latency) {
+» TRACE_EVENT2("input", "RenderWidgetHostImpl::ForwardMouseEvent", "x",
+               mouse_event.PositionInWidget().x(), "y",
+               mouse_event.PositionInWidget().y());
+  // …
+  if (IsIgnoringWebInputEvents(mouse_event)) {
+    return;
+  }
+  // …
+  input::MouseEventWithLatencyInfo mouse_with_latency(mouse_event, latency);
+» GetRenderInputRouter()->DispatchInputEventWithLatencyInfo(
+      mouse_with_latency.event, &mouse_with_latency.latency,
+      &mouse_with_latency.event.GetModifiableEventLatencyMetadata());
+  // …</script>
+
+<script type="text/plain" id="c-send">  std::unique_ptr<blink::WebCoalescedInputEvent> event =
+      ScaleEvent(input_event, device_scale_factor_, latency_info);
+» if (WebInputEventTraits::ShouldBlockEventStream(input_event)) {
+»   TRACE_EVENT_INSTANT("input", "InputEventSentBlocking");
+    client_->IncrementInFlightEventCount();
+    // … a callback that receives the renderer's answer …
+»     client_->GetWidgetInputHandler()->DispatchEvent(
+          std::move(event),
+          send_touch_event ? std::move(last_touch_move_event_) : std::nullopt,
+          std::move(renderer_callback));
+  // …</script>
+
+<script type="text/plain" id="c-raf">bool MainThreadEventQueue::IsRafAlignedEvent(
+    const std::unique_ptr<MainThreadEventQueueTask>& item) const {
+  if (!item->IsWebInputEvent())
+    return false;
+  const QueuedWebInputEvent* event =
+      static_cast<const QueuedWebInputEvent*>(item.get());
+  switch (event->Event().GetType()) {
+»   case WebInputEvent::Type::kMouseMove:
+»   case WebInputEvent::Type::kMouseWheel:
+»   case WebInputEvent::Type::kTouchMove:
+      return allow_raf_aligned_input_ &&
+             !needs_low_latency_.load(std::memory_order_relaxed) &&
+             !needs_low_latency_until_pointer_up_.load(
+                 std::memory_order_relaxed) &&
+             !needs_unbuffered_input_for_debugger_.load(
+                 std::memory_order_relaxed);
+»   default:
+»     return false;
+  }
+}</script>
+
+<script type="text/plain" id="c-widget">void WidgetBaseInputHandler::HandleInputEvent(
+    const WebCoalescedInputEvent& coalesced_event,
+    std::unique_ptr<cc::EventMetrics> metrics,
+    HandledEventCallback callback) {
+  const WebInputEvent& input_event = coalesced_event.Event();
+  // …
+» TRACE_EVENT1("renderer,benchmark,rail,input.scrolling",
+               "WidgetBaseInputHandler::OnHandleInputEvent", "event",
+               WebInputEvent::GetName(input_event.GetType()));
+  // …
+  // then widget_->client()->HandleInputEvent(coalesced_event):
+  // WebFrameWidgetImpl → EventHandler::HandleMousePressEvent</script>
+
+<script type="text/plain" id="c-perform">void EventHandler::PerformHitTest(const HitTestLocation& location,
+                                  HitTestResult& result,
+                                  bool no_lifecycle_update) const {
+  // LayoutView::hitTest causes a layout, and we don't want to hit that until
+  // the first layout because until then, there is nothing shown on the screen -
+  // the user can't have intentionally clicked on something belonging to this
+  // page.
+  // …
+  if (no_lifecycle_update) {
+    frame_->ContentLayoutObject()->HitTestNoLifecycleUpdate(location, result);
+  } else {
+»   frame_->ContentLayoutObject()->HitTest(location, result);
+  }
+  const HitTestRequest& request = result.GetHitTestRequest();
+  if (!request.ReadOnly()) {
+»   frame_->GetDocument()->UpdateHoverActiveState(
+        request.Active(), !request.Move(), result.InnerPossiblyPseudoElement());
+  }
+}</script>
+
+<script type="text/plain" id="c-layer">  // Begin by walking our list of positive layers from highest z-index down to
+  // the lowest z-index.
+» hit_layer = HitTestChildren(
+»     kPositiveZOrderChildren, transform_container, container_fragment, result,
+      recursion_data, container_transform_state, z_offset_for_descendants_ptr,
+      z_offset, local_transform_state, depth_sort_descendants);
+  if (hit_layer) {
+    if (!depth_sort_descendants)
+      return hit_layer;
+    // …
+  }
+
+  // Now check our overflow objects.
+» hit_layer = HitTestChildren(
+»     kNormalFlowChildren, transform_container, container_fragment, result,
+      // …
+  // Next we want to see if the mouse pos is inside the child LayoutObjects of
+  // the layer. Check every fragment in reverse order.
+  // … HitTestForegroundForFragments(…) …
+
+  // Now check our negative z-index children.
+» hit_layer = HitTestChildren(
+»     kNegativeZOrderChildren, transform_container, container_fragment, result,
+      // …
+  // … and finally this layer's own background</script>
+
+<script type="text/plain" id="c-click">  const bool should_dispatch_click_event =
+      click_count_ > 0 && !context_menu_event && mousedown_element_ &&
+      mouse_release_target && mousedown_element_->isConnected();
+  if (!should_dispatch_click_event)
+    return WebInputEventResult::kNotHandled;
+
+  Node* click_target_node = nullptr;
+  if (captured_click_target) {
+    click_target_node = captured_click_target;
+  } else if (mousedown_element_->GetDocument() ==
+             mouse_release_target->GetDocument()) {
+»   click_target_node = mouse_release_target->CommonAncestor(
+»       *mousedown_element_, event_handling_util::ParentForClickEvent);
+  }
+  // …
+  const AtomicString click_event_type =
+      (mouse_event.button == WebPointerProperties::Button::kLeft)
+»         ? event_type_names::kClick
+          : event_type_names::kAuxclick;</script>
+
+<script type="text/plain" id="c-capture">inline EventDispatchContinuation EventDispatcher::DispatchEventAtCapturing() {
+  // Trigger capturing event handlers, starting at the top and working our way
+  // down. When we get to the last one, the target, change the event phase to
+  // AT_TARGET and fire only the capture listeners on it.
+  event_->SetEventPhase(Event::PhaseType::kCapturingPhase);
+  // …
+  // 6.13. For each struct of event's path, in reverse order:
+» for (wtf_size_t i = event_->GetEventPath().size(); i > 0; --i) {
+    const NodeEventContext& event_context = event_->GetEventPath()[i - 1];
+    if (event_context.CurrentTargetSameAsTarget()) {
+      event_->SetEventPhase(Event::PhaseType::kAtTarget);
+»     event_->SetFireOnlyCaptureListenersAtTarget(true);
+      event_context.HandleLocalEvents(*event_);
+      event_->SetFireOnlyCaptureListenersAtTarget(false);
+    } else {
+      event_->SetEventPhase(Event::PhaseType::kCapturingPhase);
+      event_context.HandleLocalEvents(*event_);
+    }
+»   if (event_->PropagationStopped())
+      return kDoneDispatching;
+  }
+  return kContinueDispatching;
+}</script>
+
+<script type="text/plain" id="c-bubble">inline void EventDispatcher::DispatchEventAtBubbling() {
+  // 6.14. For each struct of event's path.
+  wtf_size_t size = event_->GetEventPath().size();
+» for (wtf_size_t i = 0; i < size; ++i) {
+    const NodeEventContext& event_context = event_->GetEventPath()[i];
+    if (event_context.CurrentTargetSameAsTarget()) {
+      event_->SetEventPhase(Event::PhaseType::kAtTarget);
+»     event_->SetFireOnlyNonCaptureListenersAtTarget(true);
+      event_context.HandleLocalEvents(*event_);
+      event_->SetFireOnlyNonCaptureListenersAtTarget(false);
+»   } else if (event_->bubbles() && !event_->cancelBubble()) {
+      event_->SetEventPhase(Event::PhaseType::kBubblingPhase);
+      event_context.HandleLocalEvents(*event_);
+    } else {
+      // 6.14.1.1. If event's bubbles attribute is false, then continue.
+      continue;
+    }
+    if (event_->PropagationStopped())
+      return;
+  }
+  // … then the window, if the event bubbles
+}</script>
+
+<script type="text/plain" id="c-fire">bool EventTarget::FireEventListeners(Event& event,
+                                     EventTargetData* d,
+»                                    EventListenerVectorSnapshot entry) {
+  // Fire all listeners registered for this event. Don't fire listeners removed
+  // during event dispatch. Also, don't fire event listeners added during event
+  // dispatch. Conveniently, all new event listeners will be added after or at
+  // index |size|, so iterating up to (but not including) |size| naturally
+  // excludes new event listeners.
+  // …
+  for (auto& registered_listener : entry) {
+    // …
+»   if (registered_listener->Removed()) [[unlikely]] {
+      continue;
+    }
+    // If stopImmediatePropagation has been called, we just break out
+    // immediately, without handling any more events on this target.
+»   if (event.ImmediatePropagationStopped()) {
+      break;
+    }
+    if (!registered_listener->ShouldFire(event)) {
+      continue;
+    }
+    EventListener* listener = registered_listener->Callback();
+    // …
+»   if (registered_listener->Once()) {
+      removeEventListener(event.type(), listener,
+                          registered_listener->Capture());
+    }
+»   event.SetHandlingPassive(EventPassiveMode(*registered_listener));
+    // …
+    // To match Mozilla, the AT_TARGET phase fires both capturing and bubbling
+    // event listeners, even though that violates some versions of the DOM spec.
+»   listener->Invoke(context, &event);
+    fired_listener = true;
+    // …
+    event.SetHandlingPassive(Event::PassiveMode::kNotPassive);
+  }
+  return fired_listener;
+}</script>
+
+<script type="text/plain" id="c-call">  v8::MicrotaskQueue* microtask_queue = ToMicrotaskQueue(context);
+» int depth = GetMicrotasksScopeDepth(isolate, microtask_queue);
+  if (depth >= kMaxRecursionDepth)
+    return ThrowStackOverflowExceptionIfNeeded(context);
+  // …
+» V8RunMicrotasksScope microtasks_scope(context);
+  if (!depth) {
+    TRACE_EVENT_BEGIN("devtools.timeline", "FunctionCall", "data",
+                      [&](perfetto::TracedValue trace_context) {
+                        inspector_function_call_event::Data(
+                            std::move(trace_context), context, function);
+                      });
+  }
+  // …
+» v8::MaybeLocal<v8::Value> result = function->Call(
+      isolate, isolate->GetCurrentContext(), receiver, argc, argv);
+  // …
+  return result;
+  // ← microtasks_scope is destroyed here</script>
+
+<script type="text/plain" id="c-micro">// src/api/api.cc
+MicrotasksScope::~MicrotasksScope() {
+  if (run_) {
+»   microtask_queue_->DecrementMicrotasksScopeDepth();
+    if (MicrotasksPolicy::kScoped == microtask_queue_->microtasks_policy() &&
+        !i_isolate_->has_exception()) {
+»     microtask_queue_->PerformCheckpoint(
+          reinterpret_cast<Isolate*>(i_isolate_));
+      // …
+    }
+  }
+  // …
+}
+
+// src/execution/microtask-queue.cc
+bool MicrotaskQueue::ShouldPerformCheckpoint(v8::Isolate* v8_isolate) const {
+  Isolate* isolate = reinterpret_cast<Isolate*>(v8_isolate);
+» return !IsRunningMicrotasks() && !GetMicrotasksScopeDepth() &&
+         !HasMicrotasksSuppressions() &&
+         isolate->is_javascript_execution_allowed();
+}</script>
+
+<script src="../assets/reading.js?v=c7d4c5c6"></script>
+<script src="dispatch-model.js?v=2d85d790"></script>
+<script src="dispatch-real.js?v=b31bafa9"></script>
+<script src="hit-model.js?v=b5463f15"></script>
+<script src="click-data.js?v=62dfee6a"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|\b(if|else|return|const|bool|int|void|struct|static|for|while|auto|case|break|continue|true|false|enum|unsigned|signed|char|inline|switch|default|nullptr)\b|\b([A-Za-z_]\w*)(?=\()|\b(0x[0-9a-fA-F]+|\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+  function presets(host,list,onPick){
+    host.innerHTML=list.map(function(p,i){return '<button type="button" data-i="'+i+'">'+esc(p[0])+'</button>'}).join("");
+    [].forEach.call(host.children,function(b){b.onclick=function(){[].forEach.call(host.children,function(x){x.classList.toggle("sel",x===b)});onPick(list[+b.getAttribute("data-i")][1])}});
+  }
+
+  /* ---------- real captures ---------- */
+  if(window.CLICK_DATA){
+    var R=CLICK_DATA.order.runs;
+    var clickOnly=function(l){return /^click |^  micro/.test(l)};
+    $("reallog").textContent=R.real.log.filter(clickOnly).join("\n");
+    $("scriptlog").textContent=R.script.log.join("\n");
+    $("splitlog").textContent=R.split.log.filter(function(l){return !/capture listener/.test(l)&&!/^  micro/.test(l)}).join("\n");
+    var FL=CLICK_DATA.flow.events,cut=FL.findIndex(function(e){return e.name==="InputLatency::MouseUp"});
+    var LANE={CrBrowserMain:"st-b",Compositor:"st-c",CrRendererMain:"st-m"};
+    function showT(k){
+      [].forEach.call($("tBtns").children,function(b){b.classList.toggle("sel",b.getAttribute("data-k")===k)});
+      var rows=k==="down"?FL.slice(0,cut):FL.slice(cut),t0=rows[0].t;
+      $("tRows").innerHTML=rows.map(function(e){return '<tr class="'+(LANE[e.thread]||"")+(e.name==="EventDispatch"&&/listener calls/.test(e.detail)?" big":"")+'"><td>'+(e.t-t0).toFixed(2)+'</td><td>'+esc(e.thread)+'</td><td>'+esc(e.name)+'</td><td>'+(e.dur?e.dur.toFixed(3)+" ms":"")+'</td><td>'+esc(e.detail)+'</td></tr>'}).join("");
+      var fwd=rows.find(function(e){return e.name==="RenderWidgetHostImpl::ForwardMouseEvent"}),cmp=rows.find(function(e){return e.name==="WidgetInputHandlerImpl::DispatchEvent"}),main=rows.find(function(e){return e.name==="WidgetBaseInputHandler::OnHandleInputEvent"}),ack=rows.find(function(e){return e.name==="InputRouterImpl::MouseEventHandled"});
+      var disp=rows.filter(function(e){return e.name==="EventDispatch"}).map(function(e){return/type: (\w+)/.exec(e.detail)[1]});
+      $("tSum").textContent="Browser to compositor thread: "+(cmp.t-fwd.t).toFixed(2)+" ms. Compositor to main thread: "+(main.t-cmp.t).toFixed(2)+" ms. Main-thread handling: "+main.dur.toFixed(2)+" ms, dispatching "+disp.join(", ")+". From ForwardMouseEvent to the browser's MouseEventHandled: "+(ack.t-fwd.t).toFixed(2)+" ms.";
+    }
+    [].forEach.call($("tBtns").children,function(b){b.onclick=function(){showT(b.getAttribute("data-k"))}});
+    showT("down");
+  }
+
+  /* ---------- hit-test lab ---------- */
+  if(window.HitModel){
+    var scene=null,last=null;
+    function hBuild(){
+      try{scene=HitModel.parse($("hSrc").value);$("hErr").textContent=""}catch(e){$("hErr").textContent=e.message;return}
+      $("hHost").innerHTML=HitModel.toHTML(scene,{labels:true});
+      var st=$("stage");st.setAttribute("aria-hidden","true");
+      st.addEventListener("click",function(ev){var r=st.getBoundingClientRect();test(Math.floor(ev.clientX-r.left),Math.floor(ev.clientY-r.top),ev.clientX,ev.clientY)});
+      $("hOrder").innerHTML=HitModel.paintOrder(scene).map(function(b,i){return (i?'<i>→</i>':'')+'<span class="chip" data-id="'+esc(b.id)+'">'+esc(b.id)+'</span>'}).join("");
+      if(last)test(last[0],last[1]);else{$("hWalk").innerHTML='<li class="s">click the stage, or press Test point</li>';$("hOut").textContent="";$("hMark").style.display="none"}
+    }
+    function test(x,y,cx,cy){
+      if(!scene)return;last=[x,y];
+      var st=$("stage"),r=st.getBoundingClientRect();
+      if(cx===undefined){cx=r.left+x;cy=r.top+y}
+      var res=HitModel.hitTest(scene,x,y);
+      $("hWalk").innerHTML=res.why.map(function(w){return '<li class="'+(w.result==="hit"?"h":"s")+'">'+esc(w.id)+": "+esc(w.result)+'</li>'}).join("");
+      [].forEach.call($("hOrder").querySelectorAll(".chip"),function(c){c.classList.toggle("hit",c.getAttribute("data-id")===res.hit)});
+      var el=document.elementFromPoint(cx,cy),real=el&&st.contains(el)?el.id:el?"outside the stage ("+el.nodeName.toLowerCase()+")":"nothing (the point is off screen)";
+      var ok=real===res.hit;
+      $("hOut").innerHTML="Point ("+x+", "+y+"). Model: <b>"+esc(res.hit||"none")+"</b>. This browser's elementFromPoint: <b>"+esc(real)+'</b> <span class="pill '+(ok?"ok":"bad")+'">'+(ok?"✓ same":"different: please report it")+"</span>";
+      var m=$("hMark"),wr=$("hWrap").getBoundingClientRect();m.style.display="block";m.style.left=(r.left-wr.left+$("hWrap").scrollLeft+x)+"px";m.style.top=(r.top-wr.top+y)+"px";
+      $("hX").value=x;$("hY").value=y;
+    }
+    $("hTest").onclick=function(){var x=Math.max(0,Math.min(359,Math.round(+$("hX").value||0))),y=Math.max(0,Math.min(239,Math.round(+$("hY").value||0)));var st=$("stage");if(st){var r=st.getBoundingClientRect();if(r.top<0||r.bottom>innerHeight||r.left<0||r.right>innerWidth)st.scrollIntoView({block:"center"})}test(x,y)};
+    presets($("hPresets"),HitModel.PRESETS,function(t){$("hSrc").value=t;last=null;hBuild()});
+    var hd=null;$("hSrc").addEventListener("input",function(){[].forEach.call($("hPresets").children,function(x){x.classList.remove("sel")});clearTimeout(hd);hd=setTimeout(hBuild,300)});
+    $("hSrc").value=HitModel.PRESETS[2][1];$("hPresets").children[2].classList.add("sel");hBuild();
+  }
+
+  /* ---------- dispatch lab ---------- */
+  if(window.DispatchModel){
+    var prog=null,want=null;
+    function dRun(){
+      $("dPill").textContent="";$("dPill").className="pill";$("dFrame").hidden=true;
+      try{prog=DispatchModel.parse($("dSrc").value);want=DispatchModel.run(prog);$("dErr").textContent=""}catch(e){$("dErr").textContent=e.message;prog=null;return}
+      var ran={};want.log.forEach(function(l){var m=/^L\d+ \w+ (\S+)$/.exec(l);if(m)ran[m[1]]=1});
+      $("dPath").innerHTML=want.path.slice().reverse().map(function(p,i){return (i?'<i>→</i>':'')+'<span class="chip'+(ran[p]?" ran":"")+'">'+esc(p)+(p===prog.dispatch.target?" (target)":"")+'</span>'}).join("");
+      $("dLog").innerHTML=want.log.length?want.log.map(function(l,i){var m=/^(L\d+) (\w+) (\S+)$/.exec(l);return m?'<li class="'+m[2]+'"><span class="n">'+m[1]+'</span> '+m[2]+' · '+esc(m[3])+'</li>':'<li class="micro">'+esc(l.trim())+'</li>'}).join(""):'<li>no listener ran</li>';
+      $("dRes").innerHTML="defaultPrevented: <b>"+want.defaultPrevented+"</b>"+(prog.dispatch.by==="script"?" · dispatchEvent() returns <b>"+!want.defaultPrevented+"</b>":"");
+      $("dSteps").innerHTML=want.steps.map(function(s){return '<li class="'+s.kind+'">'+esc(s.text)+'</li>'}).join("");
+      $("dHint").textContent=prog.dispatch.by==="user"?"This is a real click: press Check, then click or tap the dashed box ("+prog.dispatch.target+") in the frame that appears. (It needs a mouse or touch; from the keyboard, change by user to by script.)":"Check runs the same listeners in a real document in this browser and calls dispatchEvent.";
+    }
+    function compare(got){
+      var same=got.log.join("\n")===want.log.join("\n")&&got.defaultPrevented===want.defaultPrevented;
+      var p=$("dPill");
+      if(prog.dispatch.by==="user"&&got.target&&got.target!==prog.dispatch.target){p.className="pill bad";p.textContent="you clicked "+got.target+", not "+prog.dispatch.target+": try again";return}
+      p.className="pill "+(same?"ok":"bad");
+      p.textContent=same?"✓ this browser ran the same listeners in the same order":"different from this browser: please report it";
+      if(!same&&window.console)console.log("model",want,"browser",got);
+    }
+    $("dCheck").onclick=function(){
+      if(!prog)return;
+      var f=$("dFrame");f.hidden=false;$("dPill").className="pill";$("dPill").textContent="loading…";
+      f.onload=function(){
+        var w=f.contentWindow,r;
+        try{r=DispatchReal.setup(prog,w)}catch(e){$("dPill").className="pill bad";$("dPill").textContent="could not build the frame: "+e.message;return}
+        if(prog.dispatch.by==="script"){r.dispatchByScript();setTimeout(function(){compare(r.result())},0);f.hidden=true;return}
+        var t=w.document.getElementById(prog.dispatch.target);t.style.outline="3px dashed #c2410c";t.style.outlineOffset="-3px";
+        $("dPill").textContent="click the dashed box";
+        w.addEventListener("pointerup",function(){setTimeout(function(){compare(r.result())},0)},{once:true});
+      };
+      f.srcdoc="<!doctype html><html><head></head><body></body></html>";
+    };
+    presets($("dPresets"),DispatchModel.PRESETS,function(t){$("dSrc").value=t;dRun()});
+    var dd=null;$("dSrc").addEventListener("input",function(){[].forEach.call($("dPresets").children,function(x){x.classList.remove("sel")});clearTimeout(dd);dd=setTimeout(dRun,300)});
+    $("dSrc").value=DispatchModel.PRESETS[1][1];$("dPresets").children[1].classList.add("sel");dRun();
+  }
+})();
+</script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
+</body>
+</html>

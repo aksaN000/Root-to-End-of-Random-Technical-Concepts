@@ -1,0 +1,32 @@
+{
+ "id": "event-dispatch",
+ "date": "2026-10-09T09:32:53.390Z",
+ "platform": "linux 6.18.44-fc-v80 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "Chromium 141.0.7390.37 (Playwright 1.56.0)",
+ "cases": 1609,
+ "matched": 1609,
+ "passed": true,
+ "handPicked": 10,
+ "seeds": [
+  {
+   "count": 400,
+   "seed": 7
+  },
+  {
+   "count": 400,
+   "seed": 2026
+  },
+  {
+   "count": 400,
+   "seed": 99
+  },
+  {
+   "count": 400,
+   "seed": 4242
+  }
+ ],
+ "detail": "799 real clicks through the browser's input path and 810 script dispatches",
+ "failureCount": 0
+}
