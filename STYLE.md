@@ -57,7 +57,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 - Fonts: Chivo (display), IBM Plex Sans (body), JetBrains Mono (code), from Google Fonts.
 - Colour tokens on `:root` with a dark theme under `prefers-color-scheme` and `[data-theme]`: `--bg --surface --code --ink --muted --rule --accent --accent-soft --trace --trace-bg --ok --ok-bg --bad --bad-bg`, plus page-specific pairs (for example `--sh`/`--re` for shift and reduce).
 - Accent (blue) means "where we are / our code". Trace (amber) means "the key line / the root". Green means done or correct, red means conflict or wrong.
-- Diagrams are inline SVG using the `.tl-box`, `.tl-t`, `.tl-a` classes so they work in both themes.
+- Diagrams are inline SVG using the `.tl-box`, `.tl-t`, `.tl-a` classes so they work in both themes. Each shape also carries plain fallback attributes (`fill`, `stroke`, `font-size`, and `width`/`height` on the `<svg>`), so a diagram stays readable even if the stylesheet fails to load.
 - Every page works at 390 px wide with no sideways scrolling; long code wraps or scrolls inside its own box.
 - Motion is small and respects `prefers-reduced-motion`.
 
@@ -73,6 +73,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Before publishing a page
 
+0. Run `python3 tools/stamp-assets.py`. It adds a content hash (`?v=1a2b3c4d`) to every local CSS and JS link. GitHub Pages lets browsers cache files for 10 minutes, so without it a browser can pair a new page with an old stylesheet.
 1. jsdom smoke test: no script errors, footnotes, quizzes and exam questions render.
 2. Playwright screenshots at 1300 px and 390 px, light and dark; no horizontal scroll.
 3. Run the folder's `verify/` script.
@@ -80,6 +81,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Changelog
 
+- **2026-10-09**: Versioned asset links (`tools/stamp-assets.py`) and fallback attributes on diagrams, after a cached old stylesheet made the new diagrams render as large black shapes.
 - **2026-10-09**: Added the 60-second version, exam practice with self-marking, per-section mistake reports, issue templates, SEO metadata, preview images and the sitemap. Wrote this guide.
 - **2026-10-09**: Added the event-loop playground (model plus real-engine check).
 - **2026-10-09**: Added reading footnotes, go-deeper strips, reading lists, quizzes and the progress bar to every page. Replaced the § sign with "Section".
