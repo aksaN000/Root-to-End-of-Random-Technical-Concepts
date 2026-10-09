@@ -1,4 +1,4 @@
-// SLR(1) parser construction and simulation, following the Dragon Book (2nd ed.) §4.4.2 and §4.6.
+// SLR(1) parser construction and simulation, following the Dragon Book (2nd ed.) Sections 4.4.2 and 4.6.
 // Grammar text: one rule per line, "A -> x y | z", symbols separated by spaces, "ε" or nothing for empty.
 var LR = (function () {
   var EPS = "ε", END = "$";

@@ -158,7 +158,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="lbl"><span>Parser build</span><span>top = output</span></div>
   <ol class="frames" id="frames">
     <li><a href="#why"><b>Why bottom-up</b>shift, reduce, accept</a></li>
-    <li><a href="#sets"><b>FIRST and FOLLOW</b>Dragon §4.4.2</a></li>
+    <li><a href="#sets"><b>FIRST and FOLLOW</b>Dragon Book 4.4.2</a></li>
     <li><a href="#items"><b>LR(0) items</b>closure and GOTO</a></li>
     <li><a href="#table"><b>The SLR table</b>ACTION and GOTO</a></li>
     <li><a href="#run"><b>Run the parser</b>stack, input, tree</a></li>
@@ -180,7 +180,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#why">Why</a><a href="#sets">Sets</a><a href="#items">Items</a><a href="#table">Table</a><a href="#run">Run</a><a href="#bison">Bison</a><a href="#conflicts">Conflicts</a><a href="#try">Try it</a><a href="#reading">Reading</a>
   </nav>
-  <p class="muted" style="font-size:.86rem">The construction follows the Dragon Book (2nd ed., §4.4.2 and §4.6). For the expression grammar it reproduces the book's twelve states, SLR table (Fig. 4.37) and moves for <code>id * id + id</code> (Fig. 4.38) exactly; we checked that before publishing. The Bison boxes are real files and real output from GNU Bison 3.8.2.</p>
+  <p class="muted" style="font-size:.86rem">The construction follows the Dragon Book (2nd ed., Sections 4.4.2 and 4.6). For the expression grammar it reproduces the book's twelve states, SLR table (Fig. 4.37) and moves for <code>id * id + id</code> (Fig. 4.38) exactly; we checked that before publishing. The Bison boxes are real files and real output from GNU Bison 3.8.2.</p>
 </header>
 
 <section id="why" data-deeper="haberman-lr,dragon-lr,knuth-lr">

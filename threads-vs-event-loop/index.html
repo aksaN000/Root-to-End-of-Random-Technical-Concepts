@@ -182,7 +182,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 
 <section id="root" data-deeper="ostep-threads,lkd,silberschatz">
   <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>Both models end in the same place: a sleeping task and <code>schedule()</code></h2></div>
-  <div class="claim"><b>From the report, §4.1</b>In synchronous I/O the kernel suspends the thread until data is available; in asynchronous I/O the kernel notifies the application later.</div>
+  <div class="claim"><b>From the report, Section 4.1</b>In synchronous I/O the kernel suspends the thread until data is available; in asynchronous I/O the kernel notifies the application later.</div>
   <div class="prose">
     <p>Here is what "suspends the thread" means in the kernel. On Linux every thread is a <code>task_struct</code>. To wait, a task puts itself on a wait queue, sets its state to sleeping, and calls the scheduler, which picks some other task to run. When the awaited thing happens, whoever caused it walks the wait queue and wakes the sleepers.<a class="rd" data-r="ostep-threads,lkd"></a></p>
     <p>The thread-per-connection server blocks in <code>read()</code>, which for TCP reaches <code>sk_wait_data</code> and waits on <em>that one socket's</em> queue. The event-loop server blocks in <code>epoll_wait()</code>, which reaches <code>ep_poll</code> and waits on <em>one queue for every socket it watches</em>. The mechanism is identical. The difference is the number of sleepers: N threads each waiting on one socket, versus one thread waiting on N.<a class="rd" data-r="c10k"></a></p>
@@ -220,7 +220,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 
 <section id="thread" data-deeper="man-clone,ostep-threads">
   <div class="sechead"><span class="eyebrow">Frame 2 · threads</span><h2>What <code>pthread_create</code> actually asks the kernel for</h2></div>
-  <div class="claim"><b>From the report, §2.1</b>Threads in a process share the address space, file descriptors and globals, but each has its own program counter, registers and stack.</div>
+  <div class="claim"><b>From the report, Section 2.1</b>Threads in a process share the address space, file descriptors and globals, but each has its own program counter, registers and stack.</div>
   <div class="prose">
     <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what our report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.<a class="rd" data-r="man-clone"></a></p>
   </div>
@@ -228,12 +228,12 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <figcaption><span class="path">glibc/nptl/pthread_create.c · create_thread()</span><span class="note">verbatim</span></figcaption>
     <pre data-code="c-clone"></pre>
   </figure>
-  <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in our §4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
+  <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in our Section 4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
 </section>
 
 <section id="switch" data-deeper="ostep-lde,lkd">
   <div class="sechead"><span class="eyebrow">Frame 3 · threads</span><h2>The context switch, line by line</h2></div>
-  <div class="claim"><b>From the report, §2.2</b>The kernel saves the current thread's registers, program counter and stack pointer, loads the next thread's state, and switches the page table base if the threads belong to different processes.</div>
+  <div class="claim"><b>From the report, Section 2.2</b>The kernel saves the current thread's registers, program counter and stack pointer, loads the next thread's state, and switches the page table base if the threads belong to different processes.</div>
   <div class="prose">
     <p>This is that function. When the scheduler picks a different task, it calls <code>context_switch</code>. If the next task is a user task with a different address space, <code>switch_mm_irqs_off</code> loads its page tables (CR3 on x86). Two threads of the same process share <code>mm</code>, so that step costs almost nothing between them. Then <code>switch_to</code>, a short piece of architecture-specific assembly, swaps the stack pointer and callee-saved registers. When <code>switch_to</code> "returns", it returns on the <em>next</em> task's stack, into wherever that task last called <code>schedule()</code>.<a class="rd" data-r="ostep-lde,lkd"></a></p>
   </div>
@@ -246,7 +246,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 
 <section id="mutex" data-deeper="ostep-locks,drepper-futex,lwn-futex">
   <div class="sechead"><span class="eyebrow">Frame 4 · threads</span><h2>Why <code>counter++</code> loses updates, and what <code>pthread_mutex_lock</code> really does</h2></div>
-  <div class="claim"><b>From the report, §2.3, Listing 1</b>Without the mutex, the read-modify-write on <code>counter</code> is not atomic and updates are lost. Under contention, the kernel puts the waiting thread to sleep.</div>
+  <div class="claim"><b>From the report, Section 2.3, Listing 1</b>Without the mutex, the read-modify-write on <code>counter</code> is not atomic and updates are lost. Under contention, the kernel puts the waiting thread to sleep.</div>
   <div class="prose">
     <p><code>counter++</code> compiles to three instructions: load into a register, add, store. Each thread has its own registers, so if the scheduler interleaves those instructions, both threads can load the same old value. Step through it below: pick an interleaving, then turn the mutex on.<a class="rd" data-r="ostep-locks"></a></p>
     <p>The mutex is glibc's futex lock. Its word holds <code>0</code> (unlocked), <code>1</code> (locked, no waiters) or <code>2</code> (locked, maybe waiters). The fast path is a single atomic compare-and-swap in user space with no system call. Only when it fails does <code>__lll_lock_wait</code> set the word to 2 and call <code>futex_wait</code>, which puts the thread to sleep in the kernel. Unlock swaps the word back to 0 and, only if it was 2, calls <code>futex_wake</code>.<a class="rd" data-r="drepper-futex,man-futex,lwn-futex"></a></p>
@@ -284,7 +284,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 
 <section id="loop" data-deeper="man-epoll,libuv-design,node-loop">
   <div class="sechead"><span class="eyebrow">Frame 5 · event loop</span><h2>How a single <code>epoll_wait</code> learns about N sockets</h2></div>
-  <div class="claim"><b>From the report, §3.1</b>Node.js's event loop is built on libuv, which hides platform features like Linux's <code>epoll</code>, macOS's <code>kqueue</code> and Windows I/O completion ports.</div>
+  <div class="claim"><b>From the report, Section 3.1</b>Node.js's event loop is built on libuv, which hides platform features like Linux's <code>epoll</code>, macOS's <code>kqueue</code> and Windows I/O completion ports.</div>
   <div class="prose">
     <p>When we <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.<a class="rd" data-r="man-epoll"></a></p>
     <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs our JavaScript callback.<a class="rd" data-r="libuv-design,node-loop"></a></p>
@@ -339,7 +339,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 
 <section id="scale" data-deeper="c10k,tlpi">
   <div class="sechead"><span class="eyebrow">Frame 7 · scale</span><h2>What 10,000 idle connections cost in each model</h2></div>
-  <div class="claim"><b>From the report, §4.3</b>A pthread on Linux defaults to an 8 MB stack. An event-driven server holds only a small descriptor and a few callback closures per connection.</div>
+  <div class="claim"><b>From the report, Section 4.3</b>A pthread on Linux defaults to an 8 MB stack. An event-driven server holds only a small descriptor and a few callback closures per connection.</div>
   <div class="panel">
     <div class="ctl"><label for="nc">Connections <input type="range" id="nc" min="1" max="5" step="0.01" value="4" style="width:240px"><output id="nco"></output></label></div>
     <div class="tbl"><table id="scaleTbl"></table></div>
