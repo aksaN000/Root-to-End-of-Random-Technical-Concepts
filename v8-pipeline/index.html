@@ -1,0 +1,903 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Inside V8's Pipeline</title>
+<meta name="description" content="How V8 runs our JavaScript: scanner, precedence-climbing parser, Ignition bytecode, inline caches, tiering and deoptimization, traced through real V8 source and real Node output.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css">
+<style>
+/* Layout: the same source-trace grid as the other pages (call-stack rail on the left). Signature element: one expression typed at the top flows through tokens, AST, bytecode and a running interpreter, all live. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --tok:#0f7b74; --tok-soft:#dcf2ef; --ast:#6d3fc4; --ast-soft:#ece5fb; --bc:#2445d0; --jit:#c2410c; --jit-soft:#fde8dc;
+  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --tok:#4fd1c5; --tok-soft:#123430; --ast:#b79bff; --ast-soft:#2a2145; --bc:#8ea5ff; --jit:#ff8a4c; --jit-soft:#3a1d10;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --tok:#4fd1c5; --tok-soft:#123430; --ast:#b79bff; --ast-soft:#2a2145; --bc:#8ea5ff; --jit:#ff8a4c; --jit-soft:#3a1d10;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.2rem,6vw,3.9rem);font-weight:800;letter-spacing:-.02em}
+.hero h1 em{font-style:normal;color:var(--jit)}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+/* hero pipeline strip */
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch}
+.pipe a{flex:1 1 120px;min-width:0;text-decoration:none;color:var(--ink);border:1px solid var(--rule);background:var(--surface);border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;position:relative;overflow:hidden}
+.pipe a b{font-family:var(--display);font-size:.95rem}
+.pipe a span{font-family:var(--mono);font-size:.7rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pipe a::after{content:"";position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--c,var(--accent));transform:scaleX(0);transform-origin:left}
+.pipe a:hover{border-color:var(--c,var(--accent))}
+@media (prefers-reduced-motion:no-preference){.pipe a::after{animation:flow 6s infinite}.pipe a:nth-child(2)::after{animation-delay:1s}.pipe a:nth-child(3)::after{animation-delay:2s}.pipe a:nth-child(4)::after{animation-delay:3s}.pipe a:nth-child(5)::after{animation-delay:4s}.pipe a:nth-child(6)::after{animation-delay:5s}}
+@keyframes flow{0%{transform:scaleX(0)}12%{transform:scaleX(1)}30%{transform:scaleX(1);opacity:1}40%{opacity:0}100%{opacity:0}}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src.real figcaption{border-top:3px solid var(--ok)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.ctl label{font-size:.84rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+button,select,input[type=text],input[type=number]{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover,select:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+input[type=number]{width:5.5em;font-family:var(--mono)}
+/* expression lab */
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.lab .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.lab input#expr{flex:1 1 260px;min-width:0;font-family:var(--mono);font-size:1.05rem;padding:9px 12px;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:8px}
+.lab .presets{display:flex;flex-wrap:wrap;gap:6px}
+.lab .presets button{font-family:var(--mono);font-size:.78rem;padding:4px 8px}
+.err{font-size:.86rem;color:var(--bad);min-height:1.2em}
+.lab .sig{font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.stagehead i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.toks{display:flex;flex-wrap:wrap;gap:6px}
+.tk{display:flex;flex-direction:column;align-items:center;border:1px solid var(--tok);background:var(--tok-soft);border-radius:8px;padding:4px 8px;min-width:44px}
+.tk b{font-family:var(--mono);font-size:1rem;color:var(--ink);font-weight:600}
+.tk span{font-family:var(--mono);font-size:.66rem;color:var(--tok)}
+@media (prefers-reduced-motion:no-preference){.tk{animation:pop .25s ease-out both}}
+@keyframes pop{from{transform:translateY(4px);opacity:0}to{transform:none;opacity:1}}
+.ast-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--bg)}
+.ast-wrap svg{display:block;min-width:360px;width:100%;height:auto}
+.plog{font-family:var(--mono);font-size:.74rem;color:var(--muted);background:var(--code);border-radius:8px;padding:8px 10px;max-height:13em;overflow:auto;white-space:pre;line-height:1.55}
+.bcl{font-family:var(--mono);font-size:.82rem;border:1px solid var(--rule);border-radius:10px;overflow:hidden}
+.bcl .r{display:grid;grid-template-columns:3.2em minmax(9em,auto) minmax(0,1fr);gap:10px;padding:3px 10px;border-left:3px solid transparent;align-items:baseline}
+.bcl .r:nth-child(odd){background:var(--code)}
+.bcl .r .off{color:var(--muted);font-size:.72rem}
+.bcl .r .op{color:var(--bc);font-weight:600;white-space:nowrap}
+.bcl .r .op em{font-style:normal;color:var(--ink);font-weight:400}
+.bcl .r .why{color:var(--muted);font-family:var(--body);font-size:.8rem}
+.bcl .r.pc{border-left-color:var(--accent);background:var(--accent-soft)}
+.bcl .r.done{opacity:.6}
+.meta{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}.pill.acc{background:var(--accent-soft);color:var(--accent)}
+.vm{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.cell{border:1px solid var(--rule);border-radius:8px;padding:6px 10px;background:var(--bg);min-width:0}
+.cell span{display:block;font-family:var(--mono);font-size:.68rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.cell b{font-family:var(--mono);font-size:1.05rem;font-weight:600;font-variant-numeric:tabular-nums;word-break:break-all}
+.cell.acc{border-color:var(--accent);background:var(--accent-soft)}
+.cell.flash{animation:flash .5s ease-out}
+@keyframes flash{from{box-shadow:0 0 0 3px var(--trace)}to{box-shadow:0 0 0 0 transparent}}
+@media (prefers-reduced-motion:reduce){.cell.flash{animation:none}}
+.note{font-size:.92rem;max-width:72ch;min-height:1.5em}
+/* shapes */
+.shp{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:14px}
+@media (max-width:760px){.shp{grid-template-columns:1fr}}
+.tree{font-family:var(--mono);font-size:.82rem;line-height:1.7}
+.tree .m{display:inline-block;padding:0 6px;border-radius:5px;background:var(--ast-soft);color:var(--ast);margin-right:4px}
+.tree .m.hot{background:var(--trace-bg);color:var(--trace);outline:1px solid var(--trace)}
+.icstate{font-family:var(--display);font-size:1.5rem;font-weight:800}
+.icstate.UNINITIALIZED{color:var(--muted)}.icstate.MONOMORPHIC{color:var(--ok)}.icstate.POLYMORPHIC{color:var(--trace)}.icstate.MEGAMORPHIC{color:var(--bad)}
+.slots{display:flex;gap:4px;flex-wrap:wrap}
+.slots i{width:28px;height:28px;border-radius:6px;border:1px dashed var(--rule);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-family:var(--mono);font-size:.72rem}
+.slots i.f{border-style:solid;border-color:var(--ast);background:var(--ast-soft);color:var(--ast)}
+/* tiers */
+.ladder{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+@media (max-width:700px){.ladder{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tier{border:1px solid var(--rule);border-radius:10px;padding:10px;background:var(--bg);display:flex;flex-direction:column;gap:3px}
+.tier b{font-family:var(--display);font-size:1rem}
+.tier span{font-size:.78rem;color:var(--muted)}
+.tier small{font-family:var(--mono);font-size:.68rem;color:var(--muted)}
+.tier.on{border-color:var(--jit);background:var(--jit-soft)}
+.tier.on b{color:var(--jit)}
+.tier.off{opacity:.55}
+.trace{font-family:var(--mono);font-size:.74rem;background:var(--code);border:1px solid var(--rule);border-radius:8px;padding:8px 10px;white-space:pre-wrap;word-break:break-all;line-height:1.55;max-height:16em;overflow:auto}
+.trace .opt{color:var(--ok)}.trace .de{color:var(--bad);font-weight:600}.trace .out{color:var(--ink)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.88rem;width:100%}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Pipeline</span><span>top = fastest</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#handoff"><b>Blink hands V8 our file</b>lazy parsing</a></li>
+    <li><a href="#tokens"><b>Characters → tokens</b>Scanner::ScanSingleToken</a></li>
+    <li><a href="#parse"><b>Tokens → AST</b>precedence climbing</a></li>
+    <li><a href="#bytecode"><b>AST → bytecode</b>BytecodeGenerator</a></li>
+    <li><a href="#ignition"><b>Running bytecode</b>Ignition handlers</a></li>
+    <li><a href="#shapes"><b>Shapes and inline caches</b>IC::SetCache</a></li>
+    <li><a href="#tiers"><b>Tiering up</b>Sparkplug · Maglev · TurboFan</a></li>
+    <li><a href="#deopt"><b>When speculation fails</b>deoptimization</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>flags, quizzes, exercises</a></li>
+    <li><a href="#reading"><b>Reading list</b>everything cited here</a></li>
+  </ol>
+  <div class="base">— bottom: source text</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Compilers meets runtimes · traced through V8 source and real Node 22 output</span>
+  <h1>How V8 turns <code style="font-size:.8em;background:none;padding:0">a + b</code> into <em>machine code</em></h1>
+  <p class="lede">The <a href="../js-event-loop/">event-loop page</a> stops at "Blink hands the source to V8, which parses it, compiles it to bytecode, and executes". This page opens that box. We follow one expression through V8's scanner, its precedence-climbing parser, the bytecode generator and the Ignition interpreter, then watch V8 collect feedback, compile hot code to machine code, and throw that code away when its guesses turn out wrong.</p>
+  <nav class="pipe" aria-label="The stages on this page">
+    <a href="#tokens" style="--c:var(--tok)"><b>Scanner</b><span>chars → tokens</span></a>
+    <a href="#parse" style="--c:var(--ast)"><b>Parser</b><span>tokens → AST</span></a>
+    <a href="#bytecode" style="--c:var(--bc)"><b>Generator</b><span>AST → bytecode</span></a>
+    <a href="#ignition" style="--c:var(--bc)"><b>Ignition</b><span>run + collect feedback</span></a>
+    <a href="#tiers" style="--c:var(--jit)"><b>TurboFan</b><span>feedback → machine code</span></a>
+    <a href="#deopt" style="--c:var(--bad)"><b>Deopt</b><span>back to bytecode</span></a>
+  </nav>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#handoff">Handoff</a><a href="#tokens">Tokens</a><a href="#parse">Parse</a><a href="#bytecode">Bytecode</a><a href="#ignition">Ignition</a><a href="#shapes">Shapes</a><a href="#tiers">Tiers</a><a href="#deopt">Deopt</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">V8 excerpts come from <code>v8/v8</code> main, fetched October 2026. Every "real output" box was produced by running Node v22.22.0 (V8 12.4) with the flags shown. The live lab below is a model of V8's parser and bytecode generator; we tested it against Node's <code>--print-bytecode</code> on 746 expressions and it matched every one byte for byte. Small numbered tags like <a class="rd" data-r="hinkelmann-bytecode"></a> open reading notes.</p>
+</header>
+
+<section id="handoff" data-deeper="v8-preparser,v8-launch,kosaka-browser">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the handoff</span><h2>Where V8 gets our code</h2></div>
+  <div class="prose">
+    <p>On the event-loop page, step 10 was a task that "executes the script". Inside that task, Blink passes the source text of <code>main.jsx</code> to V8 and asks it to compile and run. In Node, the same happens when <code>require</code> or <code>import</code> loads a file. Either way, V8 receives a string of characters and has to end up executing machine instructions.</p>
+    <p>V8 does not compile everything at once. The top-level code is parsed fully, but most function bodies are only <b>pre-parsed</b>: scanned quickly to find where they end and which variables they capture. A function is fully parsed and compiled to bytecode the first time it is called.<a class="rd" data-r="v8-preparser"></a> Since <code>add</code> below is called, it goes all the way through.</p>
+  </div>
+</section>
+
+<div class="lab" id="lab" aria-label="Expression lab">
+  <div class="stagehead"><i style="background:var(--accent)"></i>Expression lab · drives frames 1 to 4 below</div>
+  <div class="row">
+    <span class="sig">function f(a, b, c) { return</span>
+    <input id="expr" type="text" value="a + b * c" spellcheck="false" autocomplete="off" aria-label="Expression">
+    <span class="sig">; }</span>
+  </div>
+  <div class="presets" id="presets"></div>
+  <div class="err" id="err" role="status"></div>
+</div>
+
+<section id="tokens" data-deeper="v8-scanner,dragon-lex">
+  <div class="sechead"><span class="eyebrow">Frame 1 · lexical analysis</span><h2>Characters become tokens</h2></div>
+  <div class="prose">
+    <p>The scanner reads characters and groups them into tokens, the lexical-analysis phase from compiler design.<a class="rd" data-r="dragon-lex"></a> V8's scanner is hand-written for speed. For ASCII characters it looks up a precomputed table, <code>one_char_tokens</code>, then resolves multi-character operators by peeking ahead. That is how <code>&lt;</code>, <code>&lt;=</code>, <code>&lt;&lt;</code> and <code>&lt;&lt;=</code> are told apart.</p>
+  </div>
+  <div class="panel">
+    <div class="stagehead"><i style="background:var(--tok)"></i>Tokens for our expression · V8 token names</div>
+    <div class="toks" id="toks"></div>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/parsing/scanner-inl.h · Scanner::ScanSingleToken()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-scan"></pre>
+  </figure>
+</section>
+
+<section id="parse" data-deeper="ci-parsing,ci-compiling,dragon-cfg">
+  <div class="sechead"><span class="eyebrow">Frame 2 · syntax analysis</span><h2>Tokens become a tree, by precedence climbing</h2></div>
+  <div class="prose">
+    <p>V8's parser is hand-written recursive descent, not generated by a tool like Bison. For binary operators it uses <b>precedence climbing</b>: every operator has a number (<code>+</code> is 12, <code>*</code> is 13, <code>**</code> is 14), and the parser keeps absorbing operators of the current precedence, recursing with a higher minimum precedence for the right-hand side.<a class="rd" data-r="ci-compiling,dragon-cfg"></a> Associativity falls out of one line: <code>**</code> is right-associative, so its right side is parsed at the <em>same</em> precedence instead of one higher.</p>
+    <p>Two things happen during parsing that surprise most people. When both operands are number literals, the parser folds them on the spot, so <code>2 * 3 + a</code> never contains a multiplication. And a chain of the same operator, such as <code>a - b - c</code>, is collapsed into one n-ary node.</p>
+  </div>
+  <div class="panel">
+    <div class="stagehead"><i style="background:var(--ast)"></i>Abstract syntax tree</div>
+    <div class="ast-wrap" id="ast"></div>
+    <div class="stagehead"><i style="background:var(--muted)"></i>Parser call trace</div>
+    <div class="plog" id="plog"></div>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">v8/src/parsing/parser-base.h · ParseBinaryContinuation()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-prec"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">v8/src/parsing/token.h · BINARY_OP_TOKEN_LIST</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-tokens"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/parsing/parser.cc · ShortcutLiteralBinaryExpression()</span><span class="note">trimmed: constant folding</span></figcaption>
+    <pre data-code="c-fold"></pre>
+  </figure>
+</section>
+
+<section id="bytecode" data-deeper="hinkelmann-bytecode,v8-ignition,ci-vm">
+  <div class="sechead"><span class="eyebrow">Frame 3 · code generation</span><h2>The tree becomes Ignition bytecode</h2></div>
+  <div class="prose">
+    <p>Ignition is a <b>register machine with an accumulator</b>. Most bytecodes read one operand from a register and the other from an implicit accumulator, then leave the result in the accumulator. Parameters live in registers <code>a0</code>, <code>a1</code>, <code>a2</code>; temporaries are <code>r0</code>, <code>r1</code> and so on.<a class="rd" data-r="hinkelmann-bytecode"></a> The <code>[n]</code> operand after an arithmetic bytecode is a <b>feedback slot</b>: a place where Ignition records which types it actually saw, for the optimizing compilers to use later.</p>
+    <p>The generator below walks our tree. Watch three real V8 behaviours: a Smi literal on the right becomes an immediate operand (<code>MulSmi [2]</code>); a literal on the left of a commutative operator is moved to the right; and a parameter used as a left operand is read straight from its register, because V8's register optimizer removes the copy.</p>
+  </div>
+  <div class="panel">
+    <div class="stagehead"><i style="background:var(--bc)"></i>Bytecode for f(a, b, c) · same format as node --print-bytecode</div>
+    <div class="meta" id="bcmeta"></div>
+    <div class="bcl" id="bcl"></div>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/interpreter/bytecode-generator.cc · VisitArithmeticExpression()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-gen"></pre>
+  </figure>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">real output · node --print-bytecode --print-bytecode-filter=add</span><span class="note">Node 22.22.0</span></figcaption>
+      <pre data-code="o-add"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">real output · sumSquares(n)</span><span class="note">Node 22.22.0, used in Frame 4</span></figcaption>
+      <pre data-code="o-sum"></pre>
+    </figure>
+  </div>
+</section>
+
+<section id="ignition" data-deeper="ci-vm,v8-ignition,hinkelmann-bytecode">
+  <div class="sechead"><span class="eyebrow">Frame 4 · interpretation</span><h2>Ignition runs the bytecode, one handler at a time</h2></div>
+  <div class="prose">
+    <p>Each bytecode has a <b>handler</b>: a small piece of machine code generated when V8 is built. A handler does its work, then <code>Dispatch()</code> reads the next bytecode and jumps straight to that handler. There is no central <code>switch</code> statement; each handler ends by jumping to the next one. The arithmetic handlers also update the feedback slot with the types they saw.</p>
+  </div>
+  <div class="panel" id="vm">
+    <div class="ctl">
+      <span class="stagehead" style="margin-right:6px"><i style="background:var(--bc)"></i>Program</span>
+      <button type="button" id="pExpr" class="sel">Our expression</button>
+      <button type="button" id="pSum">sumSquares(n) · real bytecode</button>
+      <span style="flex:1"></span>
+      <span id="vmInputs"></span>
+    </div>
+    <div class="ctl">
+      <button type="button" id="vStep" class="go">Step</button>
+      <button type="button" id="vRun">Run to end</button>
+      <button type="button" id="vReset">Reset</button>
+      <span class="pill" id="vCount"></span>
+    </div>
+    <div class="vm" id="vmCells"></div>
+    <div class="bcl" id="vmCode"></div>
+    <p class="note" id="vmNote"></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">v8/src/interpreter/interpreter-generator.cc · Ldar, Add</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-handlers"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">v8/src/interpreter/interpreter-generator.cc · JumpLoop</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-jumploop"></pre>
+    </figure>
+  </div>
+  <p class="callout">Two details worth noticing in real V8 output. The Node 22 bytecode writes the feedback slot as an operand (<code>Add a0, [0]</code>), while current V8 main has moved to <b>embedded feedback</b> (<code>BinaryOpWithEmbeddedFeedback</code> above) stored in the bytecode stream itself. And <code>JumpLoop</code> is where long-running loops are checked for <b>on-stack replacement</b>: switching to optimized code in the middle of a running loop.</p>
+</section>
+
+<section id="shapes" data-deeper="shapes-ics,meurer-speculative">
+  <div class="sechead"><span class="eyebrow">Frame 5 · objects</span><h2>Hidden classes and inline caches</h2></div>
+  <div class="prose">
+    <p>JavaScript objects look like dictionaries, but V8 gives every object a hidden class it calls a <b>Map</b>: a description of which properties exist and at which offset. Objects created with the same properties in the same order share a Map. When <code>getX(o)</code> runs <code>o.x</code>, the property load's <b>inline cache</b> remembers "for this Map, x is at offset N", so the next lookup is a comparison and a load.<a class="rd" data-r="shapes-ics"></a></p>
+    <p>The cache has states. One Map seen is <b>monomorphic</b>. Up to four is <b>polymorphic</b>, a short list to check. The fifth different Map makes it <b>megamorphic</b>, falling back to a global lookup table. The limit 4 is a real V8 flag, shown below, and the transitions are exactly what V8 printed for us.</p>
+  </div>
+  <div class="panel">
+    <div class="ctl" id="shapeBtns"></div>
+    <div class="shp">
+      <div class="cell"><span>Map transition tree (property order matters)</span><div class="tree" id="mapTree"></div></div>
+      <div class="cell"><span>Inline cache for o.x in getX</span><div class="icstate" id="icState">UNINITIALIZED</div><div class="slots" id="icSlots"></div><p class="note" id="icNote" style="font-size:.84rem"></p></div>
+    </div>
+  </div>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">real output · node --allow-natives-syntax (%DebugPrint feedback)</span><span class="note">Node 22.22.0</span></figcaption>
+      <pre data-code="o-ic"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">v8/src/flags/flag-definitions.h</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-poly"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/ic/ic.cc · IC::SetCache()</span><span class="note">trimmed: the state machine</span></figcaption>
+    <pre data-code="c-setcache"></pre>
+  </figure>
+</section>
+
+<section id="tiers" data-deeper="v8-sparkplug,v8-maglev,v8-launch">
+  <div class="sechead"><span class="eyebrow">Frame 6 · just-in-time compilation</span><h2>Tiering up: from bytecode to optimized machine code</h2></div>
+  <div class="prose">
+    <p>Interpreting is cheap to start but slow to run. V8 therefore has a ladder of compilers and moves a function up the ladder as it gets hotter. <b>Sparkplug</b> translates bytecode to machine code almost one-to-one, without optimizing.<a class="rd" data-r="v8-sparkplug"></a> <b>Maglev</b> is a fast optimizing compiler.<a class="rd" data-r="v8-maglev"></a> <b>TurboFan</b> spends the most time and produces the fastest code, using the feedback Ignition collected to <em>speculate</em> about types.</p>
+  </div>
+  <div class="ladder">
+    <div class="tier on"><b>Ignition</b><span>interpreter, collects feedback</span><small>always</small></div>
+    <div class="tier on"><b>Sparkplug</b><span>baseline machine code</span><small>Node 22: on · Chrome: on</small></div>
+    <div class="tier off"><b>Maglev</b><span>fast optimizing JIT</span><small>Node 22: off · Chrome: on</small></div>
+    <div class="tier on"><b>TurboFan</b><span>speculative optimizing JIT</span><small>Node 22: on · Chrome: on</small></div>
+  </div>
+  <p class="muted" style="font-size:.86rem">The Node column comes from <code>node --v8-options</code> on Node 22.22.0: <code>--sparkplug</code> and <code>--turbofan</code> default on, <code>--maglev</code> defaults off. Chrome has shipped Maglev on by default since version 117.</p>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/execution/tiering-manager.cc · TieringManager::ShouldOptimize()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-tier"></pre>
+  </figure>
+</section>
+
+<section id="deopt" data-deeper="meurer-speculative,v8-ptr-compression">
+  <div class="sechead"><span class="eyebrow">Frame 7 · speculation</span><h2>When TurboFan's guess is wrong: deoptimization</h2></div>
+  <div class="prose">
+    <p>TurboFan compiles <code>add</code> assuming the feedback stays true. If Ignition only ever saw small integers (V8 calls them <b>Smis</b>), the machine code uses a plain integer add plus a cheap check. When a value breaks the assumption, the check fails and V8 <b>deoptimizes</b>: it rebuilds the interpreter frame and continues in Ignition at the exact same bytecode, with updated feedback.<a class="rd" data-r="meurer-speculative"></a> Step through what Node actually printed for this program:</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">deopt.js</span><span class="note">the program we ran</span></figcaption>
+    <pre data-code="c-deoptjs"></pre>
+  </figure>
+  <div class="panel">
+    <div class="ctl"><button type="button" id="dNext" class="go">Next event</button><button type="button" id="dReset">Reset</button><span class="pill" id="dCount"></span></div>
+    <div class="vm">
+      <div class="cell"><span>Running as</span><b id="dTier">Ignition</b></div>
+      <div class="cell"><span>Feedback for a + b</span><b id="dFb">none yet</b></div>
+      <div class="cell"><span>Optimized code assumes</span><b id="dAssume">nothing</b></div>
+    </div>
+    <p class="note" id="dNote"></p>
+    <div class="trace" id="dTrace" aria-live="polite"></div>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">v8/src/deoptimizer/deoptimize-reason.h</span><span class="note">two of the reasons, verbatim</span></figcaption>
+    <pre data-code="c-reasons"></pre>
+  </figure>
+  <p class="callout">Why did the first deopt say <b>overflow</b>? The running sum passes 2<sup>31</sup>, so it no longer fits a Smi, which in Node is a 32-bit integer. Chrome uses pointer compression, which shrinks Smis to 31 bits, so the same overflow would happen earlier there.<a class="rd" data-r="v8-ptr-compression"></a> That is also why the lab above treats numbers up to 2,147,483,647 as Smis: it matches Node.</p>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 8 · verify it ourselves</span><h2>Run every experiment on this page</h2></div>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>Command (Node 18 or later)</th></tr></thead>
+    <tbody>
+      <tr><td>Bytecode for one function</td><td><code>node --print-bytecode --print-bytecode-filter=add add.js</code></td></tr>
+      <tr><td>Optimization and deoptimization</td><td><code>node --trace-opt --trace-deopt deopt.js</code></td></tr>
+      <tr><td>Inline cache states</td><td><code>node --allow-natives-syntax ic.js</code> with <code>%DebugPrint(getX)</code> after each call</td></tr>
+      <tr><td>Whether two objects share a Map</td><td><code>%HaveSameMap(a, b)</code> under <code>--allow-natives-syntax</code></td></tr>
+      <tr><td>Which tiers are enabled</td><td><code>node --v8-options | grep -A1 -E "^\s+--(maglev|sparkplug|turbofan) "</code></td></tr>
+      <tr><td>Check the lab model ourselves</td><td><code>node verify/compare-with-node.js</code> in this folder compares the model with real V8 on random expressions</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Predict first</h3>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"What is the first bytecode for <code>return 2 * 3 + a</code>?","options":["<code>LdaSmi [2]</code>","<code>LdaSmi [6]</code>","<code>Ldar a0</code>","<code>MulSmi [3]</code>"],"answer":1,"explain":"The parser folds <code>2 * 3</code> into the literal 6 before any bytecode exists. Because <code>+</code> is not treated as commutative (it might be string concatenation), the literal stays on the left: <code>LdaSmi [6]; Star0; Ldar a0; Add r0, [0]</code>. Type it into the lab to check."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"<code>getX</code> has seen objects with 4 different Maps. A fifth Map arrives. What does the load IC become?","options":["Still POLYMORPHIC, with 5 entries","MEGAMORPHIC","MONOMORPHIC again, for the newest Map","It deoptimizes"],"answer":1,"explain":"<code>max_valid_polymorphic_map_count</code> defaults to 4. <code>UpdatePolymorphicIC</code> refuses a fifth Map, so <code>SetCache</code> falls through to <code>ConfigureVectorState(MEGAMORPHIC)</code>. Node printed exactly this sequence for us."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"TurboFan optimized <code>add</code> after seeing only numbers. We call <code>add(\"root\", \"-to-end\")</code>. Which deopt reason did Node print?","options":["overflow","wrong map","not a Number or Oddball","insufficient type feedback"],"answer":2,"explain":"The optimized code checks that both inputs are numbers (or oddballs like <code>undefined</code>). A string fails that check, so V8 deoptimized with <code>kNotANumberOrOddball</code> and continued in Ignition, where <code>Add</code> handles strings."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Are <code>{x: 1, y: 2}</code> and <code>{y: 2, x: 1}</code> the same hidden class?","options":["Yes, they have the same properties","No, property order matters","Only after TurboFan runs","Only in strict mode"],"answer":1,"explain":"Maps are built by transitions in the order properties are added, so the two objects follow different paths in the transition tree. <code>%HaveSameMap</code> returned <code>false</code> for <code>{x:1}</code> and <code>{y:1, x:2}</code> in our run."}</script></div>
+  </div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Run <code>node --print-bytecode</code> on <code>function f(a, b) { return a + b + 1 }</code> and on <code>return 1 + a + b</code>. Explain the difference using constant folding and n-ary collapsing, then confirm with the lab.</li>
+    <li>Write a loop that calls <code>getX</code> with 3 shapes, then 5 shapes, and time 10 million calls of each with <code>performance.now()</code>. Relate the gap to the IC states.</li>
+    <li>Change <code>deopt.js</code> so the sum stays below 2<sup>31</sup>. Which deopt disappears from <code>--trace-deopt</code>, and why?</li>
+    <li>Run <code>node --maglev --trace-opt deopt.js</code>. Does <code>add</code> go to Maglev first? Read <code>ShouldOptimize</code> above and explain what you see.</li>
+    <li>Extend the lab's grammar on paper with unary minus. Where in <code>ParseBinaryExpression</code> would it be handled, and what bytecode do you expect for <code>-a * b</code>? Check with Node.</li>
+  </ol>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <div id="reading-list"></div>
+  <p class="muted" style="font-size:.84rem">V8 source is © the V8 project authors, BSD license, quoted for study. Real outputs were produced on Node v22.22.0 (V8 12.4.254.21-node.33).</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-scan">V8_INLINE Token::Value Scanner::ScanSingleToken() {
+  // …
+  do {
+    next().location.beg_pos = source_pos();
+
+    if (V8_LIKELY(static_cast<unsigned>(c0_) <= kMaxAscii)) {
+»     token = one_char_tokens[c0_];          // table lookup on the first character
+
+      switch (token) {
+        case Token::kLeftParen:
+        case Token::kRightParen:
+        // …
+          // One character tokens.
+»         return Select(token);
+
+        case Token::kLessThan:
+          // < <= << <<= <!--
+»         Advance();                           // peek at the next character
+          if (c0_ == '=') return Select(Token::kLessThanEq);
+          if (c0_ == '<') return Select('=', Token::kAssignShl, Token::kShl);
+          // …
+          return Token::kLessThan;
+        // …</script>
+
+<script type="text/plain" id="c-prec">// Precedence >= 4
+template <typename Impl>
+typename ParserBase<Impl>::ExpressionT
+ParserBase<Impl>::ParseBinaryContinuation(ExpressionT x, int prec, int prec1) {
+  do {
+    // prec1 >= 4
+»   while (Token::Precedence(peek(), accept_IN_) == prec1) {
+      // …
+        op = Next();
+
+»       const bool is_right_associative = op == Token::kExp;
+»       const int next_prec = is_right_associative ? prec1 : prec1 + 1;
+»       y = ParseBinaryExpression(next_prec);
+      // …
+      } else if (!impl()->ShortcutLiteralBinaryExpression(&x, y, op, pos) &&
+                 !impl()->CollapseNaryExpression(&x, y, op, pos, right_range)) {
+        // We have a "normal" binary operation.
+»       x = factory()->NewBinaryOperation(op, x, y, pos);
+        // …
+      }
+    }
+»   --prec1;
+  } while (prec1 >= prec);
+
+  return x;
+}</script>
+
+<script type="text/plain" id="c-tokens">#define BINARY_OP_TOKEN_LIST(T, E) \
+  E(T, Nullish, "??", 3)           \
+  E(T, Or, "||", 4)                \
+  E(T, And, "&&", 5)               \
+  E(T, BitOr, "|", 6)              \
+  E(T, BitXor, "^", 7)             \
+  E(T, BitAnd, "&", 8)             \
+  E(T, Shl, "<<", 11)              \
+  E(T, Sar, ">>", 11)              \
+  E(T, Shr, ">>>", 11)             \
+» E(T, Mul, "*", 13)               \
+  E(T, Div, "/", 13)               \
+  E(T, Mod, "%", 13)               \
+» E(T, Exp, "**", 14)              \
+» E(T, Add, "+", 12)               \
+  E(T, Sub, "-", 12)</script>
+
+<script type="text/plain" id="c-fold">bool Parser::ShortcutLiteralBinaryExpression(Expression** x, Expression* y,
+                                             Token::Value op, int pos) {
+  // Constant fold numeric operations.
+» if ((*x)->IsNumberLiteral() && y->IsNumberLiteral()) {
+    double x_val = (*x)->AsLiteral()->AsNumber();
+    double y_val = y->AsLiteral()->AsNumber();
+    switch (op) {
+      case Token::kAdd:
+»       *x = factory()->NewNumberLiteral(x_val + y_val, pos);
+        return true;
+      // … kSub, kMul, kDiv, kMod, kBitOr, kBitAnd, kBitXor, kShl, kShr, kSar, kExp …
+      default:
+        break;
+    }
+  }
+  // …
+  return false;
+}</script>
+
+<script type="text/plain" id="c-gen">void BytecodeGenerator::VisitArithmeticExpression(BinaryOperation* expr) {
+  FeedbackSlot slot;
+  // …
+  Expression* subexpr;
+  Tagged<Smi> literal;
+» if (expr->IsSmiLiteralOperation(&subexpr, &literal)) {
+    TypeHint type_hint = VisitForAccumulatorValue(subexpr);
+    builder()->SetExpressionPosition(expr);
+»   builder()->BinaryOperationSmiLiteral(expr->op(), literal,
+                                         kFeedbackIsEmbedded);
+    // …
+  } else {
+»   TypeHint lhs_type = VisitForAccumulatorValue(expr->left());
+»   Register lhs = register_allocator()->NewRegister();
+»   builder()->StoreAccumulatorInRegister(lhs);
+»   TypeHint rhs_type = VisitForAccumulatorValue(expr->right());
+    // … then emits  Op lhs  (accumulator = lhs op accumulator)
+  }
+}</script>
+
+<script type="text/plain" id="o-add">// add.js
+function add(a, b) { return a + b; }
+
+[generated bytecode for function: add (0x14e73021af89 <SharedFunctionInfo add>)]
+Bytecode length: 6
+Parameter count 3
+Register count 0
+Frame size 0
+»   21 S> 0xf99822c1ed0 @    0 : 0b 04             Ldar a1
+»   30 E> 0xf99822c1ed2 @    2 : 3b 03 00          Add a0, [0]
+»   34 S> 0xf99822c1ed5 @    5 : ae                Return
+Constant pool (size = 0)</script>
+
+<script type="text/plain" id="o-sum">function sumSquares(n) {
+  let total = 0;
+  for (let i = 1; i <= n; i++) { total += i * i; }
+  return total;
+}
+Register count 3
+   39 S> @    0 : 0c                LdaZero
+         @    1 : c9                Star0
+   57 S> @    2 : 0d 01             LdaSmi [1]
+         @    4 : c8                Star1
+   62 S> @    5 : 0b 03             Ldar a0
+   62 E> @    7 : 73 f8 00          TestLessThanOrEqual r1, [0]
+         @   10 : 9e 17             JumpIfFalse [23] (@ 33)
+   79 S> @   12 : 0b f8             Ldar r1
+   90 E> @   14 : 3d f8 02          Mul r1, [2]
+         @   17 : 3b f9 01          Add r0, [1]
+         @   20 : 19 f9 f7          Mov r0, r2
+         @   23 : c9                Star0
+   69 S> @   24 : 0b f8             Ldar r1
+         @   26 : 53 03             Inc [3]
+         @   28 : c8                Star1
+»  44 E> @   29 : 8e 18 00 04       JumpLoop [24], [0], [4] (@ 5)
+  101 S> @   33 : 0b f9             Ldar r0
+  114 S> @   35 : ae                Return</script>
+
+<script type="text/plain" id="c-handlers">// Ldar <src>
+//
+// Load accumulator with value from register <src>.
+IGNITION_HANDLER(Ldar, InterpreterAssembler) {
+  TNode<Object> value = LoadRegisterAtOperandIndex(0);
+» SetAccumulator(value);
+» Dispatch();                  // jump straight to the next bytecode's handler
+}
+
+// Add <src>
+//
+// Add register <src> to accumulator.
+IGNITION_HANDLER(Add, InterpreterBinaryOpAssembler) {
+  BinaryOpWithEmbeddedFeedback(&BinaryOpAssembler::Generate_AddWithFeedback);
+}
+
+  void BinaryOpWithEmbeddedFeedback_WithoutDispatch(
+      BinaryOpGenerator generator) {
+»   TNode<Object> lhs = LoadRegisterAtOperandIndex(0);
+»   TNode<Object> rhs = GetAccumulator();
+    // …
+    TNode<Object> result = (binop_asm.*generator)(
+        [=] { return context; }, lhs, rhs,
+»       binop_asm.MakeEmbeddedFeedbackUpdater(bytecode_array, feedback_offset),
+        /*rhs_known_smi=*/false);
+    SetAccumulator(result);
+  }</script>
+
+<script type="text/plain" id="c-jumploop">IGNITION_HANDLER(JumpLoop, InterpreterAssembler) {
+  TNode<IntPtrT> relative_jump =
+      ChangeInt32ToIntPtr(Signed(BytecodeOperandUImm(0)));
+  // …
+  TNode<FeedbackVector> feedback_vector = CAST(maybe_feedback_vector.value());
+» TNode<Int8T> osr_state = LoadOsrState(feedback_vector);
+  TNode<Int32T> loop_depth = BytecodeOperandImm(1);
+  // …
+  // The quick initial OSR check. If it passes, we proceed on to more expensive
+  // OSR logic.
+» GotoIfNot(Uint32GreaterThanOrEqual(loop_depth, osr_state),
+            &maybe_osr_because_osr_state);
+  // …
+  // The backward jump can trigger a budget interrupt, which can handle stack
+  // interrupts, so we don't need to explicitly handle them here.
+» JumpBackward(relative_jump);
+  // …</script>
+
+<script type="text/plain" id="o-ic">function getX(o) { return o.x; }
+// call getX twice with each new shape, then %DebugPrint(getX)
+after shape 1 ->
+» - slot #0 LoadProperty MONOMORPHIC
+after shape 2 ->
+» - slot #0 LoadProperty POLYMORPHIC
+after shape 3 ->
+ - slot #0 LoadProperty POLYMORPHIC
+after shape 4 ->
+ - slot #0 LoadProperty POLYMORPHIC
+after shape 5 ->
+» - slot #0 LoadProperty MEGAMORPHIC {
+
+// and %HaveSameMap:
+a,b same map: true  a,c same map: false   // {x:1},{x:2} vs {y:1,x:2}</script>
+
+<script type="text/plain" id="c-poly">» #define DEFAULT_MAX_POLYMORPHIC_MAP_COUNT 4
+  DEFINE_INT(max_valid_polymorphic_map_count, DEFAULT_MAX_POLYMORPHIC_MAP_COUNT,
+             "maximum number of valid maps to track in POLYMORPHIC state")</script>
+
+<script type="text/plain" id="c-setcache">void IC::SetCache(DirectHandle<Name> name, const MaybeObjectHandle& handler) {
+  // …
+  switch (state()) {
+    case NO_FEEDBACK:
+      UNREACHABLE();
+    case UNINITIALIZED: {
+»     UpdateMonomorphicIC(handler, name);
+      // …
+      break;
+    }
+    case RECOMPUTE_HANDLER:
+    case MONOMORPHIC:
+      // …
+      if (TryHealMonomorphicIC(handler)) break;
+      if (UpdateOneMapManyNamesIC(name)) break;
+      [[fallthrough]];
+    case POLYMORPHIC:
+»     if (UpdatePolymorphicIC(name, handler)) {   // fails once 4 maps are cached
+        // …
+        break;
+      }
+      if (UpdateMegaDOMIC(handler, name)) break;
+      [[fallthrough]];
+    case HOMOMORPHIC:
+      // …
+      if (!is_keyed() || state() == RECOMPUTE_HANDLER) {
+        CopyICToMegamorphicCache(name);
+      }
+      [[fallthrough]];
+    case MEGADOM:
+»     ConfigureVectorState(MEGAMORPHIC, name);
+      [[fallthrough]];
+    case MEGAMORPHIC:
+      UpdateMegamorphicCache(lookup_start_object_map(), name, handler);
+      // …
+  }
+}</script>
+
+<script type="text/plain" id="c-tier">OptimizationDecision TieringManager::ShouldOptimize(
+    Tagged<FeedbackVector> feedback_vector, CodeKind current_code_kind) {
+  Tagged<SharedFunctionInfo> shared = feedback_vector->shared_function_info();
+  if (current_code_kind == CodeKind::TURBOFAN_JS) {
+    return OptimizationDecision::DoNotOptimize();
+  }
+
+» if (TiersUpToMaglev(current_code_kind) &&
+      shared->PassesFilter(v8_flags.maglev_filter) &&
+      !shared->maglev_compilation_failed()) {
+    // …
+»   return OptimizationDecision::Maglev();
+  }
+
+  if (V8_UNLIKELY(!v8_flags.turbofan ||
+                  // …
+                  isolate_->BatterySaverModeEnabled())) {
+    return OptimizationDecision::DoNotOptimize();
+  }
+  // …
+  Tagged<BytecodeArray> bytecode = shared->GetBytecodeArray(isolate_);
+» if (bytecode->length() > v8_flags.max_optimized_bytecode_size) {
+    return OptimizationDecision::DoNotOptimize();
+  }
+
+» return OptimizationDecision::TurbofanHotAndStable();   // prints "hot and stable"
+}</script>
+
+<script type="text/plain" id="c-deoptjs">function add(a, b) { return a + b; }
+let s = 0;
+for (let i = 0; i < 300000; i++) s = add(s, i);   // sum grows past 2^31
+console.log("numbers done", s);
+console.log(add("root", "-to-end"));               // a string arrives
+for (let i = 0; i < 300000; i++) s = add(s, i);</script>
+
+<script type="text/plain" id="c-reasons">  V(NotANumberOrOddball, "not a Number or Oddball")                            \
+  // …
+  V(Overflow, "overflow")                                                      \</script>
+
+<script src="../assets/reading.js"></script>
+<script src="v8-model.js"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+
+  /* ---------- source rendering ---------- */
+  function hl(line){
+    var re=/(\/\/.*$)|("(?:[^"\\]|\\.)*")|\b(if|else|for|while|do|return|break|case|switch|const|let|var|int|bool|void|static|struct|class|template|typename|true|false|default|function|define|using|auto|continue)\b|\b([A-Za-z_][A-Za-z0-9_]*)(?=\s*\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+
+  /* ---------- rail ---------- */
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+
+  /* ---------- expression lab ---------- */
+  var PRESETS=["a + b * c","(a + 1) * b","a - b - c","2 * 3 + a","a * 2 + c","a ** b ** c","a + 40000","(a + b) * (c - 1)"];
+  $("presets").innerHTML=PRESETS.map(function(p){return '<button type="button" data-p="'+esc(p)+'">'+esc(p)+'</button>'}).join("");
+  [].forEach.call($("presets").querySelectorAll("button"),function(b){b.onclick=function(){$("expr").value=b.getAttribute("data-p");update()}});
+  var TOKNAME={"+":"kAdd","-":"kSub","*":"kMul","/":"kDiv","%":"kMod","**":"kExp","|":"kBitOr","^":"kBitXor","&":"kBitAnd","<<":"kShl",">>":"kSar","(":"kLeftParen",")":"kRightParen"};
+  var cur=null;
+  function update(){
+    var src=$("expr").value;
+    try{
+      var P=V8M.parse(src),G=V8M.gen(P.ast);
+      $("err").textContent="";
+      cur={src:src,ast:P.ast,gen:G,log:P.log,tokens:P.tokens};
+    }catch(e){$("err").textContent=e.message+". The lab supports numbers, the parameters a, b, c, parentheses and + - * / % ** | ^ & << >>.";return}
+    $("toks").innerHTML=cur.tokens.map(function(t,i){var k=TOKNAME[t]||(/^\d/.test(t)?"kNumber":"kIdentifier");return '<div class="tk" style="animation-delay:'+(i*35)+'ms"><b>'+esc(t)+'</b><span>'+k+'</span></div>'}).join("")+'<div class="tk" style="border-style:dashed"><b>·</b><span>kEos</span></div>';
+    drawAST(cur.ast);
+    $("plog").textContent=cur.log.map(function(l){return new Array(l.d+1).join("  ")+l.s}).join("\n");
+    var code=cur.gen.code,off=0;
+    $("bcmeta").innerHTML='<span class="pill">Parameter count 4</span><span class="pill">Register count '+cur.gen.regs+'</span><span class="pill">Feedback slots '+cur.gen.slots+'</span><span class="pill">Constant pool '+cur.gen.constants.length+'</span>';
+    $("bcl").innerHTML=code.map(function(c){var s='<div class="r"><span class="off">@ '+off+'</span><span class="op">'+esc(c.op)+(c.args.length?' <em>'+esc(c.args.join(", "))+'</em>':'')+'</span><span class="why">'+esc(c.why)+'</span></div>';off+=size(c);return s}).join("");
+    if(prog==="expr")vmReset();
+  }
+  function size(c){var base=1+c.args.length;if(/\.ExtraWide/.test(c.op))base+=1+3*c.args.length;else if(/\.Wide/.test(c.op))base+=1+c.args.length;return base}
+  function nodeLabel(n){if(n.k==="num")return V8M.fmt(n.v);if(n.k==="var")return n.v;return n.op}
+  function drawAST(ast){
+    var nodes=[],leaf=0,maxD=0;
+    (function lay(n,d){maxD=Math.max(maxD,d);var kids=n.k==="bin"?[n.l,n.r]:n.k==="nary"?n.items:[];var me={n:n,d:d,kids:[]};nodes.push(me);
+      if(!kids.length){me.x=leaf++;}else{kids.forEach(function(k){me.kids.push(lay(k,d+1))});me.x=(me.kids[0].x+me.kids[me.kids.length-1].x)/2}return me})(ast,0);
+    var W=Math.max(360,leaf*70+40),H=(maxD+1)*70+20,sx=function(x){return 20+(W-40)*(leaf<=1?0.5:x/(leaf-1))},sy=function(d){return 30+d*70};
+    var cs=getComputedStyle(document.documentElement),col=function(v){return cs.getPropertyValue(v).trim()};
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Abstract syntax tree"><title>AST</title>';
+    nodes.forEach(function(m){m.kids.forEach(function(k){s+='<line x1="'+sx(m.x)+'" y1="'+(sy(m.d)+16)+'" x2="'+sx(k.x)+'" y2="'+(sy(k.d)-16)+'" stroke="'+col("--rule")+'" stroke-width="1.5"/>'})});
+    nodes.forEach(function(m){var n=m.n,isOp=n.k==="bin"||n.k==="nary",fill=isOp?col("--ast-soft"):n.folded?col("--trace-bg"):col("--tok-soft"),stroke=isOp?col("--ast"):n.folded?col("--trace"):col("--tok");
+      var lbl=nodeLabel(n),w=Math.max(34,lbl.length*9+18);
+      s+='<g><rect x="'+(sx(m.x)-w/2)+'" y="'+(sy(m.d)-16)+'" width="'+w+'" height="32" rx="8" fill="'+fill+'" stroke="'+stroke+'" stroke-width="1.5"/>';
+      s+='<text x="'+sx(m.x)+'" y="'+(sy(m.d)+5)+'" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="14" font-weight="600" fill="'+col("--ink")+'">'+esc(lbl)+'</text>';
+      if(n.k==="nary")s+='<text x="'+sx(m.x)+'" y="'+(sy(m.d)-21)+'" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="'+col("--ast")+'">n-ary</text>';
+      if(n.folded)s+='<text x="'+sx(m.x)+'" y="'+(sy(m.d)+29)+'" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="10" fill="'+col("--trace")+'">folded</text>';
+      s+='<title>'+esc(n.folded?("folded at parse time from "+V8M.fmt(n.folded.l.v)+" "+n.folded.op+" "+V8M.fmt(n.folded.r.v)):n.k==="nary"?"CollapseNaryExpression: one node for the whole chain":lbl)+'</title></g>'});
+    $("ast").innerHTML=s+'</svg>';
+  }
+
+  /* ---------- Ignition VM ---------- */
+  var OPF={Add:function(x,y){return x+y},Sub:function(x,y){return x-y},Mul:function(x,y){return x*y},Div:function(x,y){return x/y},Mod:function(x,y){return x%y},Exp:function(x,y){return Math.pow(x,y)},BitwiseOr:function(x,y){return x|y},BitwiseXor:function(x,y){return x^y},BitwiseAnd:function(x,y){return x&y},ShiftLeft:function(x,y){return x<<y},ShiftRight:function(x,y){return x>>y}};
+  function isSmiV(v){return Number.isInteger(v)&&v>=-2147483648&&v<=2147483647&&!Object.is(v,-0)}
+  function fbOf(x,y,r){return isSmiV(x)&&isSmiV(y)&&isSmiV(r)?"SignedSmall":"Number"}
+  var SUM=[["LdaZero",[]],["Star0",[]],["LdaSmi",["[1]"]],["Star1",[]],["Ldar",["a0"]],["TestLessThanOrEqual",["r1","[0]"]],["JumpIfFalse",["[23]","(@ 33)"]],["Ldar",["r1"]],["Mul",["r1","[2]"]],["Add",["r0","[1]"]],["Mov",["r0","r2"]],["Star0",[]],["Ldar",["r1"]],["Inc",["[3]"]],["Star1",[]],["JumpLoop",["[24]","[0]","[4]","(@ 5)"]],["Ldar",["r0"]],["Return",[]]];
+  var SUMOFF=[0,1,2,4,5,7,10,12,14,17,20,23,24,26,28,29,33,35];
+  var prog="expr",V=null;
+  function vmCode(){return prog==="expr"?(cur?cur.gen.code.map(function(c){return[c.op,c.args,c.why]}):[]):SUM.map(function(c){return[c[0],c[1],""]})}
+  function inputs(){
+    if(prog==="expr")$("vmInputs").innerHTML='<label>a <input type="number" id="ia" value="2"></label> <label>b <input type="number" id="ib" value="3"></label> <label>c <input type="number" id="ic" value="4"></label>';
+    else $("vmInputs").innerHTML='<label>n <input type="number" id="in" value="3" min="0" max="50"></label>';
+    [].forEach.call($("vmInputs").querySelectorAll("input"),function(i){i.addEventListener("input",vmReset)});
+  }
+  function num(id,d){var v=parseFloat(($(id)||{}).value);return isFinite(v)?v:d}
+  function vmReset(){
+    var code=vmCode();
+    V={pc:0,acc:undefined,reg:{},par:{},fb:{},steps:0,done:false,ret:undefined,last:null,code:code};
+    if(prog==="expr"){V.par={a0:num("ia",2),a1:num("ib",3),a2:num("ic",4)}}else{V.par={a0:Math.max(0,Math.min(50,Math.floor(num("in",3))))}}
+    vmDraw("Press Step to execute the first bytecode. The accumulator starts empty.");
+  }
+  function val(r){return r.charAt(0)==="a"?V.par[r]:V.reg[r]}
+  function show(v){return v===undefined?"—":typeof v==="boolean"?String(v):V8M.fmt(v)}
+  function step(){
+    if(V.done)return;var c=V.code[V.pc],op=c[0].replace(/\.(Extra)?Wide$/,""),a=c[1],note="",next=V.pc+1,m;
+    if(op==="Ldar"){V.acc=val(a[0]);note="Ldar: accumulator ← "+a[0]+" ("+show(V.acc)+")";V.last="acc"}
+    else if((m=op.match(/^Star(\d)$/))){V.reg["r"+m[1]]=V.acc;note="Star"+m[1]+": r"+m[1]+" ← accumulator ("+show(V.acc)+")";V.last="r"+m[1]}
+    else if(op==="LdaZero"){V.acc=0;note="LdaZero: accumulator ← 0";V.last="acc"}
+    else if(op==="LdaSmi"){V.acc=parseInt(a[0].slice(1));note="LdaSmi: accumulator ← "+V.acc+" (the value is inside the bytecode)";V.last="acc"}
+    else if(op==="LdaConstant"){V.acc=cur.gen.constants[parseInt(a[0].slice(1))];note="LdaConstant: accumulator ← constant pool entry, a heap number "+show(V.acc);V.last="acc"}
+    else if(op==="Mov"){V.reg[a[1]]=val(a[0]);note="Mov: "+a[1]+" ← "+a[0];V.last=a[1]}
+    else if(op==="TestLessThanOrEqual"){var l=val(a[0]),r=V.acc;V.acc=l<=r;V.fb[a[1]]="SignedSmall";note="TestLessThanOrEqual: accumulator ← ("+a[0]+" "+show(l)+" ≤ "+show(r)+") = "+V.acc;V.last="acc"}
+    else if(op==="JumpIfFalse"){if(V.acc===false){next=SUMOFF.indexOf(33);note="JumpIfFalse: the test was false, so leave the loop (jump to @ 33)"}else note="JumpIfFalse: the test was true, so fall through into the loop body"}
+    else if(op==="Inc"){var b=V.acc;V.acc=b+1;V.fb[a[0]]=fbOf(b,1,V.acc);note="Inc: accumulator ← "+show(b)+" + 1";V.last="acc"}
+    else if(op==="JumpLoop"){next=SUMOFF.indexOf(5);note="JumpLoop: back to @ 5. In real V8 this is also where the OSR check and the interrupt budget run.";V.loops=(V.loops||0)+1}
+    else if(op==="Return"){V.done=true;V.ret=V.acc;note="Return: the function's result is the accumulator, "+show(V.acc)+"."}
+    else if((m=op.match(/^(\w+?)Smi$/))&&OPF[m[1]]){var x=V.acc,y=parseInt(a[0].slice(1));V.acc=OPF[m[1]](x,y);V.fb[a[1]]=fbOf(x,y,V.acc);note=op+": accumulator ← "+show(x)+" "+m[1]+" "+y+" = "+show(V.acc)+". Feedback slot "+a[1]+" records "+V.fb[a[1]]+".";V.last="acc"}
+    else if(OPF[op]){var x2=val(a[0]),y2=V.acc;V.acc=OPF[op](x2,y2);V.fb[a[1]]=fbOf(x2,y2,V.acc);note=op+": accumulator ← "+a[0]+" ("+show(x2)+") "+op+" accumulator ("+show(y2)+") = "+show(V.acc)+". Feedback slot "+a[1]+" records "+V.fb[a[1]]+".";V.last="acc"}
+    else note="(not modeled) "+op;
+    V.pc=next;V.steps++;
+    if(V.done&&prog==="expr"){var js;try{js=new Function("a","b","c","return ("+cur.src+")")(V.par.a0,V.par.a1,V.par.a2)}catch(e){}note+=" JavaScript itself gives "+show(js)+(Object.is(js,V.ret)||js===V.ret?" ✓":" (mismatch)")+"."}
+    if(V.done&&prog==="sum"){note+=" That is 1² + … + "+V.par.a0+"², after "+(V.loops||0)+" trips around the loop."}
+    if(V.steps>4000){V.done=true;note="Stopped after 4000 steps."}
+    vmDraw(note);
+  }
+  function vmDraw(note){
+    var cells='<div class="cell acc'+(V.last==="acc"?" flash":"")+'"><span>accumulator</span><b>'+show(V.acc)+'</b></div>';
+    Object.keys(V.par).forEach(function(k){cells+='<div class="cell"><span>'+k+(prog==="expr"?" ("+("abc".charAt(+k.slice(1)))+")":" (n)")+'</span><b>'+show(V.par[k])+'</b></div>'});
+    var regs=prog==="expr"?cur.gen.regs:3;for(var i=0;i<regs;i++)cells+='<div class="cell'+(V.last==="r"+i?" flash":"")+'"><span>r'+i+'</span><b>'+show(V.reg["r"+i])+'</b></div>';
+    var fbk=Object.keys(V.fb);cells+='<div class="cell"><span>feedback</span><b style="font-size:.78rem">'+(fbk.length?fbk.map(function(k){return k+" "+V.fb[k]}).join("<br>"):"none yet")+'</b></div>';
+    $("vmCells").innerHTML=cells;
+    var off=0;$("vmCode").innerHTML=V.code.map(function(c,i){var o=prog==="sum"?SUMOFF[i]:off;off+=prog==="sum"?0:size({op:c[0],args:c[1]});return '<div class="r'+(i===V.pc&&!V.done?" pc":"")+'"><span class="off">@ '+o+'</span><span class="op">'+esc(c[0])+(c[1].length?' <em>'+esc(c[1].join(", "))+'</em>':'')+'</span><span class="why">'+esc(c[2]||"")+'</span></div>'}).join("");
+    $("vCount").textContent=V.done?"returned "+show(V.ret):V.steps+" bytecodes executed";
+    $("vmNote").textContent=note;
+  }
+  $("vStep").onclick=step;
+  $("vRun").onclick=function(){var g=0;while(!V.done&&g++<5000)step()};
+  $("vReset").onclick=vmReset;
+  $("pExpr").onclick=function(){prog="expr";$("pExpr").className="sel";$("pSum").className="";inputs();vmReset()};
+  $("pSum").onclick=function(){prog="sum";$("pSum").className="sel";$("pExpr").className="";inputs();vmReset()};
+  $("expr").addEventListener("input",update);
+  inputs();update();vmReset();
+
+  /* ---------- shapes and ICs ---------- */
+  var SHAPES=[["{x}",["x"]],["{x, y}",["x","y"]],["{y, x}",["y","x"]],["{x, z}",["x","z"]],["{x, w}",["x","w"]],["{x, v}",["x","v"]],["{x} again",["x"]]];
+  var root={id:0,props:[],kids:{}},nextId=1,seen=[],icState="UNINITIALIZED",hot=null;
+  function mapFor(props){var n=root;props.forEach(function(p){if(!n.kids[p])n.kids[p]={id:nextId++,props:n.props.concat(p),kids:{}};n=n.kids[p]});return n}
+  function treeHTML(n,depth){var s="";Object.keys(n.kids).forEach(function(k){var c=n.kids[k];s+='<div style="padding-left:'+(depth*18)+'px">'+(depth?"└ ":"")+'<span class="m'+(hot===c.id?" hot":"")+'">Map'+c.id+'</span>+'+k+' <span class="muted">{'+c.props.join(", ")+'}</span></div>'+treeHTML(c,depth+1)});return s}
+  function shapeDraw(msg){
+    $("mapTree").innerHTML='<div><span class="m">Map0</span><span class="muted">{} empty object</span></div>'+treeHTML(root,1);
+    var st=$("icState");st.textContent=icState;st.className="icstate "+icState;
+    var sl="";for(var i=0;i<4;i++)sl+='<i class="'+(i<seen.length&&icState!=="MEGAMORPHIC"?"f":"")+'">'+(i<seen.length&&icState!=="MEGAMORPHIC"?"M"+seen[i]:"")+'</i>';
+    $("icSlots").innerHTML=sl+(icState==="MEGAMORPHIC"?'<span class="pill bad" style="align-self:center">global megamorphic cache</span>':"");
+    $("icNote").textContent=msg;
+  }
+  $("shapeBtns").innerHTML='<span class="muted" style="font-size:.84rem">Call getX(o) with:</span>'+SHAPES.map(function(s,i){return '<button type="button" data-s="'+i+'"><code>'+esc(s[0])+'</code></button>'}).join("")+'<button type="button" id="sReset">Reset</button>';
+  [].forEach.call($("shapeBtns").querySelectorAll("[data-s]"),function(b){b.onclick=function(){
+    var sh=SHAPES[+b.getAttribute("data-s")],m=mapFor(sh[1]);hot=m.id;var off=sh[1].indexOf("x"),msg;
+    if(icState==="MEGAMORPHIC"){msg="Map"+m.id+": the IC stays megamorphic. Lookups go through the global megamorphic stub cache.";}
+    else if(seen.indexOf(m.id)>=0){msg="Map"+m.id+" is already cached: hit. x is at in-object offset "+off+".";}
+    else if(seen.length===0){seen.push(m.id);icState="MONOMORPHIC";msg="First Map: UpdateMonomorphicIC caches (Map"+m.id+" → x at offset "+off+").";}
+    else if(seen.length<4){seen.push(m.id);icState="POLYMORPHIC";msg="New Map: UpdatePolymorphicIC adds it. "+seen.length+" of 4 entries used.";}
+    else{icState="MEGAMORPHIC";msg="A fifth Map: UpdatePolymorphicIC refuses, so SetCache falls through to ConfigureVectorState(MEGAMORPHIC).";}
+    shapeDraw(msg)}});
+  $("sReset").onclick=function(){root={id:0,props:[],kids:{}};nextId=1;seen=[];icState="UNINITIALIZED";hot=null;shapeDraw("No calls yet.")};
+  shapeDraw("No calls yet. Note that {x, y} and {y, x} will create different Maps.");
+
+  /* ---------- deopt replay (real trace) ---------- */
+  var EV=[
+    {tier:"Ignition",fb:"SignedSmall",as:"nothing",t:"",n:"The loop calls add(s, i). Ignition runs the bytecode and the Add feedback slot records SignedSmall: both inputs and the result were small integers."},
+    {tier:"TurboFan (compiling)",fb:"SignedSmall",as:"nothing yet",t:'<span class="opt">[marking &lt;JSFunction add&gt; for optimization to TURBOFAN, ConcurrencyMode::kConcurrent, reason: hot and stable]\n[compiling method &lt;JSFunction add&gt; (target TURBOFAN), mode: ConcurrencyMode::kConcurrent]</span>',n:"add is hot and its feedback stopped changing, so ShouldOptimize returns TurbofanHotAndStable. Compilation runs on a background thread while Ignition keeps going."},
+    {tier:"TurboFan code",fb:"SignedSmall",as:"a, b and a + b are Smis",t:'<span class="opt">[completed optimizing &lt;JSFunction add&gt; (target TURBOFAN)]</span>',n:"The optimized code does a 32-bit integer add with an overflow check, nothing else."},
+    {tier:"Ignition (deoptimized)",fb:"Number",as:"discarded",t:'<span class="de">[bailout (kind: deopt-eager, reason: overflow): begin. deoptimizing &lt;JSFunction add&gt;, &lt;Code TURBOFAN&gt;, opt id 0, bytecode offset 2, …]</span>',n:"The running sum passed 2,147,483,647. The integer add overflowed, the check failed, and V8 jumped back into Ignition at bytecode offset 2, which is the Add bytecode itself. Ignition redoes the add with doubles and widens the feedback to Number."},
+    {tier:"TurboFan code",fb:"Number",as:"a and b are Numbers (or oddballs)",t:'<span class="opt">[marking &lt;JSFunction add&gt; for optimization to TURBOFAN, …, reason: hot and stable]\n[completed optimizing &lt;JSFunction add&gt; (target TURBOFAN)]</span>\n<span class="out">numbers done 44999850000</span>',n:"Still hot, now with Number feedback. TurboFan recompiles with a floating-point add that cannot overflow."},
+    {tier:"Ignition (deoptimized)",fb:"Any (String seen)",as:"discarded",t:'<span class="de">[bailout (kind: deopt-eager, reason: not a Number or Oddball): begin. deoptimizing &lt;JSFunction add&gt;, &lt;Code TURBOFAN&gt;, opt id 2, bytecode offset 2, …]</span>\n<span class="out">root-to-end</span>',n:"add(\"root\", \"-to-end\") arrives. The optimized code checks its inputs are numbers; a string fails that check, so V8 deoptimizes again. Ignition's Add handles strings by concatenating."},
+    {tier:"TurboFan code",fb:"Any",as:"generic add (numbers or strings)",t:'<span class="opt">[marking &lt;JSFunction add&gt; for optimization to TURBOFAN, …, reason: hot and stable]\n[completed optimizing &lt;JSFunction add&gt; (target TURBOFAN)]</span>',n:"The second loop makes add hot again. This time the feedback includes a string, so TurboFan emits a more general add. It is slower than the integer version, but it will not deoptimize for these inputs."}
+  ];
+  var di=0;
+  function dDraw(){var e=di?EV[di-1]:{tier:"Ignition",fb:"none yet",as:"nothing",n:"Press Next event to replay what Node printed, one event at a time."};$("dTier").textContent=e.tier;$("dFb").textContent=e.fb;$("dAssume").textContent=e.as;$("dNote").textContent=e.n;$("dTrace").innerHTML=EV.slice(0,di).map(function(x){return x.t}).filter(Boolean).join("\n")||'<span class="out">(trace output appears here)</span>';$("dCount").textContent=di+" / "+EV.length;$("dNext").disabled=di>=EV.length}
+  $("dNext").onclick=function(){if(di<EV.length){di++;dDraw()}};
+  $("dReset").onclick=function(){di=0;dDraw()};
+  dDraw();
+})();
+</script>
+<script src="../assets/root-kit.js"></script>
+</body>
+</html>

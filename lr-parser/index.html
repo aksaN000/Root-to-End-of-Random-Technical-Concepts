@@ -1,0 +1,601 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Shift, Reduce, Accept</title>
+<meta name="description" content="LR parsing from grammar to parse tree: FIRST/FOLLOW, LR(0) items, the SLR table and a step-by-step parse, checked against the Dragon Book and real GNU Bison output.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css">
+<style>
+/* Layout: the shared source-trace grid. Signature element: one grammar typed at the top drives every artifact below it, and the parse run lights up the matching state card and table cell as it goes. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --sh:#0f7b74; --sh-soft:#dcf2ef; --re:#6d3fc4; --re-soft:#ece5fb;
+  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --sh:#4fd1c5; --sh-soft:#123430; --re:#b79bff; --re-soft:#2a2145;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --sh:#4fd1c5; --sh-soft:#123430; --re:#b79bff; --re-soft:#2a2145;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.2rem,6vw,3.9rem);font-weight:800;letter-spacing:-.02em}
+.hero h1 .s{color:var(--sh)}.hero h1 .r{color:var(--re)}.hero h1 .a{color:var(--ok)}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+/* hero mini stack animation */
+.ministack{display:flex;align-items:flex-end;gap:4px;height:58px;font-family:var(--mono);font-size:.8rem}
+.ministack span{border:1px solid var(--rule);background:var(--surface);border-radius:6px;padding:4px 8px}
+.ministack .lab{font-size:.7rem;color:var(--muted);border:0;background:none;align-self:center;margin-right:6px}
+@media (prefers-reduced-motion:no-preference){.ministack span.anim{animation:ms 4.8s infinite both}.ministack span.anim:nth-child(3){animation-delay:.4s}.ministack span.anim:nth-child(4){animation-delay:.8s}.ministack span.anim:nth-child(5){animation-delay:1.2s}}
+@keyframes ms{0%{transform:translateY(-18px);opacity:0}10%{transform:none;opacity:1}70%{opacity:1}80%{opacity:0;transform:scale(.8)}100%{opacity:0}}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src.real figcaption{border-top:3px solid var(--ok)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.ctl label{font-size:.84rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+button,select,input[type=text],textarea{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.lab textarea{width:100%;min-height:7.5em;font-family:var(--mono);font-size:.95rem;line-height:1.6;resize:vertical}
+.lab .presets{display:flex;flex-wrap:wrap;gap:6px}
+.lab .presets button{font-size:.8rem;padding:4px 9px}
+.err{font-size:.86rem;color:var(--bad);min-height:1.2em}
+.summary{display:flex;flex-wrap:wrap;gap:6px}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+td.mono,th.mono{font-family:var(--mono)}
+/* grammar listing */
+.prods{font-family:var(--mono);font-size:.86rem;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 12px}
+.prods .n{color:var(--muted)}
+/* automaton cards */
+.states{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:10px}
+.st{border:1px solid var(--rule);border-radius:10px;background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;gap:4px;transition:box-shadow .15s ease,border-color .15s ease;min-width:0}
+.st h4{margin:0;font-family:var(--display);font-size:.95rem;display:flex;justify-content:space-between;align-items:center}
+.st .it{font-family:var(--mono);font-size:.76rem;white-space:pre;overflow-x:auto}
+.st .it.k{font-weight:600}
+.st .it .dot{color:var(--trace);font-weight:700}
+.st .it.done{color:var(--re)}
+.st .tr{display:flex;flex-wrap:wrap;gap:4px;border-top:1px dashed var(--rule);padding-top:5px}
+.st .tr button{font-family:var(--mono);font-size:.7rem;padding:1px 6px;border-radius:5px}
+.st.cur{border-color:var(--accent);box-shadow:0 0 0 2px var(--accent)}
+.st.ping{border-color:var(--trace);box-shadow:0 0 0 2px var(--trace)}
+.st.conf{border-color:var(--bad)}
+/* SLR table */
+#slr td,#slr th{text-align:center;padding:5px 8px;font-family:var(--mono);font-size:.8rem;white-space:nowrap}
+#slr th.sep,#slr td.sep{border-left:2px solid var(--rule)}
+#slr td.s{color:var(--sh);font-weight:600}
+#slr td.r{color:var(--re);font-weight:600}
+#slr td.a{color:var(--ok);font-weight:700}
+#slr td.g{color:var(--muted)}
+#slr td.c{background:var(--bad-bg);color:var(--bad);font-weight:700}
+#slr td.hit{outline:2px solid var(--accent);outline-offset:-2px;background:var(--accent-soft)}
+#slr tr.hit td:first-child{color:var(--accent);font-weight:700}
+/* parse machine */
+.machine{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.tape,.stack{display:flex;flex-wrap:wrap;gap:4px;align-items:center;min-height:40px}
+.cellx{font-family:var(--mono);font-size:.84rem;border:1px solid var(--rule);border-radius:7px;padding:4px 8px;background:var(--bg);display:flex;flex-direction:column;align-items:center;line-height:1.2}
+.cellx small{font-size:.64rem;color:var(--muted)}
+.cellx.st0{border-color:var(--accent);background:var(--accent-soft)}
+.cellx.used{opacity:.35}
+.cellx.next{border-color:var(--trace);background:var(--trace-bg);font-weight:700}
+@media (prefers-reduced-motion:no-preference){.stack .cellx.new{animation:drop .3s ease-out}}
+@keyframes drop{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+.actline{font-size:.95rem;padding:8px 12px;border-radius:8px;background:var(--code)}
+.actline.shift{background:var(--sh-soft);color:var(--sh)}.actline.reduce{background:var(--re-soft);color:var(--re)}.actline.accept{background:var(--ok-bg);color:var(--ok)}.actline.error{background:var(--bad-bg);color:var(--bad)}
+.log{max-height:16em;overflow:auto}
+.log td{font-family:var(--mono);font-size:.76rem;white-space:nowrap}
+.log tr.now td{background:var(--accent-soft)}
+.tree-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--bg);min-height:60px}
+.tree-wrap svg{display:block;min-width:300px;width:100%;height:auto}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections">
+  <div class="lbl"><span>Parser build</span><span>top = output</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#why"><b>Why bottom-up</b>shift, reduce, accept</a></li>
+    <li><a href="#sets"><b>FIRST and FOLLOW</b>Dragon §4.4.2</a></li>
+    <li><a href="#items"><b>LR(0) items</b>closure and GOTO</a></li>
+    <li><a href="#table"><b>The SLR table</b>ACTION and GOTO</a></li>
+    <li><a href="#run"><b>Run the parser</b>stack, input, tree</a></li>
+    <li><a href="#bison"><b>Inside real Bison</b>yyparse()</a></li>
+    <li><a href="#conflicts"><b>Conflicts</b>dangling else, SLR vs LALR</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes, exercises</a></li>
+    <li><a href="#reading"><b>Reading list</b>everything cited here</a></li>
+  </ol>
+  <div class="base">— bottom: the grammar</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">CSE420 Compiler Design · checked against the Dragon Book and GNU Bison 3.8.2</span>
+  <h1><span class="s">Shift</span>, <span class="r">reduce</span>, <span class="a">accept</span>: building an LR parser from a grammar</h1>
+  <p class="lede">The <a href="../v8-pipeline/">V8 page</a> shows a hand-written parser. Most language tools instead <em>generate</em> their parser from a grammar: Bison, yacc, and the parsers inside PostgreSQL, Bash and GCC's old C front end. This page builds an SLR parser in front of us from any grammar we type: FIRST and FOLLOW sets, LR(0) item sets, the parsing table, and a step-by-step parse that grows its tree. Then we open real Bison and see the same machine in C.</p>
+  <div class="ministack" aria-hidden="true"><span class="lab">stack</span><span>0</span><span class="anim">id 5</span><span class="anim">F 3</span><span class="anim">T 2</span><span class="anim">E 1</span></div>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#why">Why</a><a href="#sets">Sets</a><a href="#items">Items</a><a href="#table">Table</a><a href="#run">Run</a><a href="#bison">Bison</a><a href="#conflicts">Conflicts</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">The construction follows the Dragon Book (2nd ed., §4.4.2 and §4.6). For the expression grammar it reproduces the book's twelve states, SLR table (Fig. 4.37) and moves for <code>id * id + id</code> (Fig. 4.38) exactly; we checked that before publishing. The Bison boxes are real files and real output from GNU Bison 3.8.2.</p>
+</header>
+
+<section id="why" data-deeper="haberman-lr,dragon-lr,knuth-lr">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the idea</span><h2>Why parse bottom-up</h2></div>
+  <div class="prose">
+    <p>A top-down parser, like V8's, guesses which rule to use from the next token and calls a function per rule. An <b>LR parser</b> waits: it <b>shifts</b> tokens onto a stack until the top of the stack matches the right-hand side of a rule, then <b>reduces</b> it to the rule's left-hand side. It finishes when the whole input has been reduced to the start symbol.<a class="rd" data-r="haberman-lr"></a> Read backwards, the sequence of reductions is a rightmost derivation.</p>
+    <p>The hard part is knowing <em>when</em> to reduce. The answer is a finite automaton over "items", compiled into a table of ACTION and GOTO entries. That compilation is what a parser generator does, and it is what we watch below.<a class="rd" data-r="knuth-lr,deremer-slr"></a></p>
+  </div>
+</section>
+
+<div class="lab" id="lab">
+  <div class="stagehead">Grammar lab · drives every frame below</div>
+  <div class="presets" id="presets"></div>
+  <textarea id="gram" spellcheck="false" aria-label="Grammar"></textarea>
+  <div class="err" id="gerr" role="status"></div>
+  <div class="summary" id="gsum"></div>
+  <p class="muted" style="font-size:.82rem;margin:0">One rule per line: <code>A -&gt; x y | z</code>. Symbols are separated by spaces. Anything never on a left-hand side is a terminal. Use <code>ε</code> for an empty alternative. The first rule's left side is the start symbol.</p>
+</div>
+
+<section id="sets" data-deeper="dragon-first">
+  <div class="sechead"><span class="eyebrow">Frame 1 · analysis</span><h2>Augment the grammar, then compute FIRST and FOLLOW</h2></div>
+  <div class="prose">
+    <p>We add a new start rule <code>S' → S</code> so that "reduce to <code>S'</code>" can only mean "accept". <b>FIRST(X)</b> is the set of terminals that can begin a string derived from X. <b>FOLLOW(A)</b> is the set of terminals that can appear immediately after A in some sentential form.<a class="rd" data-r="dragon-first"></a> SLR uses FOLLOW to decide where to place reduce actions.</p>
+  </div>
+  <div class="pair">
+    <div class="panel"><div class="stagehead">Augmented grammar, numbered</div><div class="prods" id="prods"></div></div>
+    <div class="panel"><div class="stagehead">FIRST and FOLLOW of each nonterminal</div><div class="tbl"><table id="ff"></table></div></div>
+  </div>
+</section>
+
+<section id="items" data-deeper="dragon-lr">
+  <div class="sechead"><span class="eyebrow">Frame 2 · the automaton</span><h2>LR(0) items, CLOSURE and GOTO</h2></div>
+  <div class="prose">
+    <p>An <b>item</b> is a rule with a dot showing how much of it we have seen: <code>E → E · + T</code> means "we have an E and expect + T next". A <b>state</b> is a set of items. CLOSURE adds, for every nonterminal right after a dot, all of its rules with the dot at the start. GOTO(I, X) moves the dot over X in every item of I that allows it, then takes the closure.<a class="rd" data-r="dragon-lr"></a> Starting from CLOSURE({S' → · S}) and applying GOTO until no new state appears gives the canonical collection.</p>
+    <p>Bold items are the <b>kernel</b>; the rest came from CLOSURE. Purple items have the dot at the end, which means a reduction is possible. Click a transition to see its target state.</p>
+  </div>
+  <div class="states" id="states"></div>
+</section>
+
+<section id="table" data-deeper="dragon-lr,dragon-lalr">
+  <div class="sechead"><span class="eyebrow">Frame 3 · the table</span><h2>The SLR parsing table</h2></div>
+  <div class="prose">
+    <p>The rules are short. For an item <code>A → α · a β</code> with terminal <code>a</code>, ACTION[i, a] = <b>shift</b> to GOTO(i, a). For a complete item <code>A → α ·</code>, ACTION[i, b] = <b>reduce</b> by that rule for every <code>b</code> in FOLLOW(A). For <code>S' → S ·</code>, ACTION[i, $] = <b>accept</b>. GOTO entries come straight from the automaton. If any cell gets two actions, the grammar is not SLR(1), and the cell turns red.</p>
+  </div>
+  <div class="tbl"><table id="slr"></table></div>
+  <p class="muted" style="font-size:.84rem;margin:0"><span style="color:var(--sh);font-weight:600">s</span>n = shift and go to state n · <span style="color:var(--re);font-weight:600">r</span>n = reduce by rule n · <span style="color:var(--ok);font-weight:600">acc</span> = accept · blank = syntax error · right of the bar: GOTO</p>
+</section>
+
+<section id="run" data-deeper="dragon-lr,haberman-lr">
+  <div class="sechead"><span class="eyebrow">Frame 4 · parsing</span><h2>Run the parser on an input</h2></div>
+  <div class="prose">
+    <p>The driver is the same for every LR parser (Dragon Book Algorithm 4.44): look at the state on top of the stack and the next input token, do what ACTION says, and on a reduce pop one entry per symbol of the rule, then push GOTO of the newly exposed state. The tree below is built from the reductions.</p>
+  </div>
+  <div class="panel">
+    <div class="ctl">
+      <label for="inp">Input tokens <input type="text" id="inp" style="min-width:16em;font-family:var(--mono)" value="id * id + id" spellcheck="false"></label>
+      <button type="button" id="pStep" class="go">Step</button>
+      <button type="button" id="pRun">Run to end</button>
+      <button type="button" id="pReset">Reset</button>
+      <span class="pill" id="pStat"></span>
+    </div>
+    <div class="machine">
+      <div><div class="stagehead">Stack · state numbers with the symbol that brought us there</div><div class="stack" id="stk"></div></div>
+      <div><div class="stagehead">Input tape</div><div class="tape" id="tape"></div></div>
+      <div class="actline" id="act" aria-live="polite">Press Step.</div>
+    </div>
+    <div class="pair">
+      <div><div class="stagehead">Moves so far</div><div class="tbl log"><table id="plog"></table></div></div>
+      <div><div class="stagehead">Parse tree, built bottom-up</div><div class="tree-wrap" id="tree"></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="bison" data-deeper="bison-algo,bison-understand,pg-gram">
+  <div class="sechead"><span class="eyebrow">Frame 5 · the real thing</span><h2>Inside a Bison-generated parser</h2></div>
+  <div class="prose">
+    <p>We gave Bison the expression grammar and compiled the result with GCC. Bison builds <b>LALR(1)</b> tables rather than SLR. For this grammar they make the same parsing decisions, but Bison numbers states differently and adds one state for shifting the end-of-file token.<a class="rd" data-r="dragon-lalr,bison-algo"></a> The driver is the C function <code>yyparse</code>, and it is our Step button written with labels and <code>goto</code>.</p>
+  </div>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">expr.y</span><span class="note">the grammar we fed Bison</span></figcaption>
+      <pre data-code="b-expr"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">real output · bison -v expr.y → expr.output</span><span class="note">two of 13 states</span></figcaption>
+      <pre data-code="b-out"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">bison/data/skeletons/yacc.c · yyparse()</span><span class="note">trimmed: shift, default reduction, reduce</span></figcaption>
+    <pre data-code="b-skel"></pre>
+  </figure>
+  <figure class="src real">
+    <figcaption><span class="path">real output · ./expr with yydebug = 1, input id+id*id</span><span class="note">first moves</span></figcaption>
+    <pre data-code="b-trace"></pre>
+  </figure>
+  <p class="callout">Compare Bison's trace with ours. Bison <b>reduces before reading the next token</b> ("Reducing stack by rule 6" appears before "Reading a token"). That is a <b>default reduction</b>: when a state's only sensible action is one reduction, <code>yypact</code> says so and <code>yydefault</code> skips the lookahead. Our SLR driver always reads the lookahead first. The tables are also <b>compressed</b> into <code>yypact</code>, <code>yytable</code> and <code>yycheck</code> instead of a full two-dimensional array.<a class="rd" data-r="bison-understand"></a></p>
+</section>
+
+<section id="conflicts" data-deeper="dragon-ambig,bison-sr,dragon-lalr">
+  <div class="sechead"><span class="eyebrow">Frame 6 · when it breaks</span><h2>Conflicts: the dangling else, and where SLR is too weak</h2></div>
+  <div class="prose">
+    <p><b>The dangling else.</b> In <code>if c1 then if c2 then s1 else s2</code>, which <code>if</code> owns the <code>else</code>? The grammar allows both, so there is a state where the parser could either shift <code>else</code> or reduce the inner <code>if</code>. Load the "Dangling else" preset in the lab and find the red cell. Bison reports the same conflict and shows both derivations; by default it shifts, attaching <code>else</code> to the nearest <code>if</code>. Declaring precedence silences it.<a class="rd" data-r="bison-sr,dragon-ambig"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">real output · bison -Wcounterexamples ifelse.y</span><span class="note">GNU Bison 3.8.2</span></figcaption>
+      <pre data-code="b-ifelse"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">ifelse2.y · with precedence declarations</span><span class="note">bison reports no warnings</span></figcaption>
+      <pre data-code="b-ifelse2"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p><b>SLR is not always enough.</b> The classic Dragon Book grammar for C-style assignments (<code>S → L = R | R</code>, <code>L → * R | id</code>, <code>R → L</code>) is unambiguous, yet SLR gets a shift/reduce conflict on <code>=</code>: <code>=</code> is in FOLLOW(R), because of <code>*R = …</code>, even in the state where reducing <code>L</code> to <code>R</code> can never be followed by <code>=</code>. Load the "SLR fails" preset to see it. LALR computes lookaheads per state instead of per nonterminal, so Bison builds this grammar without any conflict.<a class="rd" data-r="dragon-lalr"></a></p>
+  </div>
+  <figure class="src real">
+    <figcaption><span class="path">real output · bison -v lr.y (no warnings), state 4 of lr.output</span><span class="note">LALR lookahead: reduce only on $end</span></figcaption>
+    <pre data-code="b-lalr"></pre>
+  </figure>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 7 · practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"In the expression grammar, the parser is in state 2 (<code>E → T ·</code> and <code>T → T · * F</code>) and the next token is <code>*</code>. What does it do?","options":["Reduce by E → T","Shift * and go to state 7","Report a syntax error","Reduce by T → F"],"answer":1,"explain":"<code>*</code> is not in FOLLOW(E) = {+, ), $}, so there is no reduce action on <code>*</code>, only the shift from <code>T → T · * F</code>. That is how the table makes <code>*</code> bind tighter than <code>+</code>."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"How many states does the canonical LR(0) collection have for the expression grammar?","options":["6","9","12","13"],"answer":2,"explain":"Twelve, I0 to I11, as in the Dragon Book. Bison prints 13 because it adds a state for shifting the end-of-file token before accepting."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Bison reports <code>1 shift/reduce conflict</code> for the if-then-else grammar and still generates a parser. What does that parser do on <code>else</code>?","options":["Reduces, so else binds to the outer if","Shifts, so else binds to the nearest if","Stops with a syntax error","Picks randomly"],"answer":1,"explain":"Bison resolves shift/reduce conflicts in favour of shifting unless precedence says otherwise, which gives the usual nearest-if rule. It still warns because the choice was not stated in the grammar."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Why does the grammar S → L = R | R, L → * R | id, R → L have an SLR conflict but no LALR conflict?","options":["It is ambiguous","FOLLOW(R) contains = globally, but in that state R → L · can only be followed by $","LALR uses more states than SLR","SLR cannot handle ε-productions"],"answer":1,"explain":"SLR reduces on all of FOLLOW(R), and = is in FOLLOW(R) because of *R = R. LALR tracks lookaheads per state: in the state containing S → L · = R, the item R → L · has lookahead $ only, so there is nothing to clash with the shift on =."}</script></div>
+  </div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Add a right-associative power operator <code>P → F ^ P | F</code> and change <code>T → T * P | P</code>. Predict the new number of states, then check in the lab. Parse <code>id ^ id ^ id</code> and confirm the tree groups to the right.</li>
+    <li>Dragon Book Exercise 4.6.2: build the SLR sets of items and table for <code>S → S S + | S S * | a</code>. Is the grammar SLR? Verify with the lab, then with <code>bison -v</code>.</li>
+    <li>Install Bison (<code>sudo apt install bison</code> on Ubuntu or WSL), save the grammar from Frame 5, and run <code>bison -v expr.y &amp;&amp; gcc expr.c -o expr &amp;&amp; ./expr</code>. Match each line of the trace to a row of our SLR table.</li>
+    <li>Write a grammar with a reduce/reduce conflict, for example two nonterminals that both derive <code>id</code> in the same context. Find the red cell in the lab and explain which reduction Bison picks (hint: the rule that appears first).</li>
+    <li>Open PostgreSQL's <code>gram.y</code> and find its <code>%left</code>/<code>%right</code> precedence declarations. Which conflicts do they exist to resolve?</li>
+  </ol>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <div id="reading-list"></div>
+  <p class="muted" style="font-size:.84rem">The Bison skeleton is © the Free Software Foundation, GPL-3.0 with the Bison exception, quoted for study. All Bison outputs were produced with GNU Bison 3.8.2.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="b-expr">%define parse.trace
+%token ID
+%%
+E : E '+' T
+  | T
+  ;
+T : T '*' F
+  | F
+  ;
+F : '(' E ')'
+  | ID
+  ;</script>
+
+<script type="text/plain" id="b-out">State 0
+
+    0 $accept: . E $end
+
+»   ID   shift, and go to state 1
+    '('  shift, and go to state 2
+
+    E  go to state 3
+    T  go to state 4
+    F  go to state 5
+
+State 4
+
+    2 E: T .
+    3 T: T . '*' F
+
+»   '*'  shift, and go to state 9
+
+»   $default  reduce using rule 2 (E)</script>
+
+<script type="text/plain" id="b-skel">yybackup:
+  /* First try to decide what to do without reference to lookahead token.  */
+» yyn = yypact[yystate];
+  if (yypact_value_is_default (yyn))
+»   goto yydefault;                       /* default reduction, no lookahead read */
+  /* Not known => get a lookahead token if don't already have one.  */
+  // … yychar = yylex (); …
+  /* If the proper action on seeing token YYTOKEN is to reduce or to
+     detect an error, take that action.  */
+» yyn += yytoken;
+  if (yyn < 0 || YYLAST < yyn || yycheck[yyn] != yytoken)
+    goto yydefault;
+  yyn = yytable[yyn];
+  if (yyn <= 0)
+    {
+      // …
+      yyn = -yyn;
+»     goto yyreduce;
+    }
+  /* Shift the lookahead token.  */
+  YY_SYMBOL_PRINT ("Shifting", yytoken, &yylval, &yylloc);
+» yystate = yyn;
+  *++yyvsp = yylval;
+  // …
+  goto yynewstate;
+
+yydefault:
+  yyn = yydefact[yystate];
+  if (yyn == 0)
+    goto yyerrlab;
+  goto yyreduce;
+
+yyreduce:
+  /* yyn is the number of a rule to reduce with.  */
+» yylen = yyr2[yyn];                      /* length of the right-hand side */
+  // … run the user's semantic action …
+» YYPOPSTACK (yylen);
+  // …
+  /* Now 'shift' the result of the reduction.  Determine what state
+     that goes to, based on the state we popped back to and the rule
+     number reduced by.  */
+  {
+    const int yylhs = yyr1[yyn] - YYNTOKENS;
+    const int yyi = yypgoto[yylhs] + *yyssp;
+»   yystate = (0 <= yyi && yyi <= YYLAST && yycheck[yyi] == *yyssp
+               ? yytable[yyi]
+               : yydefgoto[yylhs]);   /* this is GOTO[state, lhs] */
+  }
+  goto yynewstate;</script>
+
+<script type="text/plain" id="b-trace">Starting parse
+Entering state 0
+Stack now 0
+Reading a token
+Next token is token ID ()
+Shifting token ID ()
+Entering state 1
+Stack now 0 1
+»Reducing stack by rule 6 (line 17):
+   $1 = token ID ()
+-> $$ = nterm F ()
+Entering state 5
+Stack now 0 5
+Reducing stack by rule 4 (line 14):
+   $1 = nterm F ()
+-> $$ = nterm T ()
+Entering state 4
+Stack now 0 4
+»Reading a token
+Next token is token '+' ()
+Reducing stack by rule 2 (line 11):
+   $1 = nterm T ()
+-> $$ = nterm E ()
+Entering state 3
+Stack now 0 3
+Next token is token '+' ()
+Shifting token '+' ()
+Entering state 8
+Stack now 0 3 8
+…   (82 lines in total, ending in)
+Shifting token "end of file" ()
+Entering state 7
+Stack now 0 3 7</script>
+
+<script type="text/plain" id="b-ifelse">%token IF THEN ELSE COND OTHER
+%%
+S : IF COND THEN S
+  | IF COND THEN S ELSE S
+  | OTHER
+  ;
+
+$ bison -Wcounterexamples ifelse.y
+»ifelse.y: warning: 1 shift/reduce conflict [-Wconflicts-sr]
+ifelse.y: warning: shift/reduce conflict on token ELSE [-Wcounterexamples]
+  Example: IF COND THEN IF COND THEN S . ELSE S
+  Shift derivation
+    S
+    `-> 1: IF COND THEN S
+                        `-> 2: IF COND THEN S . ELSE S
+  Reduce derivation
+    S
+    `-> 2: IF COND THEN S                       ELSE S
+                        `-> 1: IF COND THEN S .</script>
+
+<script type="text/plain" id="b-ifelse2">%token IF THEN COND OTHER
+»%nonassoc THEN
+»%nonassoc ELSE
+%%
+S : IF COND THEN S
+  | IF COND THEN S ELSE S
+  | OTHER
+  ;
+
+$ bison -v ifelse2.y
+$                       (no warnings: ELSE has higher
+                         precedence than the rule ending
+                         in THEN, so the conflict is
+                         resolved as a shift)</script>
+
+<script type="text/plain" id="b-lalr">State 4
+
+    1 S: L . '=' R
+    5 R: L .
+
+»   '='  shift, and go to state 9
+
+»   $default  reduce using rule 5 (R)</script>
+
+<script src="../assets/reading.js"></script>
+<script src="lr-engine.js"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|\b(if|else|goto|const|int|return)\b|^(\w+:)|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+
+  var PRESETS=[
+    ["Expression (Dragon 4.1)","E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id","id * id + id"],
+    ["Dangling else","S -> i E t S | i E t S e S | a\nE -> b","i b t i b t a e a"],
+    ["SLR fails, LALR works","S -> L = R | R\nL -> * R | id\nR -> L","* id = id"],
+    ["Balanced parentheses (ε)","S -> ( S ) S | ε","( ( ) ) ( )"],
+    ["Right-assoc power","E -> E + T | T\nT -> T * P | P\nP -> F ^ P | F\nF -> ( E ) | id","id ^ id ^ id"]
+  ];
+  $("presets").innerHTML=PRESETS.map(function(p,i){return '<button type="button" data-i="'+i+'">'+esc(p[0])+'</button>'}).join("");
+  [].forEach.call($("presets").querySelectorAll("button"),function(b){b.onclick=function(){var p=PRESETS[+b.getAttribute("data-i")];$("gram").value=p[1];$("inp").value=p[2];[].forEach.call($("presets").querySelectorAll("button"),function(x){x.className=""});b.className="sel";build()}});
+  $("gram").value=PRESETS[0][1];$("presets").querySelector("button").className="sel";
+
+  var R=null,P=null;
+  function sym(s){return esc(s)}
+  function itemHTML(it){var p=R.G.prods[it[0]],r=p.rhs.slice();r.splice(it[1],0,"·");return esc(p.lhs)+" → "+r.map(function(x){return x==="·"?'<span class="dot">·</span>':esc(x)}).join(" ")}
+  function build(){
+    try{R=LR.build($("gram").value);$("gerr").textContent=""}catch(e){$("gerr").textContent=e.message;return}
+    var G=R.G,T=R.T;
+    var cf=T.conflicts.length;
+    $("gsum").innerHTML='<span class="pill">'+(G.nts.length-1)+' nonterminals</span><span class="pill">'+G.terms.length+' terminals</span><span class="pill">'+(G.prods.length-1)+' rules</span><span class="pill">'+R.C.states.length+' LR(0) states</span>'+(cf?'<span class="pill bad">'+cf+' conflict'+(cf>1?"s":"")+': not SLR(1)</span>':'<span class="pill ok">SLR(1): no conflicts</span>');
+    $("prods").innerHTML=G.prods.map(function(p){return '<span class="n">'+p.id+'</span><span>'+esc(p.lhs)+' → '+(p.rhs.map(esc).join(" ")||"ε")+'</span>'}).join("");
+    $("ff").innerHTML='<thead><tr><th>Nonterminal</th><th>FIRST</th><th>FOLLOW</th></tr></thead><tbody>'+G.nts.map(function(n){return '<tr><td class="mono">'+esc(n)+'</td><td class="mono">{ '+R.FF.FIRST[n].map(esc).join(", ")+' }</td><td class="mono">{ '+R.FF.FOLLOW[n].map(esc).join(", ")+' }</td></tr>'}).join("")+'</tbody>';
+    var confStates={};T.conflicts.forEach(function(c){confStates[c.state]=1});
+    $("states").innerHTML=R.C.states.map(function(st){
+      var kset={};st.kernel.forEach(function(k){kset[k[0]+"."+k[1]]=1});
+      var its=st.items.map(function(it){var p=R.G.prods[it[0]],done=it[1]>=p.rhs.length;return '<div class="it'+(kset[it[0]+"."+it[1]]?" k":"")+(done?" done":"")+'">'+itemHTML(it)+'</div>'}).join("");
+      var tr=Object.keys(st.go).map(function(X){return '<button type="button" data-to="'+st.go[X]+'">'+esc(X)+' → I'+st.go[X]+'</button>'}).join("");
+      return '<div class="st'+(confStates[st.id]?" conf":"")+'" id="I'+st.id+'"><h4>I'+st.id+(confStates[st.id]?'<span class="pill bad">conflict</span>':"")+'</h4>'+its+(tr?'<div class="tr">'+tr+'</div>':"")+'</div>'}).join("");
+    [].forEach.call($("states").querySelectorAll("[data-to]"),function(b){b.onclick=function(){var t=$("I"+b.getAttribute("data-to"));t.scrollIntoView({block:"nearest",behavior:"smooth"});t.classList.remove("ping");void t.offsetWidth;t.classList.add("ping");setTimeout(function(){t.classList.remove("ping")},1200)}});
+    var terms=G.terms.concat([LR.END]),nts=G.nts.slice(1);
+    var h='<thead><tr><th>State</th>'+terms.map(function(t,i){return '<th class="'+(i===0?"":"")+'">'+esc(t)+'</th>'}).join("")+nts.map(function(n,i){return '<th class="'+(i===0?"sep":"")+'">'+esc(n)+'</th>'}).join("")+'</tr></thead><tbody>';
+    R.C.states.forEach(function(st){
+      h+='<tr id="row'+st.id+'"><td class="mono">'+st.id+'</td>';
+      terms.forEach(function(a){var cell=T.ACTION[st.id][a]||[];var cls=cell.length>1?"c":cell.length?(cell[0].t==="s"?"s":cell[0].t==="r"?"r":"a"):"";h+='<td id="c'+st.id+'_'+encodeURIComponent(a)+'" class="'+cls+'"'+(cell.length>1?' title="'+cell.map(LR.actText).join(" and ")+'"':"")+'>'+cell.map(LR.actText).join(" / ")+'</td>'});
+      nts.forEach(function(n,i){var g=T.GOTO[st.id][n];h+='<td class="g'+(i===0?" sep":"")+'">'+(g===undefined?"":g)+'</td>'});
+      h+='</tr>';
+    });
+    $("slr").innerHTML=h+'</tbody>';
+    reset();
+  }
+  function reset(){
+    if(!R)return;
+    var toks=$("inp").value.trim().split(/\s+/).filter(Boolean);
+    P=LR.parser(R.G,R.T,toks);
+    draw(null);
+  }
+  function draw(rec){
+    var stack=P.stack;
+    $("stk").innerHTML=stack.map(function(e,i){return '<div class="cellx'+(i===0?" st0":"")+(rec&&i===stack.length-1&&rec.kind!=="accept"&&rec.kind!=="error"?" new":"")+'">'+(e.sym!==undefined?'<span>'+esc(e.sym)+'</span>':'<span>⊥</span>')+'<small>state '+e.s+'</small></div>'}).join("");
+    $("tape").innerHTML=P.input.map(function(t,i){return '<div class="cellx'+(i<P.pos?" used":i===P.pos&&!P.done?" next":"")+'">'+esc(t)+'</div>'}).join("");
+    var a=$("act");
+    if(!rec){a.className="actline";a.textContent="Press Step. The parser starts in state 0 with an empty stack.";}
+    else{a.className="actline "+rec.kind;a.textContent="ACTION["+rec.state+", "+rec.sym+"] = "+(rec.act?LR.actText(rec.act):"empty")+(rec.conflict?" (conflict: shifting, as Bison would)":"")+" → "+rec.text;}
+    $("plog").innerHTML='<thead><tr><th>#</th><th>Stack</th><th>Input</th><th>Action</th></tr></thead><tbody>'+P.steps.map(function(s,i){return '<tr'+(i===P.steps.length-1?' class="now"':"")+'><td>'+(i+1)+'</td><td>'+s.stack.map(function(e){return (e.sym!==undefined?esc(e.sym)+" ":"")+e.s}).join(" ")+'</td><td>'+P.input.slice(s.pos).map(esc).join(" ")+'</td><td>'+esc(s.kind==="shift"?"shift "+s.act.n:s.kind==="reduce"?"reduce "+s.prod:s.kind)+'</td></tr>'}).join("")+'</tbody>';
+    var lg=$("plog").parentNode;lg.scrollTop=lg.scrollHeight;
+    [].forEach.call(document.querySelectorAll(".st.cur"),function(x){x.classList.remove("cur")});
+    [].forEach.call(document.querySelectorAll("#slr .hit"),function(x){x.classList.remove("hit")});
+    var top=stack[stack.length-1].s,card=$("I"+top);if(card&&!P.done)card.classList.add("cur");
+    if(!P.done){var row=$("row"+top);if(row)row.classList.add("hit");var c=$("c"+top+"_"+encodeURIComponent(P.input[P.pos]));if(c)c.classList.add("hit");}
+    $("pStat").textContent=P.done?(P.ok?"accepted ✓":"syntax error"):P.steps.length+" moves";
+    $("pStat").className="pill"+(P.done?(P.ok?" ok":" bad"):"");
+    drawTree();
+  }
+  function drawTree(){
+    var roots=P.stack.slice(1).map(function(e){return e.node});
+    if(!roots.length){$("tree").innerHTML='<p class="muted" style="padding:10px;margin:0;font-size:.86rem">Subtrees appear here as the parser shifts and reduces.</p>';return}
+    var nodes=[],leaf=0,maxD=0;
+    function lay(n,d){maxD=Math.max(maxD,d);var me={n:n,d:d,k:[]};nodes.push(me);if(!n.kids.length){me.x=leaf++}else{n.kids.forEach(function(c){me.k.push(lay(c,d+1))});me.x=(me.k[0].x+me.k[me.k.length-1].x)/2}return me}
+    var tops=roots.map(function(r){return lay(r,0)});
+    var W=Math.max(300,leaf*56+40),H=(maxD+1)*56+20,sx=function(x){return 20+(W-40)*(leaf<=1?.5:x/(leaf-1))},sy=function(d){return 26+d*56};
+    var cs=getComputedStyle(document.documentElement),col=function(v){return cs.getPropertyValue(v).trim()};
+    var nt={};R.G.nts.forEach(function(n){nt[n]=1});
+    var s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Parse tree"><title>Parse tree</title>';
+    nodes.forEach(function(m){m.k.forEach(function(c){s+='<line x1="'+sx(m.x)+'" y1="'+(sy(m.d)+13)+'" x2="'+sx(c.x)+'" y2="'+(sy(c.d)-13)+'" stroke="'+col("--rule")+'" stroke-width="1.5"/>'})});
+    nodes.forEach(function(m){var isN=nt[m.n.sym],w=Math.max(30,m.n.sym.length*9+16);s+='<rect x="'+(sx(m.x)-w/2)+'" y="'+(sy(m.d)-13)+'" width="'+w+'" height="26" rx="7" fill="'+(isN?col("--re-soft"):col("--sh-soft"))+'" stroke="'+(isN?col("--re"):col("--sh"))+'" stroke-width="1.2"/><text x="'+sx(m.x)+'" y="'+(sy(m.d)+5)+'" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="13" font-weight="600" fill="'+col("--ink")+'">'+esc(m.n.sym)+'</text>'});
+    $("tree").innerHTML=s+'</svg>';
+  }
+  $("pStep").onclick=function(){if(P&&!P.done)draw(P.step())};
+  $("pRun").onclick=function(){var r=null,g=0;while(P&&!P.done&&g++<2000)r=P.step();if(r)draw(r)};
+  $("pReset").onclick=reset;
+  var t=null;$("gram").addEventListener("input",function(){clearTimeout(t);t=setTimeout(build,250)});
+  $("inp").addEventListener("input",reset);
+  build();
+})();
+</script>
+<script src="../assets/root-kit.js"></script>
+</body>
+</html>

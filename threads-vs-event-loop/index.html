@@ -4,9 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>One Core, Two Ways to Wait</title>
-<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to usr server, with simulators.">
+<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to our server, with simulators.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css">
 <style>
 /* Layout: same two-column source-trace as the event-loop page. Left rail is a call stack (kernel at the bottom), right column walks it upward. Signature element: paired timelines, threads above, event loop below, on one shared time axis. */
 :root{
@@ -121,7 +122,7 @@ tr:last-child td{border-bottom:0}
 .bar.l{background:var(--loop)}
 ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
 .notes{display:flex;flex-direction:column;gap:10px;max-width:74ch}
-.note{border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
+.notes .note{border:1px solid var(--rule);border-radius:10px;background:var(--surface);padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr);gap:4px}
 .note .said{font-size:.86rem;color:var(--muted)}
 .note .said::before{content:"Report: ";font-family:var(--mono);font-size:.72rem;color:var(--trace)}
 .note .fix{font-size:.94rem}
@@ -151,7 +152,8 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#sim"><b>One core, both models</b>timeline simulator</a></li>
     <li><a href="#scale"><b>At 10,000 connections</b>memory model</a></li>
     <li><a href="#notes"><b>Sharpening the report</b>precision notes</a></li>
-    <li><a href="#try"><b>Verify on our machine</b>tools and exercises</a></li>
+    <li><a href="#try"><b>Verify on our machine</b>quizzes, tools, exercises</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
   </ol>
   <div class="base">— bottom: CPU / kernel</div>
 </nav>
@@ -172,18 +174,18 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#sim">our server</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a>
+    <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a><a href="#reading">Reading</a>
   </nav>
   <p style="font-size:.92rem">Read the original: <a href="assignment/CSE321_Theory_Assignment_01_Report.pdf">our submitted report (PDF, 10 pages)</a>.</p>
   <p class="muted" style="font-size:.86rem">Kernel, glibc and libuv excerpts were fetched from their upstream repositories in October 2026 and trimmed with <code>// …</code>. The two small servers in the second section are our own example programs. Highlighted lines are the ones each explanation hinges on.</p>
 </header>
 
-<section id="root">
+<section id="root" data-deeper="ostep-threads,lkd,silberschatz">
   <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>Both models end in the same place: a sleeping task and <code>schedule()</code></h2></div>
   <div class="claim"><b>From the report, §4.1</b>In synchronous I/O the kernel suspends the thread until data is available; in asynchronous I/O the kernel notifies the application later.</div>
   <div class="prose">
-    <p>Here is what "suspends the thread" means in the kernel. On Linux every thread is a <code>task_struct</code>. To wait, a task puts itself on a wait queue, sets its state to sleeping, and calls the scheduler, which picks some other task to run. When the awaited thing happens, whoever caused it walks the wait queue and wakes the sleepers.</p>
-    <p>The thread-per-connection server blocks in <code>read()</code>, which for TCP reaches <code>sk_wait_data</code> and waits on <em>that one socket's</em> queue. The event-loop server blocks in <code>epoll_wait()</code>, which reaches <code>ep_poll</code> and waits on <em>one queue for every socket it watches</em>. The mechanism is identical. The difference is the number of sleepers: N threads each waiting on one socket, versus one thread waiting on N.</p>
+    <p>Here is what "suspends the thread" means in the kernel. On Linux every thread is a <code>task_struct</code>. To wait, a task puts itself on a wait queue, sets its state to sleeping, and calls the scheduler, which picks some other task to run. When the awaited thing happens, whoever caused it walks the wait queue and wakes the sleepers.<a class="rd" data-r="ostep-threads,lkd"></a></p>
+    <p>The thread-per-connection server blocks in <code>read()</code>, which for TCP reaches <code>sk_wait_data</code> and waits on <em>that one socket's</em> queue. The event-loop server blocks in <code>epoll_wait()</code>, which reaches <code>ep_poll</code> and waits on <em>one queue for every socket it watches</em>. The mechanism is identical. The difference is the number of sleepers: N threads each waiting on one socket, versus one thread waiting on N.<a class="rd" data-r="c10k"></a></p>
   </div>
   <div class="pair">
     <figure class="src t">
@@ -198,10 +200,10 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="callout"><code>tcp_recvmsg_locked</code> in <code>net/ipv4/tcp.c</code> calls <code>sk_wait_data(sk, &amp;timeo, last)</code> when the receive queue is empty. <code>sk_wait_event</code> sleeps until the condition changes. In <code>ep_poll</code>, <code>__set_current_state(TASK_INTERRUPTIBLE)</code> followed by <code>schedule_hrtimeout_range</code> is the textbook "mark asleep, then yield the CPU" pair.</p>
 </section>
 
-<section id="servers">
+<section id="servers" data-deeper="c10k,ostep-events,tlpi">
   <div class="sechead"><span class="eyebrow">Frame 1 · user space</span><h2>The same echo server, written both ways</h2></div>
   <div class="prose">
-    <p>These are minimal C programs, not from any project, written to make the structural difference concrete. The left one creates a thread per connection, and each thread spends its life blocked in <code>read()</code>. The right one has a single thread that blocks in <code>epoll_wait()</code> and handles whichever sockets are ready. Error handling is omitted.</p>
+    <p>These are minimal C programs, not from any project, written to make the structural difference concrete. The left one creates a thread per connection, and each thread spends its life blocked in <code>read()</code>. The right one has a single thread that blocks in <code>epoll_wait()</code> and handles whichever sockets are ready. Error handling is omitted.<a class="rd" data-r="ostep-events,tlpi"></a></p>
   </div>
   <div class="pair">
     <figure class="src t">
@@ -216,11 +218,11 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="callout">The left program has N+1 kernel tasks for N clients, each with its own stack, and the kernel's scheduler decides who runs. The right program has one task, and <b>our loop</b> decides who runs, by the order in which it handles ready events. That is the whole architectural difference. The rest of this page follows each side down to the kernel code that pays for it.</p>
 </section>
 
-<section id="thread">
+<section id="thread" data-deeper="man-clone,ostep-threads">
   <div class="sechead"><span class="eyebrow">Frame 2 · threads</span><h2>What <code>pthread_create</code> actually asks the kernel for</h2></div>
   <div class="claim"><b>From the report, §2.1</b>Threads in a process share the address space, file descriptors and globals, but each has its own program counter, registers and stack.</div>
   <div class="prose">
-    <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what our report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.</p>
+    <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what our report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.<a class="rd" data-r="man-clone"></a></p>
   </div>
   <figure class="src t">
     <figcaption><span class="path">glibc/nptl/pthread_create.c · create_thread()</span><span class="note">verbatim</span></figcaption>
@@ -229,11 +231,11 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in our §4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
 </section>
 
-<section id="switch">
+<section id="switch" data-deeper="ostep-lde,lkd">
   <div class="sechead"><span class="eyebrow">Frame 3 · threads</span><h2>The context switch, line by line</h2></div>
   <div class="claim"><b>From the report, §2.2</b>The kernel saves the current thread's registers, program counter and stack pointer, loads the next thread's state, and switches the page table base if the threads belong to different processes.</div>
   <div class="prose">
-    <p>This is that function. When the scheduler picks a different task, it calls <code>context_switch</code>. If the next task is a user task with a different address space, <code>switch_mm_irqs_off</code> loads its page tables (CR3 on x86). Two threads of the same process share <code>mm</code>, so that step costs almost nothing between them. Then <code>switch_to</code>, a short piece of architecture-specific assembly, swaps the stack pointer and callee-saved registers. When <code>switch_to</code> "returns", it returns on the <em>next</em> task's stack, into wherever that task last called <code>schedule()</code>.</p>
+    <p>This is that function. When the scheduler picks a different task, it calls <code>context_switch</code>. If the next task is a user task with a different address space, <code>switch_mm_irqs_off</code> loads its page tables (CR3 on x86). Two threads of the same process share <code>mm</code>, so that step costs almost nothing between them. Then <code>switch_to</code>, a short piece of architecture-specific assembly, swaps the stack pointer and callee-saved registers. When <code>switch_to</code> "returns", it returns on the <em>next</em> task's stack, into wherever that task last called <code>schedule()</code>.<a class="rd" data-r="ostep-lde,lkd"></a></p>
   </div>
   <figure class="src t">
     <figcaption><span class="path">linux/kernel/sched/core.c · context_switch()</span><span class="note">trimmed</span></figcaption>
@@ -242,12 +244,12 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="callout">An event loop never reaches this function to move between clients. Switching from one client to another is just our loop calling a different handler: a function call on the same stack. That is where "no context switches within the loop" in our Table 1 comes from.</p>
 </section>
 
-<section id="mutex">
+<section id="mutex" data-deeper="ostep-locks,drepper-futex,lwn-futex">
   <div class="sechead"><span class="eyebrow">Frame 4 · threads</span><h2>Why <code>counter++</code> loses updates, and what <code>pthread_mutex_lock</code> really does</h2></div>
   <div class="claim"><b>From the report, §2.3, Listing 1</b>Without the mutex, the read-modify-write on <code>counter</code> is not atomic and updates are lost. Under contention, the kernel puts the waiting thread to sleep.</div>
   <div class="prose">
-    <p><code>counter++</code> compiles to three instructions: load into a register, add, store. Each thread has its own registers, so if the scheduler interleaves those instructions, both threads can load the same old value. Step through it below: pick an interleaving, then turn the mutex on.</p>
-    <p>The mutex is glibc's futex lock. Its word holds <code>0</code> (unlocked), <code>1</code> (locked, no waiters) or <code>2</code> (locked, maybe waiters). The fast path is a single atomic compare-and-swap in user space with no system call. Only when it fails does <code>__lll_lock_wait</code> set the word to 2 and call <code>futex_wait</code>, which puts the thread to sleep in the kernel. Unlock swaps the word back to 0 and, only if it was 2, calls <code>futex_wake</code>.</p>
+    <p><code>counter++</code> compiles to three instructions: load into a register, add, store. Each thread has its own registers, so if the scheduler interleaves those instructions, both threads can load the same old value. Step through it below: pick an interleaving, then turn the mutex on.<a class="rd" data-r="ostep-locks"></a></p>
+    <p>The mutex is glibc's futex lock. Its word holds <code>0</code> (unlocked), <code>1</code> (locked, no waiters) or <code>2</code> (locked, maybe waiters). The fast path is a single atomic compare-and-swap in user space with no system call. Only when it fails does <code>__lll_lock_wait</code> set the word to 2 and call <code>futex_wait</code>, which puts the thread to sleep in the kernel. Unlock swaps the word back to 0 and, only if it was 2, calls <code>futex_wake</code>.<a class="rd" data-r="drepper-futex,man-futex,lwn-futex"></a></p>
   </div>
   <div class="pair">
     <figure class="src t">
@@ -280,12 +282,12 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   </div>
 </section>
 
-<section id="loop">
+<section id="loop" data-deeper="man-epoll,libuv-design,node-loop">
   <div class="sechead"><span class="eyebrow">Frame 5 · event loop</span><h2>How a single <code>epoll_wait</code> learns about N sockets</h2></div>
   <div class="claim"><b>From the report, §3.1</b>Node.js's event loop is built on libuv, which hides platform features like Linux's <code>epoll</code>, macOS's <code>kqueue</code> and Windows I/O completion ports.</div>
   <div class="prose">
-    <p>When we <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.</p>
-    <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs our JavaScript callback.</p>
+    <p>When we <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.<a class="rd" data-r="man-epoll"></a></p>
+    <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs our JavaScript callback.<a class="rd" data-r="libuv-design,node-loop"></a></p>
   </div>
   <div class="pair">
     <figure class="src l">
@@ -300,7 +302,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <p class="callout">Note what is <em>not</em> here: no per-connection thread and no per-connection stack. The per-connection kernel state is an <code>epitem</code> on a list. What a connection costs in an event loop is that small kernel record plus whatever our callback closures hold. The full path from <code>epoll_wait</code> up through V8's microtask queue is traced on the <a href="../js-event-loop/">event-loop page</a>.</p>
 </section>
 
-<section id="sim">
+<section id="sim" data-deeper="ostep-sched,ostep-events">
   <div class="sechead"><span class="eyebrow">Frame 6 · both, on one core</span><h2>Run the same requests through both models</h2></div>
   <div class="prose">
     <p>This is a small discrete-event simulation with one CPU core. Each request needs some CPU time, may wait on I/O (a database or network call), then needs more CPU. In the <span style="color:var(--thr);font-weight:600">threads</span> model, each request gets a thread, the scheduler runs ready threads round-robin with a time slice, and every switch between threads costs CPU time. In the <span style="color:var(--loop);font-weight:600">event loop</span> model, one thread runs each callback to completion and starts I/O without blocking.</p>
@@ -331,11 +333,11 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <div class="readout" id="readout"></div>
   </div>
   <div class="prose">
-    <p>Things to look for. With the <b>I/O-bound</b> workload the two models finish at about the same time, but the threads row pays for every switch, and on a real server that overhead grows with the number of runnable threads. With <b>CPU-bound</b> jobs on one core neither model can go faster; threads just interleave the work and add switches, so the mean latency gets worse. More cores are what help, and only threads can use them without extra processes. With <b>one expensive request</b>, the event loop's head-of-line blocking appears: every cheap request that becomes ready while the expensive callback runs waits behind it, while the time slice lets threads keep cheap requests moving.</p>
+    <p>Things to look for. With the <b>I/O-bound</b> workload the two models finish at about the same time, but the threads row pays for every switch, and on a real server that overhead grows with the number of runnable threads. With <b>CPU-bound</b> jobs on one core neither model can go faster; threads just interleave the work and add switches, so the mean latency gets worse. More cores are what help, and only threads can use them without extra processes. With <b>one expensive request</b>, the event loop's head-of-line blocking appears: every cheap request that becomes ready while the expensive callback runs waits behind it, while the time slice lets threads keep cheap requests moving.<a class="rd" data-r="ostep-sched"></a></p>
   </div>
 </section>
 
-<section id="scale">
+<section id="scale" data-deeper="c10k,tlpi">
   <div class="sechead"><span class="eyebrow">Frame 7 · scale</span><h2>What 10,000 idle connections cost in each model</h2></div>
   <div class="claim"><b>From the report, §4.3</b>A pthread on Linux defaults to an 8 MB stack. An event-driven server holds only a small descriptor and a few callback closures per connection.</div>
   <div class="panel">
@@ -343,15 +345,15 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <div class="tbl"><table id="scaleTbl"></table></div>
   </div>
   <div class="prose">
-    <p>Two corrections make this more precise than the usual "8 MB per thread" line. First, 8 MB is <b>reserved virtual address space</b>, not RAM. Linux backs stack pages lazily, so an idle thread typically uses only the pages it has touched, often tens of KB of resident memory. Second, the cost that is always resident is the kernel side: a <code>task_struct</code> plus a 16 KB kernel stack per thread, and a scheduler that has more runnable tasks to consider. The model shows reserved stack and kernel stack separately for that reason. Socket buffers are the same in both models, so they are left out.</p>
+    <p>Two corrections make this more precise than the usual "8 MB per thread" line. First, 8 MB is <b>reserved virtual address space</b>, not RAM. Linux backs stack pages lazily, so an idle thread typically uses only the pages it has touched, often tens of KB of resident memory. Second, the cost that is always resident is the kernel side: a <code>task_struct</code> plus a 16 KB kernel stack per thread, and a scheduler that has more runnable tasks to consider. The model shows reserved stack and kernel stack separately for that reason. Socket buffers are the same in both models, so they are left out.<a class="rd" data-r="c10k"></a></p>
   </div>
 </section>
 
-<section id="notes">
+<section id="notes" data-deeper="lwn-eevdf,kdoc-eevdf,ostep-sched">
   <div class="sechead"><span class="eyebrow">Frame 8 · review</span><h2>Sharpening a few lines of the report</h2></div>
   <div class="prose"><p>Tracing the source turned up a few places where the report is right in spirit but can be stated more precisely.</p></div>
   <div class="notes">
-    <div class="note"><div class="said">Linux's Completely Fair Scheduler (CFS) is the example of a modern scheduler.</div><div class="fix">Since Linux 6.6 (2023), the default scheduler for normal tasks is EEVDF (Earliest Eligible Virtual Deadline First), which replaced CFS. It keeps CFS's idea of virtual runtime but also schedules by deadlines derived from a task's time slice.</div></div>
+    <div class="note"><div class="said">Linux's Completely Fair Scheduler (CFS) is the example of a modern scheduler.</div><div class="fix">Since Linux 6.6 (2023), the default scheduler for normal tasks is EEVDF (Earliest Eligible Virtual Deadline First), which replaced CFS. It keeps CFS's idea of virtual runtime but also schedules by deadlines derived from a task's time slice.<a class="rd" data-r="lwn-eevdf,kdoc-eevdf"></a></div></div>
     <div class="note"><div class="said">The kernel saves registers into the process control block (PCB).</div><div class="fix">Linux has no structure called a PCB. On a switch, user registers are already saved on the task's kernel stack (from the system call or interrupt entry), and <code>switch_to</code> saves the stack pointer and callee-saved state into <code>task_struct</code> (its <code>thread</code> field). "PCB" is the textbook name for the role <code>task_struct</code> plays.</div></div>
     <div class="note"><div class="said">If the threads belong to different processes, the TLB may need to be flushed.</div><div class="fix">On modern x86 with PCID, switching address spaces usually does not flush the TLB; entries are tagged with an address-space ID. Switching between two threads of the same process skips <code>switch_mm</code>'s real work entirely, because both share one <code>mm_struct</code>.</div></div>
     <div class="note"><div class="said">Event-driven code has no race conditions on in-process data.</div><div class="fix">There are no data races, since only one callback runs at a time, but there are still <b>logical</b> races. Any state read before an <code>await</code> can be changed by another callback before execution resumes, for example a check-then-act on a balance across an <code>await db.query()</code>.</div></div>
@@ -373,6 +375,15 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <tr><td>Futex calls under contention</td><td><code>strace -f -e trace=futex ./counter</code> on Listing 1: futex calls appear only when threads actually collide.</td></tr>
     </tbody>
   </table></div>
+  <h3>Predict, then check</h3>
+  <div class="quizzes">
+<div class="quiz"><script type="application/json">{"q": "Two threads each run <code>counter++</code> once with no mutex, starting from 0. Which final values are possible?", "options": ["Only 2", "1 or 2", "0, 1 or 2", "Any value"], "answer": 1, "explain": "Each increment is load, add, store. If both loads happen before either store, both write 1 and one update is lost. Neither thread can produce 0, because each stores at least its own increment."}</script></div>
+<div class="quiz"><script type="application/json">{"q": "Thread A holds the mutex. Thread B calls <code>pthread_mutex_lock</code>, then A unlocks. What does the futex word go through?", "options": ["1 → 0", "1 → 2 → 0, and unlock calls futex_wake", "0 → 1 → 2", "It stays 1; the kernel tracks waiters"], "answer": 1, "explain": "B's CAS from 0 fails, so <code>__lll_lock_wait</code> exchanges the word to 2 and calls <code>futex_wait</code>. A's unlock swaps it to 0, sees the old value 2 and calls <code>futex_wake</code>. With no waiter the word would only go 1 → 0, with no system call."}</script></div>
+<div class="quiz"><script type="application/json">{"q": "Which clone flag makes a new task share the creator's PID, so it shows up as a thread rather than a process?", "options": ["CLONE_VM", "CLONE_FILES", "CLONE_THREAD", "CLONE_SIGHAND"], "answer": 2, "explain": "<code>CLONE_THREAD</code> puts the new task in the caller's thread group, so <code>getpid()</code> returns the same thread-group ID. <code>CLONE_VM</code> shares memory but on its own would still give a separate process ID."}</script></div>
+<div class="quiz"><script type="application/json">{"q": "An epoll server's callback for one client runs a 200 ms computation. What happens to the other clients during that time?", "options": ["They are served by other threads", "Nothing is read from their sockets until the callback returns", "The kernel drops their packets", "epoll preempts the callback after a time slice"], "answer": 1, "explain": "There is one thread and no preemption inside it. Packets still arrive and the kernel queues them in socket buffers and marks the sockets ready, but no one calls <code>epoll_wait</code> again until the callback returns. This is head-of-line blocking."}</script></div>
+<div class="quiz"><script type="application/json">{"q": "A server holds 10,000 idle connections, one thread each, with 8 MB default stacks. Roughly how much RAM do those stacks use?", "options": ["80 GB", "8 GB", "Far less: most of the 8 MB is reserved address space, never touched", "Exactly 160 MB of kernel stacks and nothing else"], "answer": 2, "explain": "glibc maps 8 MB of virtual address space per stack, but pages are backed lazily, so an idle thread's resident stack is often tens of KB. The always-resident part is the 16 KB kernel stack plus <code>task_struct</code> per thread, about 160 MB plus change at this scale."}</script></div>
+<div class="quiz"><script type="application/json">{"q": "Switching between two threads of the <em>same</em> process skips which step of <code>context_switch</code>?", "options": ["Saving callee-saved registers", "Changing the stack pointer", "Loading a new page-table base (the switch_mm work)", "Updating the scheduler's run queue"], "answer": 2, "explain": "Both threads share one <code>mm_struct</code>, so there is no address space to switch. <code>switch_to</code> still swaps stacks and registers."}</script></div>
+  </div>
   <h3>Exercises</h3>
   <ol class="ex">
     <li>Compile Listing 1 without the mutex (<code>gcc -O0 -pthread</code>) with two threads of 1,000,000 increments each. Run it five times and explain each wrong total using the race simulator's interleaving. Then compile with <code>-O2</code> and explain why the result changes. Hint: look at the generated loop with <code>objdump -d</code>.</li>
@@ -381,6 +392,12 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li>In the epoll server, add a 200 ms busy loop to the handler for one client. Connect three clients with <code>nc</code> and observe the head-of-line blocking from the simulator's third workload. Then move the busy work to a thread and explain what changed.</li>
     <li>Read <code>ep_poll_callback</code> in full and find where <code>EPOLLEXCLUSIVE</code> limits wakeups. Explain the "thundering herd" problem it solves when many processes wait on one listening socket.</li>
   </ol>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The small numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for the specifications, papers and man pages the code implements.</p>
+  <div id="reading-list"></div>
 </section>
 
 <section id="sources">
@@ -633,6 +650,7 @@ __lll_lock_wait (int *futex, int private)
     }
     // …</script>
 
+<script src="../assets/reading.js"></script>
 <script>
 (function(){
   "use strict";
@@ -868,5 +886,6 @@ __lll_lock_wait (int *futex, int private)
   document.getElementById("nc").addEventListener("input",scale);scale();
 })();
 </script>
+<script src="../assets/root-kit.js"></script>
 </body>
 </html>

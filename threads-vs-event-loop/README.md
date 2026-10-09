@@ -18,6 +18,7 @@ A root-to-end companion to our CSE321 (Operating Systems) Theory Assignment 01, 
 8. **Scale model**: what 10,000 connections cost in each model.
 9. **Precision notes** on a few lines of the report (EEVDF vs CFS, PCB vs `task_struct`, PCID, logical races across `await`, libuv's thread pool for files).
 10. **Exercises** to verify everything with `strace`, `/proc`, `pmap` and `perf`.
+11. **Predict-first quizzes** and a **reading list** (OSTEP, TLPI, man pages, Drepper on futexes, LWN on EEVDF). Numbered markers in the text open the relevant reading in place.
 
 ## Sources
 

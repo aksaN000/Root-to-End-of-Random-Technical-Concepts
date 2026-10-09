@@ -28,7 +28,7 @@ header{padding-block:64px 8px;display:flex;flex-direction:column;gap:16px}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(2.3rem,7vw,4rem);line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
 h1 span{color:var(--accent)}
 .lede{max-width:62ch;color:var(--muted);font-size:1.1rem;margin:0}
-.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:0;padding:0;list-style:none}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin:0;padding:0;list-style:none}
 .principles li{border-top:2px solid var(--rule);padding-top:10px;font-size:.92rem;color:var(--muted)}
 .principles b{display:block;color:var(--ink);font-weight:600;font-size:.95rem}
 h2{font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
@@ -47,6 +47,12 @@ h2{font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.08em
 .tag{font-family:var(--mono);font-size:.7rem;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
 footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:16px}
 footer a{color:var(--accent)}
+.map{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:var(--mono);font-size:.78rem}
+.map a{border:1px solid var(--rule);background:var(--surface);color:var(--ink);text-decoration:none;border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;line-height:1.3}
+.map a small{color:var(--muted);font-size:.68rem}
+.map a:hover{border-color:var(--accent)}
+.map i{font-style:normal;color:var(--muted)}
+.maplede{font-size:.9rem;color:var(--muted);margin:0 0 12px;max-width:64ch}
 @media (max-width:560px){.sim{grid-template-columns:1fr}}
 </style>
 </head>
@@ -60,6 +66,7 @@ footer a{color:var(--accent)}
       <li><b>Trace from the root</b>Kernel, compiler or protocol first; my own code last.</li>
       <li><b>Show the real code</b>Excerpts from the actual source, trimmed and linked.</li>
       <li><b>Make it steppable</b>Every simulation can be walked one step at a time.</li>
+      <li><b>Read deeper, then test</b>Numbered markers open curated reading in place; each page ends with predict-first quizzes.</li>
     </ul>
   </header>
 
@@ -70,7 +77,7 @@ footer a{color:var(--accent)}
         <h3>From the power button to <code>.then()</code></h3>
         <p>How one <code>fetch().then()</code> in a React app actually runs in Chrome: the renderer process and its threads, the line that starts the event loop, the kernel wait, and V8's microtask queue.</p>
         <div class="chain" aria-label="Layers traced">
-          <span>kernel</span><i>→</i><span>RendererMain</span><i>→</i><span>run_loop.Run()</span><i>→</i><span>MessagePumpDefault</span><i>→</i><span>V8</span><i>→</i><span class="you">your callback</span>
+          <span>kernel</span><i>→</i><span>RendererMain</span><i>→</i><span>run_loop.Run()</span><i>→</i><span>MessagePumpDefault</span><i>→</i><span>V8</span><i>→</i><span class="you">our callback</span>
         </div>
         <div class="meta"><span class="tag">JavaScript</span><span class="tag">Chromium</span><span class="tag">V8</span><span class="tag">event loop</span></div>
       </div>
@@ -81,12 +88,45 @@ footer a{color:var(--accent)}
         <h3>One core, two ways to wait</h3>
         <p>Multi-threading versus event-driven concurrency, from the kernel's <code>schedule()</code> through glibc's <code>clone</code> flags, <code>context_switch</code>, futex mutexes and <code>epoll</code>, with a race-condition stepper and a one-core timeline simulator. Companion to my CSE321 theory assignment.</p>
         <div class="chain" aria-label="Layers traced">
-          <span>schedule()</span><i>→</i><span>clone / epoll_wait</span><i>→</i><span>context_switch</span><i>→</i><span>futex</span><i>→</i><span class="you">your server</span>
+          <span>schedule()</span><i>→</i><span>clone / epoll_wait</span><i>→</i><span>context_switch</span><i>→</i><span>futex</span><i>→</i><span class="you">our server</span>
         </div>
         <div class="meta"><span class="tag">Operating systems</span><span class="tag">Linux</span><span class="tag">glibc</span><span class="tag">concurrency</span></div>
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="v8-pipeline/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>How V8 turns <code>a + b</code> into machine code</h3>
+        <p>One expression through V8's scanner, precedence-climbing parser, bytecode generator and the Ignition interpreter, then hidden classes, inline caches, tier-up to Maglev and TurboFan, and a real deoptimization. The bytecode model matches Node's V8 output exactly.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>scanner</span><i>→</i><span>parser</span><i>→</i><span>Ignition bytecode</span><i>→</i><span>feedback</span><i>→</i><span>TurboFan</span><i>→</i><span class="you">our function</span>
+        </div>
+        <div class="meta"><span class="tag">Compilers</span><span class="tag">V8</span><span class="tag">JIT</span><span class="tag">interpreters</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
+    <a class="sim" href="lr-parser/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>Shift, reduce, accept</h3>
+        <p>Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the ACTION and GOTO table, then a step-by-step parse that grows its tree. Checked against the Dragon Book and real GNU Bison output, including conflicts.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>grammar</span><i>→</i><span>items</span><i>→</i><span>SLR table</span><i>→</i><span>yyparse()</span><i>→</i><span class="you">our parse tree</span>
+        </div>
+        <div class="meta"><span class="tag">Compilers</span><span class="tag">parsing</span><span class="tag">Bison</span><span class="tag">CSE420</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
+  </section>
+
+  <section>
+    <h2>How the pages connect</h2>
+    <p class="maplede">Read left to right to follow source code down to the CPU: a grammar becomes a parser, V8's parser and interpreter run our JavaScript, the event loop decides when, and the kernel decides which thread gets the core.</p>
+    <nav class="map" aria-label="Topic map">
+      <a href="lr-parser/">grammar → parser<small>lr-parser</small></a><i>→</i>
+      <a href="v8-pipeline/">source → bytecode → machine code<small>v8-pipeline</small></a><i>→</i>
+      <a href="js-event-loop/">task → microtask → our callback<small>js-event-loop</small></a><i>→</i>
+      <a href="threads-vs-event-loop/">thread → schedule() → CPU<small>threads-vs-event-loop</small></a>
+    </nav>
   </section>
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>

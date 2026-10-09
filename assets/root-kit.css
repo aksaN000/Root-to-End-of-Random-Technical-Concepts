@@ -1,0 +1,67 @@
+/* Root to End shared kit: reading footnotes, "go deeper" strips, reading list, quizzes, progress bar.
+   Uses each page's own color tokens (--surface, --rule, --accent, --trace, --ok, --bad, …). */
+.rk-progress{position:fixed;left:0;right:0;top:0;height:3px;z-index:50;pointer-events:none;padding-top:env(safe-area-inset-top,0px)}
+.rk-progress i{display:block;height:3px;width:0;background:linear-gradient(90deg,var(--trace),var(--accent));transition:width .1s linear}
+@media (prefers-reduced-motion:reduce){.rk-progress i{transition:none}}
+
+/* footnote markers */
+a.rd{font-family:var(--mono);font-size:.68em;vertical-align:super;line-height:0;text-decoration:none;color:var(--accent);background:var(--accent-soft);border-radius:4px;padding:1px 4px;margin-left:2px;cursor:pointer;white-space:nowrap}
+a.rd:hover,a.rd[aria-expanded="true"]{background:var(--accent);color:var(--surface)}
+.rk-cards{display:flex;flex-direction:column;gap:8px;margin:10px 0 4px;max-width:72ch}
+.rk-card{border:1px solid var(--rule);border-left:3px solid var(--accent);border-radius:0;background:var(--surface);padding:10px 12px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:2px 10px;font-size:.88rem;line-height:1.5;animation:rk-in .18s ease-out}
+@keyframes rk-in{from{opacity:.4;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.rk-card{animation:none}}
+.rk-card .n{font-family:var(--mono);font-size:.74rem;color:var(--accent);grid-row:span 3;padding-top:2px}
+.rk-card .tt{font-weight:600}
+.rk-card .tt a{color:var(--ink);text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+.rk-card .tt a:hover{text-decoration-color:var(--accent)}
+.rk-card .by{color:var(--muted);font-size:.82rem}
+.rk-card .wh{font-size:.84rem}
+.rk-card .wh b{font-family:var(--mono);font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--trace);margin-right:6px}
+.rk-lvl{display:inline-block;font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.06em;padding:1px 6px;border-radius:999px;margin-left:6px;vertical-align:1px;font-weight:500}
+.rk-lvl.start{background:var(--ok-bg);color:var(--ok)}
+.rk-lvl.deep{background:var(--accent-soft);color:var(--accent)}
+.rk-lvl.source{background:var(--trace-bg);color:var(--trace)}
+
+/* go-deeper strip at the end of a section */
+.deeper{border:1px dashed var(--rule);border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:6px;max-width:80ch;background:transparent}
+.deeper>b{font-family:var(--mono);font-size:.7rem;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.deeper ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:5px}
+.deeper li{font-size:.86rem;line-height:1.45;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.deeper li .n{font-family:var(--mono);font-size:.72rem;color:var(--accent);min-width:2.2em}
+.deeper li a{color:var(--ink);font-weight:500;text-decoration:underline;text-decoration-color:var(--rule);text-underline-offset:3px}
+.deeper li a:hover{text-decoration-color:var(--accent)}
+.deeper li .w{color:var(--muted);font-size:.8rem}
+
+/* page reading list */
+.rk-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.rk-list section,.rk-group{display:flex;flex-direction:column;gap:8px;padding:0;min-width:0}
+.rk-group h3{margin:0;font-family:var(--display);font-size:1rem}
+.rk-group h3 small{display:block;font-family:var(--body);font-weight:400;font-size:.8rem;color:var(--muted)}
+.rk-group .rk-card{border-left-color:var(--rule)}
+.rk-group.start .rk-card{border-left-color:var(--ok)}
+.rk-group.deep .rk-card{border-left-color:var(--accent)}
+.rk-group.source .rk-card{border-left-color:var(--trace)}
+
+/* predict-the-output quiz */
+.quiz{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:10px;max-width:760px}
+.quiz .qh{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.quiz .qh b{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--trace);font-weight:500}
+.quiz .qh .score{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.quiz .qq{font-weight:500}
+.quiz pre{margin:0;background:var(--code);border:1px solid var(--rule);border-radius:8px;padding:10px 12px;font-family:var(--mono);font-size:.8rem;line-height:1.55;overflow-x:auto}
+.quiz .opts{display:flex;flex-direction:column;gap:6px}
+.quiz .opt{text-align:left;font:inherit;font-size:.9rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:8px 12px;border-radius:8px;cursor:pointer;display:flex;gap:10px;align-items:baseline;transition:transform .12s ease,border-color .12s ease}
+.quiz .opt:hover{border-color:var(--accent);transform:translateX(2px)}
+.quiz .opt code{font-size:.84em}
+.quiz .opt .k{font-family:var(--mono);font-size:.74rem;color:var(--muted);min-width:1.2em}
+.quiz .opt.right{border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
+.quiz .opt.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+.quiz .opt[disabled]{cursor:default;transform:none}
+.quiz .ex{font-size:.9rem;line-height:1.6;border-top:1px solid var(--rule);padding-top:8px}
+.quiz .ex b{font-weight:600}
+.quiz .again{align-self:flex-start;font-size:.8rem}
+.quiz.pop .qh .score{animation:rk-pop .5s ease-out}
+@keyframes rk-pop{0%{transform:scale(1)}40%{transform:scale(1.35);color:var(--ok)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){.quiz .opt{transition:none}.quiz.pop .qh .score{animation:none}}
+.quizzes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
