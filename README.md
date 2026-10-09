@@ -48,7 +48,7 @@ Each simulation is a static HTML page with a few shared files in `assets/`. Open
 Every simulator is verified against the real system it models (Node's V8, Chrome's HTML parser, real Chromium's CORS decisions, the Dragon Book, GNU Bison, scapy). To rerun all of it:
 
 ```bash
-npm install && npx playwright install chromium && pip install scapy
+npm install && npx playwright install chromium && pip install scapy cryptography
 npm test
 ```
 

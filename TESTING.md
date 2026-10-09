@@ -31,7 +31,7 @@ The most valuable help right now: **Firefox, Safari, and real phones.** All auto
 Requirements:
 
 - [Git](https://git-scm.com/) and [Node.js 22](https://nodejs.org/). The V8 bytecode check needs Node 22 exactly, because bytecode differs between V8 versions; with another version that one check is skipped.
-- Python 3 with scapy for the packet dissector check: `pip install scapy`
+- Python 3 with scapy for the packet dissector check: `pip install scapy cryptography` (scapy needs cryptography to read TLS)
 - Optional: [GNU Bison](https://www.gnu.org/software/bison/) for two extra LR checks.
 
 ```bash
@@ -39,7 +39,7 @@ git clone https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts.g
 cd Root-to-End-of-Random-Technical-Concepts
 npm install                          # installs Playwright and axe-core (pinned versions)
 npx playwright install chromium      # downloads the browser Playwright drives
-pip install scapy
+pip install scapy cryptography
 npm test
 ```
 
@@ -87,7 +87,7 @@ A full `npm test` writes each check's latest numbers to `validation/results/<che
 
 ### Continuous integration
 
-`.github/workflows/checks.yml` runs on every push, every pull request and every night: a fast job (V8, LR with Bison, event loop, scapy) and a browser job (CORS, HTML parser, pages). Versions are pinned (Node 22.22.0, Playwright 1.56.0, axe-core 4.13.0, scapy 2.8.0) and random checks use fixed seeds. If a job fails, `validation/` is attached to the run as an artifact.
+`.github/workflows/checks.yml` runs on every push, every pull request and every night: a fast job (V8, LR with Bison, event loop, scapy) and a browser job (CORS, HTML parser, pages). Versions are pinned (Node 22.22.0, Playwright 1.56.0, axe-core 4.13.0, scapy 2.8.0 with cryptography 50.0.1) and random checks use fixed seeds. If a job fails, `validation/` is attached to the run as an artifact.
 
 Random checks take a count and a seed, so a failure can be reproduced exactly, for example `node verify/compare-with-chrome.js 5000 123` inside `html-to-pixels/`.
 

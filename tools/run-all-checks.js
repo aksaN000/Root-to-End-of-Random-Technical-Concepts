@@ -8,13 +8,13 @@ const { spawnSync } = require("child_process"), path = require("path");
 const ROOT = path.resolve(__dirname, ".."), quick = process.argv.includes("--quick");
 const node = process.execPath, nodeMajor = +process.versions.node.split(".")[0];
 let hasPlaywright = true; try { require.resolve("playwright"); } catch (e) { try { require.resolve("/opt/npm-tools/node_modules/playwright"); } catch (e2) { hasPlaywright = false; } }
-function py() { for (const c of ["python3", "python"]) { const r = spawnSync(c, ["-c", "import scapy"], { encoding: "utf8" }); if (r.status === 0) return c; } return null; }
+function py() { for (const c of ["python3", "python"]) { const r = spawnSync(c, ["-c", "import scapy, cryptography"], { encoding: "utf8" }); if (r.status === 0) return c; } return null; }
 const PY = py();
 const CHECKS = [
   { id: "v8", name: "V8 bytecode model vs this Node's V8", dir: "v8-pipeline", cmd: [node, "verify/compare-with-node.js", quick ? "100" : "300"], need: nodeMajor === 22 ? null : "needs Node 22 (V8 12.4); bytecode differs between V8 versions. This is Node " + process.versions.node },
   { id: "lr", name: "LR engine vs Dragon Book tables (and Bison if installed)", dir: "lr-parser", cmd: [node, "verify/check-dragon-book.js"] },
   { id: "loop", name: "Event-loop playground vs Node", dir: "js-event-loop", cmd: [node, "verify/compare-loop-with-node.js"] },
-  { id: "packets", name: "DNS/TLS byte dissectors vs scapy", dir: "fetch-to-the-wire", cmd: [PY || "python3", "verify/check-dissectors.py"], need: PY ? null : "needs Python 3 with scapy (pip install scapy)" },
+  { id: "packets", name: "DNS/TLS byte dissectors vs scapy", dir: "fetch-to-the-wire", cmd: [PY || "python3", "verify/check-dissectors.py"], need: PY ? null : "needs Python 3 with scapy and cryptography (pip install scapy cryptography)" },
   { id: "cors", name: "CORS model vs real Chromium (2,880 cases)", dir: "fetch-to-the-wire", cmd: [node, "verify/cors-matrix.js"], need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "html", name: "HTML parser model vs real Chrome", dir: "html-to-pixels", cmd: [node, "verify/compare-with-chrome.js"].concat(quick ? ["300:7"] : ["1000:7", "3000:2026", "3000:99", "2000:4242"]), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "pages", name: "Every page loads cleanly (desktop and phone width)", dir: ".", cmd: [node, "tools/check-pages.js"], need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" }
