@@ -150,6 +150,28 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
   .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
 }
+
+/* playground */
+.pgpresets{display:flex;flex-wrap:wrap;gap:6px}
+.pgpresets button{font-size:.8rem;padding:4px 9px}
+.pgtop{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:12px}
+@media (max-width:760px){.pgtop{grid-template-columns:1fr}}
+.pgtop textarea{width:100%;min-height:13em;font-family:var(--mono);font-size:.84rem;line-height:1.55;border:1px solid var(--rule);border-radius:8px;background:var(--code);color:var(--ink);padding:10px 12px;resize:vertical;tab-size:2}
+.pgtop textarea:focus-visible,.pgguess input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.pgguess{border:1px dashed var(--trace);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--trace-bg)}
+.pgguess b{font-family:var(--mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:var(--trace);font-weight:500}
+.pgguess p{font-size:.84rem;margin:0}
+.pgguess input{font:inherit;font-family:var(--mono);font-size:.86rem;border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:6px 9px;border-radius:7px;width:100%}
+.pgres{font-size:.86rem;min-height:1.3em}
+.pgres.ok{color:var(--ok);font-weight:600}.pgres.bad{color:var(--bad)}
+.pgerr{font-size:.86rem;color:var(--bad);min-height:1.2em}
+.pgreal{font-size:.84rem;padding:7px 12px;border-radius:7px;background:var(--code);color:var(--muted)}
+.pgreal.ok{background:var(--ok-bg);color:var(--ok)}.pgreal.bad{background:var(--bad-bg);color:var(--bad)}
+.pgcon div{font-family:var(--mono);font-size:.78rem;padding:1px 0;border-bottom:1px dashed var(--rule)}
+.pgcon div:last-child{border-bottom:0}
+@media (prefers-reduced-motion:no-preference){.pgcon div.new,.chip.new{animation:pgpop .35s ease-out}}
+@keyframes pgpop{from{transform:translateY(-4px);opacity:0}to{transform:none;opacity:1}}
+.pgkind{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:2px}
 </style>
 </head>
 <body>
@@ -167,6 +189,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#io"><b>The IO thread wakes it</b>Chrome_ChildIOThread</a></li>
     <li><a href="#v8"><b>V8: .then() and microtasks</b>PerformPromiseThen</a></li>
     <li><a href="#trace"><b>Full trace, step by step</b>JS + C++ stacks together</a></li>
+    <li><a href="#playground"><b>Playground</b>our own code, stepped</a></li>
     <li><a href="#react"><b>Where React fits</b>our useEffect</a></li>
     <li><a href="#node"><b>Node.js is different</b>uv_run</a></li>
     <li><a href="#try"><b>See it on our machine</b>quizzes, tools, exercises</a></li>
@@ -194,7 +217,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#trace" class="you">our callback</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
-    <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a><a href="#reading">Reading</a>
+    <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#playground">Playground</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a><a href="#reading">Reading</a>
   </nav>
   <p class="muted" style="font-size:.86rem">Every excerpt below is copied from the current source of Chromium, V8, libuv or Node (fetched October 2026) and trimmed with <code>// …</code> where unrelated code was removed. File paths link to the originals at the bottom of the page. Highlighted lines are the ones the explanation hinges on.</p>
 </header>
@@ -418,6 +441,56 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
         <p class="note" id="note"></p>
       </div>
     </div>
+  </div>
+</section>
+
+<section id="playground" data-deeper="jake-tasks,html-loop,mdn-microtasks">
+  <div class="sechead"><span class="eyebrow">Frame 8½ · our own code</span><h2>Playground: write it, predict it, step through it</h2></div>
+  <div class="prose">
+    <p>The trace above follows one fixed program. Here we write our own. The playground runs a model of the event loop that follows the spec's promise jobs and the "one task, then every microtask" rule, and shows the queues at each step. It covers a subset of JavaScript: <code>console.log</code>, <code>setTimeout</code>, <code>queueMicrotask</code>, <code>Promise.resolve</code>, <code>new Promise</code>, <code>.then</code>, <code>.catch</code>, <code>async</code>/<code>await</code>, functions, arrow functions and variables. Rejections, <code>if</code> and loops are left out.<a class="rd" data-r="jake-tasks,mdn-microtasks"></a></p>
+    <p>The model is not taken on trust. Every time the code changes, the page also runs it for real in a Web Worker, using the V8 in this browser, and compares the printed lines. A test suite in the folder checks the same thing against Node.</p>
+  </div>
+  <div class="sim" id="pg" tabindex="-1">
+    <div class="pgpresets" id="pgPresets" aria-label="Example programs"></div>
+    <div class="pgtop">
+      <textarea id="pgSrc" spellcheck="false" aria-label="Our JavaScript"></textarea>
+      <div class="pgguess">
+        <b>Predict first</b>
+        <p>Before stepping, type the lines we expect it to print, in order, separated by spaces or commas.</p>
+        <input type="text" id="pgGuess" placeholder="e.g. 1 4 3 2" aria-label="Our predicted output">
+        <button type="button" id="pgCheck">Check prediction</button>
+        <div class="pgres" id="pgRes" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="pgerr" id="pgErr" role="status"></div>
+    <div class="ctl">
+      <button id="pgPrev" type="button" aria-label="Previous step">← Back</button>
+      <button id="pgNext" type="button" aria-label="Next step">Next →</button>
+      <button id="pgPlay" type="button">▶ Play</button>
+      <button id="pgEnd" type="button">Jump to end</button>
+      <button id="pgReset" type="button">Reset</button>
+      <span class="ctr" id="pgCtr"></span>
+    </div>
+    <div class="phases" aria-label="Event loop phase">
+      <div class="ph" id="pgph0">1 · run one task</div><div class="ph" id="pgph1">2 · drain microtasks</div><div class="ph" id="pgph2">3 · render if due</div><div class="ph" id="pgph3">4 · sleep until next task</div>
+    </div>
+    <div class="runbar" id="pgRun"></div>
+    <div class="simgrid">
+      <div class="col">
+        <div class="box jscode"><h5>Our code</h5><div id="pgCode"></div></div>
+        <div class="two">
+          <div class="box"><h5>JS call stack</h5><div id="pgStack"></div></div>
+          <div class="box"><h5>Console</h5><div class="pgcon" id="pgCon"></div></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="box"><h5>Task queue (timers waiting to become tasks)</h5><div id="pgTasks"></div></div>
+        <div class="box"><h5>V8 microtask queue</h5><div id="pgMicro"></div></div>
+        <div class="box"><h5>Promises on the V8 heap</h5><div id="pgProm"></div></div>
+        <p class="note" id="pgNote"></p>
+      </div>
+    </div>
+    <div class="pgreal" id="pgReal" aria-live="polite">Real engine check: waiting.</div>
   </div>
 </section>
 
@@ -1019,6 +1092,7 @@ export default function User() {
 }</script>
 
 <script src="../assets/reading.js"></script>
+<script src="loop-model.js"></script>
 <script>
 (function(){
   /* ---------- source rendering ---------- */
@@ -1125,6 +1199,84 @@ export default function User() {
 })();
 </script>
 
+<script>
+(function(){
+  "use strict";
+  if(typeof LoopModel==="undefined")return;
+  var PRE=[["Classic: 1 4 3 2", "console.log(1);\nsetTimeout(() => console.log(2));\nPromise.resolve().then(() => console.log(3));\nconsole.log(4);"], ["The async/await interview question", "async function a1() {\n  console.log(\"a1 start\");\n  await a2();\n  console.log(\"a1 end\");\n}\nasync function a2() {\n  console.log(\"a2\");\n}\n\nconsole.log(\"script start\");\nsetTimeout(() => console.log(\"setTimeout\"), 0);\na1();\nnew Promise(resolve => {\n  console.log(\"promise1\");\n  resolve();\n}).then(() => console.log(\"promise2\"));\nconsole.log(\"script end\");"], ["Two chains take turns", "Promise.resolve()\n  .then(() => console.log(\"A1\"))\n  .then(() => console.log(\"A2\"));\nPromise.resolve()\n  .then(() => console.log(\"B1\"))\n  .then(() => console.log(\"B2\"));"], ["Returning a promise costs 2 ticks", "Promise.resolve()\n  .then(() => {\n    console.log(\"returns a promise\");\n    return Promise.resolve();\n  })\n  .then(() => console.log(\"after\"));\n\nPromise.resolve()\n  .then(() => console.log(\"t1\"))\n  .then(() => console.log(\"t2\"))\n  .then(() => console.log(\"t3\"))\n  .then(() => console.log(\"t4\"));"], ["sleep() with new Promise", "const sleep = ms => new Promise(r => setTimeout(r, ms));\n\nasync function main() {\n  console.log(\"start\");\n  await sleep(20);\n  console.log(\"after 20 ms\");\n}\n\nmain();\nsetTimeout(() => console.log(\"timer at 10 ms\"), 10);\nconsole.log(\"sync\");"], ["Microtasks between tasks", "setTimeout(() => {\n  console.log(\"task 1\");\n  Promise.resolve().then(() => console.log(\"microtask from task 1\"));\n}, 5);\nsetTimeout(() => console.log(\"task 2\"), 5);"], ["Microtasks starve a timer", "setTimeout(() => console.log(\"timer\"), 0);\n\nPromise.resolve().then(function loop() {\n  Promise.resolve().then(loop);\n});"]];
+  function $(id){return document.getElementById(id)}
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  var R=null,i=0,timer=null,worker=null,wTimer=null,lastOut=0;
+  $("pgPresets").innerHTML=PRE.map(function(p,k){return '<button type="button" data-k="'+k+'">'+esc(p[0])+'</button>'}).join("");
+  [].forEach.call($("pgPresets").querySelectorAll("button"),function(b){b.onclick=function(){load(+b.getAttribute("data-k"))}});
+  function load(k){$("pgSrc").value=PRE[k][1];[].forEach.call($("pgPresets").querySelectorAll("button"),function(x,j){x.className=j===k?"sel":""});$("pgGuess").value="";$("pgRes").textContent="";$("pgRes").className="pgres";build()}
+  function stop(){if(timer){clearInterval(timer);timer=null;$("pgPlay").textContent="▶ Play"}}
+  function build(){
+    stop();
+    var src=$("pgSrc").value;
+    try{R=LoopModel.run(src)}catch(e){R=null;$("pgErr").textContent="The model hit an internal error: "+e.message;return}
+    $("pgErr").textContent=R.error?R.error+". The steps below stop there.":(R.truncated?"Stopped after "+R.steps.length+" steps: the microtask queue never became empty, so the loop never reached the next task.":"");
+    i=0;lastOut=0;show();realCheck(src);
+  }
+  function chips(el,arr,cls,fresh){el.innerHTML=arr.length?arr.map(function(x,k){return '<span class="chip '+(cls||"")+(fresh&&k>=fresh?" new":"")+'">'+esc(x)+'</span>'}).join(""):'<span class="empty">empty</span>'}
+  function show(){
+    var steps=R?R.steps:[];var n=steps.length;
+    var src=$("pgSrc").value.split("\n");
+    if(!n){$("pgCode").innerHTML=src.map(function(l){return '<div class="l">'+(esc(l)||" ")+'</div>'}).join("");$("pgCtr").textContent="0 / 0";return}
+    var st=steps[i],prev=i>0?steps[i-1]:null;
+    $("pgCtr").textContent=(i+1)+" / "+n+(R.truncated?"+":"");
+    $("pgCode").innerHTML=src.map(function(l,k){return '<div class="l'+(k+1===st.line?" on":"")+'"><span style="color:var(--muted);display:inline-block;width:2.2em">'+(k+1)+'</span>'+(esc(l)||" ")+'</div>'}).join("");
+    for(var k=0;k<4;k++)$("pgph"+k).className="ph"+(st.phase===k?" on":"");
+    var rb=$("pgRun");rb.textContent=(st.clock?"t = "+st.clock+" ms · ":"")+st.running;rb.className="runbar "+(st.phase===3?"idle":st.phase===1?"eng":"you");
+    chips($("pgStack"),st.stack.slice().reverse(),"j");
+    chips($("pgTasks"),st.tasks,"t");
+    chips($("pgMicro"),st.micro,"q",prev?prev.micro.length:0);
+    $("pgProm").innerHTML=st.promises.length?st.promises.map(function(p){return '<span class="chip '+(p.state==="fulfilled"?"f":"")+'" title="'+esc(p.origin)+'">'+p.id+": "+p.state+(p.value?" ("+esc(p.value)+")":"")+(p.waiting?" · "+p.waiting+" waiting":"")+'</span>'}).join(""):'<span class="empty">none yet</span>';
+    var po=prev?prev.out.length:0;
+    $("pgCon").innerHTML=st.out.length?st.out.map(function(o,k){return '<div'+(k>=po&&i>0?' class="new"':"")+'>'+esc(o)+'</div>'}).join(""):'<span class="empty">nothing printed yet</span>';
+    $("pgNote").innerHTML='<span class="pgkind">'+esc(st.kind)+'</span>'+esc(st.text);
+  }
+  function go(d){if(!R||!R.steps.length)return;i=Math.max(0,Math.min(R.steps.length-1,i+d));show()}
+  $("pgNext").onclick=function(){stop();go(1)};
+  $("pgPrev").onclick=function(){stop();go(-1)};
+  $("pgEnd").onclick=function(){stop();if(R){i=R.steps.length-1;show()}};
+  $("pgReset").onclick=function(){stop();i=0;show()};
+  $("pgPlay").onclick=function(){if(timer){stop();return}if(R&&i>=R.steps.length-1)i=0;$("pgPlay").textContent="❚❚ Pause";timer=setInterval(function(){if(!R||i>=R.steps.length-1){stop();return}go(1)},650)};
+  $("pg").addEventListener("keydown",function(e){if(e.target.tagName==="TEXTAREA"||e.target.tagName==="INPUT")return;if(e.key==="ArrowRight"){stop();go(1);e.preventDefault()}if(e.key==="ArrowLeft"){stop();go(-1);e.preventDefault()}});
+  var deb=null;$("pgSrc").addEventListener("input",function(){[].forEach.call($("pgPresets").querySelectorAll("button"),function(x){x.className=""});clearTimeout(deb);deb=setTimeout(build,400)});
+  function norm(a){return a.map(function(x){return String(x).trim()}).filter(Boolean)}
+  $("pgCheck").onclick=function(){
+    if(!R||R.error){$("pgRes").textContent="Fix the code first.";$("pgRes").className="pgres bad";return}
+    var g=$("pgGuess").value;var guess=norm(/,/.test(g)?g.split(","):g.split(/\s+/));
+    var actual=norm(/,/.test(g)?R.out:R.out.join(" ").split(/\s+/));
+    var res=$("pgRes");
+    if(!guess.length){res.textContent="Type a prediction first.";res.className="pgres bad";return}
+    var k=0;while(k<guess.length&&k<actual.length&&guess[k]===actual[k])k++;
+    if(k===guess.length&&k===actual.length){res.textContent="Exactly right. Now step through to see why.";res.className="pgres ok";return}
+    res.className="pgres bad";
+    res.textContent=k<actual.length&&k<guess.length?"Same up to item "+k+". Then we predicted \u201c"+guess[k]+"\u201d, but the program prints \u201c"+actual[k]+"\u201d. Step through to find the moment it diverges.":(guess.length<actual.length?"Right so far, but the program prints more after \u201c"+(guess[k-1]||"")+"\u201d.":"The program stops before \u201c"+guess[k]+"\u201d.");
+  };
+  function realCheck(src){
+    if(worker){worker.terminate();worker=null}clearTimeout(wTimer);
+    var el=$("pgReal");
+    if(!R||R.error){el.className="pgreal";el.textContent="Real engine check: skipped until the code is inside the playground's subset.";return}
+    var url;try{url=URL.createObjectURL(new Blob([LoopModel.WORKER],{type:"text/javascript"}));worker=new Worker(url)}catch(e){el.className="pgreal";el.textContent="Real engine check: this browser blocked the Web Worker, so only the model ran.";return}
+    var out=[],err=null,w=worker,wait=R.maxDelay+500;
+    el.className="pgreal";el.textContent="Real engine check: running our code in a Web Worker with this browser's V8…";
+    w.onmessage=function(e){if(e.data.log!==undefined)out.push(e.data.log);if(e.data.err)err=e.data.err};
+    w.postMessage(src);
+    wTimer=setTimeout(function(){
+      w.terminate();if(worker===w)worker=null;URL.revokeObjectURL(url);
+      if(err){el.className="pgreal bad";el.textContent="Real engine threw: "+err;return}
+      if(R.truncated){el.className="pgreal ok";el.textContent="Real engine: after "+(wait/1000)+" s it had printed "+(out.length?out.length+" line(s)":"nothing")+" and the timer still had not run, because the microtask queue never empties. We stopped the worker. The model agrees.";return}
+      var same=JSON.stringify(out)===JSON.stringify(R.out);
+      el.className="pgreal "+(same?"ok":"bad");
+      el.textContent=same?"✓ Real engine check: this browser's V8 printed the same "+out.length+" line(s) in the same order as the model.":"Real engine printed: "+out.join(" | ")+". The model printed: "+R.out.join(" | ")+". Timers with very close delays can race in a real browser; otherwise this is a model bug worth reporting.";
+    },wait);
+  }
+  load(0);
+})();
+</script>
 <script src="../assets/root-kit.js"></script>
 </body>
 </html>

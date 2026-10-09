@@ -14,7 +14,8 @@ A root-to-end trace of one `fetch().then()` call in a React app running in Chrom
 8. **V8**: `PromisePrototypeThen`, `PerformPromiseThenImpl`, `FulfillPromise`, and the microtask ring buffer.
 9. **Step-through simulator**: JS stack, C++ stack, task queue, microtask queue and promise states side by side.
 10. **React**, **Node.js / libuv contrast**, and **exercises** to verify everything on our own machine.
-11. **Predict-first quizzes** and a **reading list**. Numbered markers in the text open the relevant reading in place.
+11. **Playground**: write our own code with `setTimeout`, promises and `async`/`await`, type a prediction, then step through the task queue, microtask queue and promise states. Each run is checked against the real V8 in the browser (a Web Worker), and `node verify/compare-loop-with-node.js` checks the model against Node.
+12. **Predict-first quizzes** and a **reading list**. Numbered markers in the text open the relevant reading in place.
 
 ## Sources
 

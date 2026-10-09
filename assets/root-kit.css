@@ -65,3 +65,7 @@ a.rd:hover,a.rd[aria-expanded="true"]{background:var(--accent);color:var(--surfa
 @keyframes rk-pop{0%{transform:scale(1)}40%{transform:scale(1.35);color:var(--ok)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){.quiz .opt{transition:none}.quiz.pop .qh .score{animation:none}}
 .quizzes{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:14px;align-items:start}
+
+/* long code and paths wrap instead of widening the page on phones */
+.quiz code,ol.ex code,.prose code,.callout code,.src-list a,td code{overflow-wrap:anywhere}
+.ctl label{max-width:100%;flex-wrap:wrap}.ctl select{max-width:100%;min-width:0}
