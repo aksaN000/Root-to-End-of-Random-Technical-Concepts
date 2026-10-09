@@ -52,6 +52,8 @@ footer a{color:var(--accent)}
 .map a small{color:var(--muted);font-size:.68rem}
 .map a:hover{border-color:var(--accent)}
 .map i{font-style:normal;color:var(--muted)}
+.map .soon{border:1px dashed var(--rule);color:var(--muted);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;line-height:1.3}
+.map .soon small{font-size:.68rem}
 .maplede{font-size:.9rem;color:var(--muted);margin:0 0 12px;max-width:64ch}
 @media (max-width:560px){.sim{grid-template-columns:1fr}}
 </style>
@@ -135,6 +137,27 @@ footer a{color:var(--accent)}
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="fetch-to-the-wire/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>What <code>fetch()</code> really sends</h3>
+        <p>One <code>fetch('/api/users')</code> traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS. Real captured bytes, a replay of Chrome's own NetLog, and a CORS lab that matches Chrome on 2,880 cases.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>fetch()</span><i>→</i><span>network service</span><i>→</i><span>DNS · TCP · TLS</span><i>→</i><span>HTTP</span><i>→</i><span>CORS</span><i>→</i><span class="you">our promise</span>
+        </div>
+        <div class="meta"><span class="tag">Browser track 1/3</span><span class="tag">networking</span><span class="tag">web APIs</span><span class="tag">Chromium</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
+  </section>
+
+  <section>
+    <h2>Browser track</h2>
+    <p class="maplede">Three pages that follow one interaction through the browser, each picking up where the last one stops. They connect to the event-loop page, which shows when each piece of our JavaScript gets to run.</p>
+    <nav class="map" aria-label="Browser track">
+      <a href="fetch-to-the-wire/">1 · fetch() → the wire → our promise<small>live</small></a><i>→</i>
+      <span class="soon">2 · HTML bytes → DOM → pixels<small>next</small></span><i>→</i>
+      <span class="soon">3 · a click → hit test → our listener<small>planned</small></span>
+    </nav>
   </section>
 
   <section>
@@ -146,6 +169,7 @@ footer a{color:var(--accent)}
       <a href="js-event-loop/">task → microtask → our callback<small>js-event-loop</small></a><i>→</i>
       <a href="threads-vs-event-loop/">thread → schedule() → CPU<small>threads-vs-event-loop</small></a>
     </nav>
+    <p class="maplede" style="margin-top:12px">And sideways, out of the machine: <a href="fetch-to-the-wire/">fetch-to-the-wire</a> follows the network request that the event-loop page's wake chain starts from.</p>
   </section>
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Found a mistake? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml">Report it</a>, or <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml">suggest a topic</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>

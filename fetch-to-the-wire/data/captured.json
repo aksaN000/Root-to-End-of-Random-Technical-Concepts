@@ -1,0 +1,370 @@
+{
+ "chrome": "HeadlessChrome 141.0.7390.37",
+ "captured": "2026-10-09",
+ "dns": {
+  "query": "d3ac0100000100000000000003617069076578616d706c6504746573740000010001",
+  "response": "d3ac8180000100010000000003617069076578616d706c6504746573740000010001c00c000100010000003c00047f000001"
+ },
+ "clientHello": "1603010719010007150303e73b5e3f358238e2a1520223f59cb9815f5cb420fa187de69f05e12527610df6204062e8eb2946741d3433578119a8edf1b64462a64b51facac5ca5d1c636c4fed0020caca130113021303c02bc02fc02cc030cca9cca8c013c014009c009d002f0035010006ac9a9a0000fe0d011a00000100014d0020e1c98a75aa940fd171976e5c7384a228095e3ddde9b3cda1856d8c2b48889d6400f00b68a9eb790894714f0a6d1c491ffeb250e74dfed95b79088663de5e76c2efb05a8494903db4631fbdb38473b542e7d3d57c06fce5ac1d5bc4085897c444a974e0ef24b8dd3fe8b797a5109dccbeb742956f1e8807d982677ee0d5d085784a5a0708db448d43a6975dac713b81c9af600827f3c0c7e4f0b74b1e7dbee9a79f46a4106dab24aca6ffdbc55840116492c3286093c06035df97a7095be1cbc75884191c757437134849480ecb93b918b86183cbdbdd09885e5ee2014cd56e9ab80dcacb3eac14c6640fdb3d18d326a7dc2ef1685cdc5fbb0d362532a6210722c5f5ad5f81a6d8cfe775d32b3fab8197461b000a000c000a0a0a11ec001d00170018ff0100010000230000000500050100000000003304ef04ed0a0a00010011ec04c05ce43a323b0bb68b48f95441a2dca6a15c67cfa54a80f456e42952f7a37e1af94d28995a0f810795dcb19ff51b806b308c7535d90c65bbc477cd30c628c1a1d0e7861af86502b59eea1b705b260e147c21b5737f3530351d2bb99be3675e23c6599789c740024e2006e71116ea8b956e681614052a088c6390a54ce5085b0ae74bb4b2cdb5d79fdacb9ae9cb5304ec82efe573f0c9829de940eb104ea7c037788742e803b71f76c7b4a58e6bba7dab7156e0060435c307e31778dd83bcf7ac0269039f9f2c7c666b8e6956a002463d99d11ad7babc38728330a9346a20cb67671c0d2c8e41807fe825215b73c5f2f2b4b3f3538f158fa6ea8f92f09731c37d96172b7c460eba2c192afa8e20b02f5bf429a6651e6dc58f81fca42b1c8a553178c95c9c44a99101a2a23e51687e429d2e4619e6e361f3994a77841ab2405555dc529b753187017e657c06da29b2b9b39a594a3167d1c6ab5a92485402a3b6c5d0386357e6904cfb2b31841bacf008feb0a3a8cc039093b767ea95221c669ba108eb041a0e029365a2ad849bbdb2f4271f521f562b323b7275b03abb82c6175796b54d5754842c4f5f754eb8e9401e4ba4fea05584c62a2907c014435a8b61a3ebfc13a9f1a935e0a920b08bb7c4ace2e27d6facb8c16cb250fa8f6fb230beac1e5cbb25517105e7ab9af2766397e752335b60d9f51f06e8116b8ac06d044a0e93bf2ec225172b7a3517b139e007dbb521443a8a82662179c7224df2cd10321ccde2104c80381de5ad5c16c1365248fc197cadd4bcc17c5e671269d47b17cdb3502380ce2c4527d895ab833a11af81697584902b39bbbf948e632b90b184a681272c375015fb280df84b76a8ca28118055e3459d1b7a17609b0aedc446fe045315161bf1e32e1166320770a5abc3681cb043c84366c95009a55139bfa0916696b8a72876aaa40260f6adf37c5716a037cac0926bf21d76aa0d17bb32095a465d699f5b2a16f8b514afd22b15149969841fd851b10ed69c6de18ce3bbce8189ba38bba9ca088cbe969bf53180fc5c45c506119205bbc8371889fb6269c9335a24a49ba84b87c7cd81629fa596127f1a0ed27b64bec088b62177d6e492101ca1fb4875dbcb39b7b8390756a6336472e5717c621b75caf658d111ba6d22a81214c23aba377bc9c7ea9759efb87f5e2ab5bc205750b74602a45867c0cec66b02be4738451c33a7062b68d1bcb14b9c1b60b9728658cce3559253017a7a4f797091f6100b6f714ac3392a7e0019899baa947753d7705c35c261ed192226e87c28a90ead9b4044841628f0766ae332368841c27704a35927ee2c6e2e4a7ca53cc616d769e41c111c225a12e1af8a1a98572338e6e287838c13a8078211167a061a9d1b855d95416e7fa6b7ca7a0ca1fb832ef595ed778e88508e17427fa2aac8903261105a496e6caff719a817652ecb8728e696c3cc89504f1ab7d0411b221897854718868329308169146c75b411c1439c540a7caabf7428af8c4113ba712beb7fb7e42d77415d2f8740bbe2584cb783f483602ea4388d8350a869a19a3c0563953b02f84db4fc665f3535cf777b40388aaa34bf03f4c8c1f60b88233abc74662ab692f4108d7bbff30b477caf7f78630e9119fcdb82ff925083a23d53b9165726b84f66bdb9d9880ded09a9250602515e096178f77faf48f5b9e806a3491dbe5b226f001d00202c5626b8850bbdde3f929937af94a0da1b346565f8da9906113c3b4cdf61230100170000000b00020100002d000201010000001500130000106170692e6578616d706c652e746573740010000e000c02683208687474702f312e31002b000706aaaa03040303001b00030200020012000044cd00050003026832000d0012001004030804040105030805050108060601baba000100",
+ "serverFlight": "16030304ba020004b60303d9f85e05eb0c063035910cf19ff598c446c457f630c07c8c0be5a5fbf1e26467204062e8eb2946741d3433578119a8edf1b64462a64b51facac5ca5d1c636c4fed130200046e002b000203040033046411ec04602b935f9ec48a7a260166d8ecbc5f63bed2c023fad5a512b3623b9f69318296e78773a8933259e34b7f9f51d24d9e7470d54eb61b1301861372a61289bda567bd822bc4d9b433586e55353415183898bc8d485793adbe38bbed3a6a6923119d60db314eba82f8baf09eb4a12bf11ddd1ae38f6e6aebe013f743508559d2a4afc98a7a9a5ae27a004c0e06460ef1c52b3997c3a7dc798ed00cd9768371cf64b4487d6d0217efaf17eed50edc517827c0eb12811d6fa1a3b4f2ac2fa997551a48e980ddbf591a936d01b4c19265698ecb5c2c003ffd454b86bf568e47540507ff069e3106d44c5d53288ada222530a13e134b0533079c8e5234bf7f1a70fdf9e8cde7f49326dce5f7206d0cf06f73e15d790fd91ad8235f8b4ca93bdf539e307aa73def10dcd34636df224e4a25765ed738f0e768b537d209c6da70bc0a4794dbb2f9737837a6106c7121c69393f9878f735b5f280af0a4ce44230cb7a380cb2a463c272b1e038166dfa0e3aa0b60edee828ae8dbfcab506a6e65f6f0189c5fa4eb7c67657e84d7e35aeecefc42e077239ca6dabf1030d0911403e9b90da94809561a7672d45033f16a3e3dea9d0c20db16e2e095ff98a2ce8dfb2a299fb7ea97e9675ec91d04ca28d38491654c91af56f1bdd756f7e048aa31cc47450db37a713f0ba8c6ae252b50c708dc35de6e7144963534ae997983aa2b66d971efe6885a84395ab75414120b99259126617c16d7d970aa903377ae19e8fcc79abc289ff8bf35621c8fa43d264eacb01eff8e300eb8345f73f975c7ae32c043a3b97f150222f0f572ecacb5019270d3dcf1df92e7262670db4155ac4735965f030aab53476cf9c8dfe9e875dd92a329a15d6263494203b4ebc188e4c5504246f48d4d0a811b5ff0e9c5e62a9678db982349c82240fbb5753c7f21f1dfa2a03c8c1c91e580f2a2825b90f169c6bc46c96d411f60d11e380686ead391b9e9a8672d9efead968ebbf2b7065e380123ba70eacba7e875294fee4f8f803928818ba4d04858af082de0350999bcfdb79e0b0781073b68038c7ed8c0fa34f4cd2e468bc71c891d009295ae9a4c1ad700fa0f364a812c026096020df1fe7620ffe86bb21807fcec82fe955152b2f837d9dc7c5527e82793026903acc96a35bbefa11d6d2e42a2d9ece228a6033ba480a0a619a9641d4cb5e8b9065957cf82a3a5531ab7f9cdc0143d6f5e216bffefa5515d4050aa5bb1be9c4e2bc66fa3f145bdd79deb3ad2194cf95325ff2e1e70afdcecb0b03fbc5d4e44e32c396b69adcb07a548aa1332a755cf45c6a35a38605ad1656f3b3ee0005830b114f695affbfb331f8e344299d388f527f6096432cda198425713096607c6a5f37d7f27084f8e81a0eaa0700d83daf792a1116b2b28e9361c258e6be7e57501d7355bfe9f2feee9c498438d592d8939ca01fa4938b40e55211121257016d6f697951c130038243a3b6f1c394bc5b91b7d8af0f26318e251f0ae7e8ffeb84ed548b5ee3d7f72f1e69ab3b4faf7dbff7ee91e3c6d5c65844e0d55a98b2149445842d7d49c5ccab893105deff0e1e955f8031403030001011703030026f118be415d8bac1a385a01c523676a9adadd39c546c5f7b72b71a6703ffe195bee024e6655ee17030303567db7ce2a1cc1de703da778607fd3e508b51d05280a48e73f27021fd836bdd70f45c5e5f47d281f4c8d0323c62fc03c7f0727d52a38d4cf863beeaa92798440935c78adbaab76e5537abd87ea4f8b2d90fdbb44ac5e9578b8cc2f6a69c3b8416a367e5a271e2ec0044bd3501a98feeb270d886450f2e4bd4161e753f397451746b6b0b4234e26ec7e0a703b43a9bb4c9c8cff025f7352ea1713d1c827602374b3ad2e006bb531c061127f115dbd8d04698e96325574c84707a4b621e81ff34b5c160b648ce10d49deb7c56a42f06737211a76682b13c2d3cee086c5960d08a28bad7ef337db41c6d6b948f7e4382c9c5566fd2d1c5aaf3e9fba96b71b6ee05a1ca8d17810ea66645ecb722f39f61bfdda8e60242c94e866f6a2f5ee4ab5a734668811703be510121de9513a485aa158e31519788bf31cfa7006a56d835423c62dde9b1f8ed5a35845f95a5c97a479f907a36576b863ec323a094eaf218f0c9fed15f7b29a0ce135b09b816b8b43d3a2d64dfff73355a4f57d154a9dcdf2d74c8565034c69c9f6ebb99f2fa6820f031e419ee97abe726ab2fe6b419dd885f9b75fc0194b2be179048db1e0c092129a0c7ce07258253fbc129274a94b600a6a94cb532d3ed40057853d6af346dfcf07fa509ecf4ec43e3f9a1a0d0ca7ed5fba887c3975c46185d8f099441230b4c500f117f1ad8ed32869e7b6f87f8a475c2ed8b2c95e08c302341ce4cdf951c25bf782928d9db11188a356698f05eebc0a40207ef1f9a7bebf94be427b4604edd6289e6b30b83487c22df93bfe3a1b78178d4a0397a3cbc069d2ba38bb2e5193e1eb7c655733340fd72622b2fa78505592c2a48576e10cb5a25755e090b046584dceac608160d2a8236272e648533e27ba143b47086b9aca23b7ca0c135fedf8fd593313668b90eca14d7a8f9388da8715e1623358aac7d3931af54d2e908b5d89fc08ac8cd79214e9d329578dde51613e4d3cb0d708081dd1621371040176851b40624b23b9f5f2274cf657e0b37a98f1adea15d3a3097249adc0f5e0192929144c5205980b0f005cd9c586632c84bb710bd6dc06835f343993f02a45d4d026701b83bdc3b3cc834c64df9f5899891f64621d0820f66aad3c55e09197f289f4c3f319799006e3126e9bbb4f8e717c1dcb12405b98478d4e41b21ad2f35384033dc3d7ff6dd2637277c2170303011940103154afe626157585c89a8ec054b29bbd4ecbd439d06f4b40ef7ab3995c6d8efca8d5e609dee1dcd238b3c5a94308933113a4b850f44ed149c552511c6b48615ddae6b2c4ac447ba97ac99b0358e6a772af6b8a55a0183349f41ea0eea974f789db9f39ab2592599c170536a8674136c0df985e796c0569222d552bfa819e86f4c4df6003f48023104c550d1c69c015cb2a2715b469ec2b4e97937cbba570b580b4ad5f149b9a5bd13b9c712d15a3eb962c6e1ef301bdec7d561b842520ee33baea0c5bd38f35cc3c2a3f756b8c21c75684cc29dcdf640bf411b1a7a29f6f976607d34343dc63007892f1bb9d215be270ad195473a1d4415b6c461cc24f2e02d2d5324c4c0686357bc76504c6f42f769e22c5d631ed107e17030300453eb91ba3f62157d8f9b9ab9e71b8aadfc5c8637bf8453a9ddce7c67017b74739a0bed1269296b059005a51ca297009f1d572cc0fe08964ee63d9b8b8a67273b88711fadad0",
+ "ssl": {
+  "cipher_suite": 4866,
+  "encrypted_client_hello": false,
+  "is_resumed": false,
+  "key_exchange_group": 4588,
+  "next_proto": "http/1.1",
+  "peer_signature_algorithm": 2052,
+  "version": "TLS 1.3"
+ },
+ "http": {
+  "get": [
+   "GET /api/users HTTP/1.1\r\nHost: api.example.test\r\nConnection: keep-alive\r\nsec-ch-ua-platform: \"Linux\"\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36\r\nsec-ch-ua: \"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"\r\nsec-ch-ua-mobile: ?0\r\nAccept: */*\r\nOrigin: http://app.example.test:8080\r\nSec-Fetch-Site: cross-site\r\nSec-Fetch-Mode: cors\r\nSec-Fetch-Dest: empty\r\nReferer: http://app.example.test:8080/\r\nAccept-Encoding: gzip, deflate, br, zstd\r\n\r\n",
+   "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: http://app.example.test:8080\r\nTiming-Allow-Origin: *\r\nContent-Length: 47\r\nConnection: keep-alive\r\n\r\n[{\"id\":1,\"name\":\"Ada\"},{\"id\":2,\"name\":\"Linus\"}]"
+  ],
+  "options": [
+   "OPTIONS /api/users HTTP/1.1\r\nHost: api.example.test\r\nConnection: keep-alive\r\nAccept: */*\r\nAccess-Control-Request-Method: POST\r\nAccess-Control-Request-Headers: content-type\r\nOrigin: http://app.example.test:8080\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36\r\nSec-Fetch-Mode: cors\r\nSec-Fetch-Site: cross-site\r\nSec-Fetch-Dest: empty\r\nReferer: http://app.example.test:8080/\r\nAccept-Encoding: gzip, deflate, br, zstd\r\n\r\n",
+   "HTTP/1.1 204 No Content\r\nAccess-Control-Allow-Origin: http://app.example.test:8080\r\nAccess-Control-Allow-Methods: GET, POST\r\nAccess-Control-Allow-Headers: content-type\r\nAccess-Control-Max-Age: 600\r\nTiming-Allow-Origin: *\r\nContent-Length: 0\r\nConnection: keep-alive\r\n\r\n"
+  ],
+  "post": [
+   "POST /api/users HTTP/1.1\r\nHost: api.example.test\r\nConnection: keep-alive\r\nContent-Length: 16\r\nsec-ch-ua-platform: \"Linux\"\r\nUser-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36\r\nsec-ch-ua: \"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"\r\nContent-Type: application/json\r\nsec-ch-ua-mobile: ?0\r\nAccept: */*\r\nOrigin: http://app.example.test:8080\r\nSec-Fetch-Site: cross-site\r\nSec-Fetch-Mode: cors\r\nSec-Fetch-Dest: empty\r\nReferer: http://app.example.test:8080/\r\nAccept-Encoding: gzip, deflate, br, zstd\r\n\r\n{\"name\":\"Grace\"}",
+   "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nAccess-Control-Allow-Origin: http://app.example.test:8080\r\nTiming-Allow-Origin: *\r\nContent-Length: 47\r\nConnection: keep-alive\r\n\r\n[{\"id\":1,\"name\":\"Ada\"},{\"id\":2,\"name\":\"Linus\"}]"
+  ]
+ },
+ "timeline": [
+  {
+   "t": 0,
+   "stage": "cors",
+   "event": "CORS_REQUEST",
+   "phase": "BEGIN",
+   "label": "CORS_REQUEST begins",
+   "text": "The network service receives our request from the renderer and starts the CORS logic.",
+   "params": {
+    "cors_preflight_policy": "consider_preflight"
+   }
+  },
+  {
+   "t": 0,
+   "stage": "cors",
+   "event": "CHECK_CORS_PREFLIGHT_REQUIRED",
+   "phase": "",
+   "label": "No preflight needed",
+   "text": "A cross-origin GET with only safelisted headers: Chrome can send it directly.",
+   "params": {
+    "preflight_required": false
+   }
+  },
+  {
+   "t": 0,
+   "stage": "request",
+   "event": "REQUEST_ALIVE",
+   "phase": "BEGIN",
+   "label": "URLRequest created",
+   "text": "net/ creates a URLRequest for the URL.",
+   "params": {
+    "url": "https://api.example.test/api/users",
+    "priority": "MEDIUM"
+   }
+  },
+  {
+   "t": 1,
+   "stage": "request",
+   "event": "PROXY_RESOLUTION_SERVICE_RESOLVED_PROXY_LIST",
+   "phase": "",
+   "label": "Proxy decision",
+   "text": "No proxy: connect directly.",
+   "params": {
+    "proxy_info": "DIRECT"
+   }
+  },
+  {
+   "t": 1,
+   "stage": "dns",
+   "event": "HOST_RESOLVER_SYSTEM_TASK",
+   "phase": "BEGIN",
+   "label": "DNS lookup starts",
+   "text": "Chrome calls getaddrinfo() on a worker thread. glibc sends UDP queries to the server in /etc/resolv.conf.",
+   "params": {}
+  },
+  {
+   "t": 4,
+   "stage": "dns",
+   "event": "HOST_RESOLVER_SYSTEM_TASK",
+   "phase": "END",
+   "label": "DNS answer",
+   "text": "getaddrinfo() returns the address.",
+   "params": {
+    "address_list": [
+     "127.0.0.1:0"
+    ]
+   }
+  },
+  {
+   "t": 4,
+   "stage": "tcp",
+   "event": "TCP_CONNECT",
+   "phase": "BEGIN",
+   "label": "TCP connect starts",
+   "text": "connect() on a non-blocking socket: the kernel sends SYN.",
+   "params": {
+    "address_list": [
+     "127.0.0.1:443"
+    ]
+   }
+  },
+  {
+   "t": 5,
+   "stage": "tcp",
+   "event": "TCP_CONNECT",
+   "phase": "END",
+   "label": "TCP connected",
+   "text": "SYN, SYN-ACK, ACK done. The socket is writable.",
+   "params": {
+    "local_address": "127.0.0.1:60992",
+    "remote_address": "127.0.0.1:443"
+   }
+  },
+  {
+   "t": 5,
+   "stage": "tls",
+   "event": "SSL_CONNECT",
+   "phase": "BEGIN",
+   "label": "TLS handshake starts",
+   "text": "SSL_do_handshake() writes the ClientHello.",
+   "params": {}
+  },
+  {
+   "t": 5,
+   "stage": "tls",
+   "event": "SOCKET_BYTES_SENT",
+   "phase": "",
+   "label": "ClientHello sent",
+   "text": "One TLS record, in plaintext, carrying the hostname and our key shares.",
+   "params": {
+    "byte_count": 1822
+   }
+  },
+  {
+   "t": 11,
+   "stage": "tls",
+   "event": "SOCKET_BYTES_RECEIVED",
+   "phase": "",
+   "label": "Server's first flight",
+   "text": "ServerHello in plaintext, then the encrypted extensions, certificate, signature and Finished.",
+   "params": {
+    "byte_count": 2483
+   }
+  },
+  {
+   "t": 11,
+   "stage": "tls",
+   "event": "CERT_VERIFIER_JOB",
+   "phase": "BEGIN",
+   "label": "Certificate check starts",
+   "text": "Chrome verifies the certificate chain off the network thread.",
+   "params": {}
+  },
+  {
+   "t": 16,
+   "stage": "tls",
+   "event": "CERT_VERIFIER_JOB",
+   "phase": "END",
+   "label": "Certificate verdict",
+   "text": "net_error -202 is ERR_CERT_AUTHORITY_INVALID: our lab certificate is self-signed. We launched Chrome with --ignore-certificate-errors, so it continued.",
+   "params": {
+    "net_error": -202,
+    "is_issued_by_known_root": false
+   }
+  },
+  {
+   "t": 17,
+   "stage": "tls",
+   "event": "SSL_CONNECT",
+   "phase": "END",
+   "label": "TLS 1.3 established",
+   "text": "One round trip. cipher_suite 4866 = 0x1302 TLS_AES_256_GCM_SHA384; key_exchange_group 4588 = 0x11EC X25519MLKEM768; next_proto is the ALPN result.",
+   "params": {
+    "version": "TLS 1.3",
+    "cipher_suite": 4866,
+    "key_exchange_group": 4588,
+    "next_proto": "http/1.1",
+    "is_resumed": false
+   }
+  },
+  {
+   "t": 18,
+   "stage": "http",
+   "event": "HTTP_TRANSACTION_SEND_REQUEST_HEADERS",
+   "phase": "",
+   "label": "Request headers",
+   "text": "HttpStreamParser::SendRequest logs exactly what it will write.",
+   "params": {
+    "headers": [
+     "Host: api.example.test",
+     "Connection: keep-alive",
+     "sec-ch-ua-platform: \"Linux\"",
+     "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36",
+     "sec-ch-ua: \"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+     "sec-ch-ua-mobile: ?0",
+     "\u2026 7 more"
+    ]
+   }
+  },
+  {
+   "t": 18,
+   "stage": "http",
+   "event": "SSL_SOCKET_BYTES_SENT",
+   "phase": "",
+   "label": "Request written",
+   "text": "The HTTP/1.1 text goes into SSL_write, which encrypts it into a TLS record.",
+   "params": {
+    "byte_count": 537
+   }
+  },
+  {
+   "t": 19,
+   "stage": "http",
+   "event": "HTTP_TRANSACTION_READ_RESPONSE_HEADERS",
+   "phase": "",
+   "label": "Response headers",
+   "text": "The server answered; Chrome parsed the status line and headers.",
+   "params": {
+    "headers": [
+     "HTTP/1.1 200 OK",
+     "Content-Type: application/json",
+     "Access-Control-Allow-Origin: http://app.example.test:8080",
+     "Timing-Allow-Origin: *",
+     "Content-Length: 47",
+     "Connection: keep-alive"
+    ]
+   }
+  },
+  {
+   "t": 20,
+   "stage": "body",
+   "event": "URL_REQUEST_JOB_FILTERED_BYTES_READ",
+   "phase": "",
+   "label": "Body bytes",
+   "text": "The 47-byte JSON body, handed to the renderer through a Mojo data pipe.",
+   "params": {
+    "byte_count": 47
+   }
+  },
+  {
+   "t": 20,
+   "stage": "cors",
+   "event": "CORS_REQUEST",
+   "phase": "END",
+   "label": "CORS check passed",
+   "text": "Access-Control-Allow-Origin matched our origin, so the renderer may read the response.",
+   "params": {}
+  },
+  {
+   "t": 20,
+   "stage": "request",
+   "event": "REQUEST_ALIVE",
+   "phase": "END",
+   "label": "Request done",
+   "text": "Total time inside the network service.",
+   "params": {}
+  },
+  {
+   "t": 21,
+   "stage": "cors",
+   "event": "CHECK_CORS_PREFLIGHT_REQUIRED",
+   "phase": "",
+   "label": "Second fetch: preflight required",
+   "text": "POST with Content-Type: application/json. application/json is not a safelisted content type.",
+   "params": {
+    "preflight_required": true,
+    "preflight_required_reason": "disallowed_header"
+   }
+  },
+  {
+   "t": 21,
+   "stage": "http",
+   "event": "HTTP_TRANSACTION_SEND_REQUEST_HEADERS",
+   "phase": "",
+   "label": "OPTIONS preflight sent",
+   "text": "Same TCP+TLS connection, reused: no DNS, no handshake.",
+   "params": {
+    "headers": [
+     "Host: api.example.test",
+     "Connection: keep-alive",
+     "Accept: */*",
+     "Access-Control-Request-Method: POST",
+     "Access-Control-Request-Headers: content-type",
+     "Origin: http://app.example.test:8080",
+     "\u2026 6 more"
+    ]
+   }
+  },
+  {
+   "t": 22,
+   "stage": "http",
+   "event": "HTTP_TRANSACTION_READ_RESPONSE_HEADERS",
+   "phase": "",
+   "label": "Preflight answer",
+   "text": "204 with the allow-lists.",
+   "params": {
+    "headers": [
+     "HTTP/1.1 204 No Content",
+     "Access-Control-Allow-Origin: http://app.example.test:8080",
+     "Access-Control-Allow-Methods: GET, POST",
+     "Access-Control-Allow-Headers: content-type",
+     "Access-Control-Max-Age: 600",
+     "Timing-Allow-Origin: *",
+     "\u2026 2 more"
+    ]
+   }
+  },
+  {
+   "t": 23,
+   "stage": "http",
+   "event": "HTTP_TRANSACTION_SEND_REQUEST_HEADERS",
+   "phase": "",
+   "label": "Real POST sent",
+   "text": "Only now does the POST go out.",
+   "params": {
+    "headers": [
+     "Host: api.example.test",
+     "Connection: keep-alive",
+     "Content-Length: 16",
+     "sec-ch-ua-platform: \"Linux\"",
+     "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.7390.37 Safari/537.36",
+     "sec-ch-ua: \"HeadlessChrome\";v=\"141\", \"Not?A_Brand\";v=\"8\", \"Chromium\";v=\"141\"",
+     "\u2026 9 more"
+    ]
+   }
+  }
+ ],
+ "timing": [
+  {
+   "startTime": 29.600000000093132,
+   "domainLookupStart": 32.9000000001397,
+   "domainLookupEnd": 35.5,
+   "connectStart": 35.5,
+   "secureConnectionStart": 36.699999999953434,
+   "connectEnd": 49.10000000009313,
+   "requestStart": 49.300000000046566,
+   "responseStart": 50.5,
+   "responseEnd": 51.9000000001397,
+   "nextHopProtocol": "http/1.1",
+   "transferSize": 347,
+   "encodedBodySize": 47
+  },
+  {
+   "startTime": 52.60000000009313,
+   "domainLookupStart": 52.60000000009313,
+   "domainLookupEnd": 52.60000000009313,
+   "connectStart": 52.60000000009313,
+   "secureConnectionStart": 52.60000000009313,
+   "connectEnd": 52.60000000009313,
+   "requestStart": 55.10000000009313,
+   "responseStart": 56,
+   "responseEnd": 56.9000000001397,
+   "nextHopProtocol": "http/1.1",
+   "transferSize": 347,
+   "encodedBodySize": 47
+  }
+ ]
+}

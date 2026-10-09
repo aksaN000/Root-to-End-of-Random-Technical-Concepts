@@ -39,6 +39,9 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 - A simulator or model must be checked against the real system, and the page says how. Examples: the V8 bytecode model against `node --print-bytecode` (746 expressions), the LR engine against the Dragon Book tables, the event-loop playground against real V8 in a Web Worker and against Node (`verify/` scripts).
 - Exam model answers are produced or checked with the page's engine or the real tool where possible.
 - Each folder that has a model keeps its check script in `<folder>/verify/`.
+- **Capture real data when we can run the system.** Run the real thing locally (a real browser, compiler or kernel tool), record its own logs and bytes, and keep the scripts that reproduce the capture in `<folder>/data/`. Say on the page how it was captured and how the lab differs from the real world (for example a self-signed certificate, or a server on the same machine so round trips cost nothing).
+- **When the model and the real system disagree, find out why in the source and teach it.** Do not tune the model until the numbers match. Example: the CORS lab disagreed with Chrome on 40 of 2,880 cases, and the reason was a Chrome feature flag that leaves a spec rule unshipped; the page now teaches the difference.
+- Before publishing captured data, check it for local paths, tokens, proxy settings or anything else private.
 
 ## Reading material
 
@@ -51,6 +54,10 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 - **Quizzes**: `<div class="quiz"><script type="application/json">{q, options, answer, explain}</script></div>`. Four options, one correct, plausible wrong answers, an explanation that names the mechanism.
 - **Exam questions**: `<div class="exq" data-marks="5" data-kind="Trace"><div class="q">…</div><div class="a">…<p class="rub">Marking: …</p></div></div>`. Kinds: Trace, Explain, Compare, Calculate, Construct, Parse, Generate, Rewrite, Schedule, Short note. We do not copy real exam papers.
+
+## Tracks
+
+Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Browser track: `fetch()` → HTML to pixels → a click to our listener). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
 
 ## Visual system
 
@@ -81,6 +88,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Changelog
 
+- **2026-10-09**: Added the Browser track and its first page (`fetch-to-the-wire`). New rules: real captures with reproducible scripts in `data/`, teach model-versus-reality differences found in the source, tracks. Inline code in the lede, 60-second box and exam questions now wraps on phones.
 - **2026-10-09**: Versioned asset links (`tools/stamp-assets.py`) and fallback attributes on diagrams, after a cached old stylesheet made the new diagrams render as large black shapes.
 - **2026-10-09**: Added the 60-second version, exam practice with self-marking, per-section mistake reports, issue templates, SEO metadata, preview images and the sitemap. Wrote this guide.
 - **2026-10-09**: Added the event-loop playground (model plus real-engine check).

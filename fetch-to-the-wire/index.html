@@ -1,0 +1,1066 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What fetch() Really Sends: DNS, TCP, TLS 1.3, HTTP and CORS in Chrome | Root to End</title>
+<meta name="description" content="One fetch(&#x27;/api/users&#x27;) traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS, with real captured bytes, a NetLog replay and a CORS lab checked against Chrome.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<style>
+/* Layout: the shared source-trace grid. Signature element: one real request, replayed from Chrome's own NetLog; every stage below opens the real bytes of that same request. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --s-js:#1b7a4b; --s-js-bg:#dff3e8; --s-dns:#0f7b74; --s-dns-bg:#dcf2ef; --s-tcp:#9a5a00; --s-tcp-bg:#fff0d4; --s-tls:#6d3fc4; --s-tls-bg:#ece5fb; --s-http:#2445d0; --s-http-bg:#e3e8fb; --s-cors:#b4232c; --s-cors-bg:#fbe3e4;
+  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-js:#5fd29a; --s-js-bg:#12301f; --s-dns:#4fd1c5; --s-dns-bg:#123430; --s-tcp:#f2b659; --s-tcp-bg:#3a2a10; --s-tls:#b79bff; --s-tls-bg:#2a2145; --s-http:#8ea5ff; --s-http-bg:#1d2645; --s-cors:#ff8a90; --s-cors-bg:#3a1517;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-js:#5fd29a; --s-js-bg:#12301f; --s-dns:#4fd1c5; --s-dns-bg:#123430; --s-tcp:#f2b659; --s-tcp-bg:#3a2a10; --s-tls:#b79bff; --s-tls-bg:#2a2145; --s-http:#8ea5ff; --s-http-bg:#1d2645; --s-cors:#ff8a90; --s-cors-bg:#3a1517;
+  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.7rem);font-weight:800;letter-spacing:-.02em}
+.hero h1 code{font-size:.82em;background:none;padding:0;color:var(--accent)}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+/* the journey chips in the hero */
+.journey{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.76rem}
+.journey a{text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 9px;color:var(--ink);background:var(--surface)}
+.journey i{font-style:normal;color:var(--muted)}
+.st-js{--c:var(--s-js);--cb:var(--s-js-bg)}.st-dns{--c:var(--s-dns);--cb:var(--s-dns-bg)}.st-tcp{--c:var(--s-tcp);--cb:var(--s-tcp-bg)}.st-tls{--c:var(--s-tls);--cb:var(--s-tls-bg)}.st-http{--c:var(--s-http);--cb:var(--s-http-bg)}.st-cors{--c:var(--s-cors);--cb:var(--s-cors-bg)}
+.journey a[class^="st-"]{border-color:var(--c);color:var(--c);background:var(--cb)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src.real figcaption{border-top:3px solid var(--ok)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.ctl label{font-size:.84rem;color:var(--muted);display:flex;align-items:center;gap:8px}
+button,select,input[type=text]{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.src-list a{overflow-wrap:anywhere}
+
+/* replay */
+.stages{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:4px}
+.stg{border:1px solid var(--rule);border-radius:7px;padding:6px 4px;font-family:var(--mono);font-size:.68rem;text-align:center;color:var(--muted);line-height:1.25;background:var(--bg);transition:background .2s ease,color .2s ease}
+.stg b{display:block;font-size:.76rem;font-family:var(--body);font-weight:600}
+.stg.on{background:var(--cb);border-color:var(--c);color:var(--c)}
+.stg.done{color:var(--c);border-color:var(--c)}
+@media (max-width:640px){.stages{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.clock{height:10px;border-radius:999px;background:var(--code);position:relative;overflow:hidden}
+.clock i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,var(--s-dns),var(--s-tcp),var(--s-tls),var(--s-http));width:0;transition:width .25s ease}
+@media (prefers-reduced-motion:reduce){.clock i,.stg{transition:none}}
+.evcard{border:1px solid var(--rule);border-left:4px solid var(--c,var(--accent));border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.evcard .evh{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
+.evcard .evh b{font-family:var(--display);font-size:1.1rem}
+.evcard .evh code{font-size:.72rem}
+.evcard .ms{font-family:var(--mono);font-size:.8rem;color:var(--c,var(--accent));font-weight:600}
+.evcard pre{margin:0;background:var(--code);border-radius:7px;padding:8px 10px;font-family:var(--mono);font-size:.74rem;line-height:1.5;overflow-x:auto;white-space:pre-wrap;word-break:break-word}
+.evlist{display:flex;flex-direction:column;gap:2px;max-height:15em;overflow:auto;border:1px solid var(--rule);border-radius:8px;padding:4px;background:var(--bg)}
+.evlist button{text-align:left;border:0;background:transparent;padding:3px 8px;font-family:var(--mono);font-size:.74rem;display:grid;grid-template-columns:3.2em 4.5em minmax(0,1fr);gap:6px;border-radius:5px;color:var(--muted)}
+.evlist button .sn{color:var(--c);font-weight:600}
+.evlist button.cur{background:var(--cb);color:var(--ink)}
+.evlist button.past{color:var(--ink)}
+
+/* byte dissector */
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tabs button{font-size:.8rem;padding:4px 10px}
+.dis{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:12px}
+@media (max-width:900px){.dis{grid-template-columns:1fr}}
+.hexbox{font-family:var(--mono);font-size:.74rem;line-height:1.7;border:1px solid var(--rule);border-radius:8px;background:var(--code);padding:8px 10px;max-height:24em;overflow:auto}
+.hexrow{display:flex;gap:10px;white-space:nowrap}
+.hexrow .off{color:var(--muted);min-width:3.4em}
+.hexrow .hb{display:inline-block;width:1.7em;text-align:center;border-radius:3px;cursor:pointer}
+.hexrow .hb:hover{outline:1px solid var(--accent)}
+.hb.f0{background:var(--s-http-bg)}.hb.f1{background:var(--s-dns-bg)}.hb.f2{background:var(--s-tcp-bg)}.hb.f3{background:var(--s-tls-bg)}
+.hb.hi{background:var(--accent)!important;color:var(--surface)}
+.fields{border:1px solid var(--rule);border-radius:8px;background:var(--bg);max-height:24em;overflow:auto;padding:4px}
+.fld{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:5px;padding:4px 8px;font-size:.8rem;line-height:1.4;color:var(--ink)}
+.fld .rng{font-family:var(--mono);font-size:.66rem;color:var(--muted);margin-right:6px}
+.fld .lb{font-weight:600}
+.fld .vl{font-family:var(--mono);font-size:.74rem;color:var(--accent);margin-left:6px;word-break:break-word}
+.fld.grp{background:var(--code);margin-top:3px}
+.fld.cur{outline:2px solid var(--accent)}
+.disinfo{font-size:.88rem;min-height:3em;border-left:3px solid var(--accent);padding:4px 0 4px 12px}
+.disinfo b{font-weight:600}
+/* http viewer */
+.httpv{font-family:var(--mono);font-size:.78rem;line-height:1.6;border:1px solid var(--rule);border-radius:8px;background:var(--code);padding:8px 0;overflow-x:auto}
+.httpv div{padding:0 12px;white-space:pre}
+.httpv .start{color:var(--s-http);font-weight:600}
+.httpv .hn{color:var(--c-kw)}
+.httpv .crlf{color:var(--muted);font-size:.68rem}
+.httpv .cors{background:var(--s-cors-bg)}
+.httpv .body{color:var(--c-str)}
+/* cors lab */
+.corsgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.corsgrid fieldset{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;margin:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.corsgrid legend{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:0 6px}
+.corsgrid label{font-size:.86rem;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.corsgrid select{max-width:100%}
+.verdict{font-size:1.02rem;font-weight:600;padding:10px 14px;border-radius:10px}
+.verdict.ok{background:var(--ok-bg);color:var(--ok)}.verdict.bad{background:var(--bad-bg);color:var(--bad)}
+.csteps{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.9rem}
+.csteps li.fail{color:var(--bad)}.csteps li.ok{color:var(--ok)}.csteps li.warn{color:var(--trace)}
+/* timing */
+.wf{display:flex;flex-direction:column;gap:6px}
+.wfrow{display:grid;grid-template-columns:9.5em minmax(0,1fr) 4.2em;gap:8px;align-items:center;font-size:.8rem}
+.wfrow .nm{font-family:var(--mono);font-size:.74rem;color:var(--muted)}
+.wfrow .tr{position:relative;height:16px;background:var(--code);border-radius:4px}
+.wfrow .bar{position:absolute;top:2px;bottom:2px;border-radius:3px;background:var(--c);min-width:2px}
+.wfrow .v{font-family:var(--mono);font-size:.74rem;text-align:right}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/fetch-to-the-wire/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="What fetch() Really Sends: DNS, TCP, TLS 1.3, HTTP and CORS in Chrome">
+<meta property="og:description" content="One fetch(&#x27;/api/users&#x27;) traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS, with real captured bytes, a NetLog replay and a CORS lab checked against Chrome.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/fetch-to-the-wire/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/fetch-to-the-wire.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="What fetch() Really Sends: DNS, TCP, TLS 1.3, HTTP and CORS in Chrome">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="What fetch() Really Sends: DNS, TCP, TLS 1.3, HTTP and CORS in Chrome">
+<meta name="twitter:description" content="One fetch(&#x27;/api/users&#x27;) traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS, with real captured bytes, a NetLog replay and a CORS lab checked against Chrome.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/fetch-to-the-wire.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "What fetch() Really Sends: DNS, TCP, TLS 1.3, HTTP and CORS in Chrome", "description": "One fetch('/api/users') traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS, with real captured bytes, a NetLog replay and a CORS lab checked against Chrome.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/fetch-to-the-wire/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "fetch API, HTTP, CORS, TLS 1.3, DNS, TCP, Chrome network stack, web APIs", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>The request's trip</span><span>top = back in JS</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#replay"><b>The whole trip, replayed</b>Chrome's real NetLog</a></li>
+    <li><a href="#blink"><b>fetch() in Blink</b>renderer → network service</a></li>
+    <li><a href="#netsvc"><b>The network service</b>URLLoader, CORS decision</a></li>
+    <li><a href="#dns"><b>DNS</b>getaddrinfo, real packets</a></li>
+    <li><a href="#tcp"><b>TCP</b>connect() and the SYN</a></li>
+    <li><a href="#tls"><b>TLS 1.3</b>a post-quantum ClientHello</a></li>
+    <li><a href="#http"><b>HTTP/1.1</b>the request on the wire</a></li>
+    <li><a href="#cors"><b>CORS</b>preflights and the lab</a></li>
+    <li><a href="#back"><b>Back to our code</b>Response, json(), timing</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes, tools, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
+  </ol>
+  <div class="base">— bottom: our line of JavaScript</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Browser track · 1 of 3 · captured from real Chromium 141</span>
+  <h1>What <code>fetch()</code> really sends</h1>
+  <p class="lede">The <a href="../js-event-loop/">event-loop page</a> said "the network process performs our fetch" and moved on. This page follows that request for real. We type one line, <code>fetch('https://api.example.test/api/users')</code>, and trace it out of the renderer, through Chrome's network service, DNS, TCP, a TLS 1.3 handshake and HTTP, past the CORS checks, and back into a resolved promise. Every byte shown was captured from that request.</p>
+  <div class="journey" aria-label="Stages this page follows">
+    <a class="st-js" href="#blink">our fetch()</a><i>→</i><a class="st-cors" href="#netsvc">network service</a><i>→</i><a class="st-dns" href="#dns">DNS</a><i>→</i><a class="st-tcp" href="#tcp">TCP</a><i>→</i><a class="st-tls" href="#tls">TLS 1.3</a><i>→</i><a class="st-http" href="#http">HTTP</a><i>→</i><a class="st-cors" href="#cors">CORS</a><i>→</i><a class="st-js" href="#back">res.json()</a>
+  </div>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#replay">Replay</a><a href="#blink">Blink</a><a href="#netsvc">Network service</a><a href="#dns">DNS</a><a href="#tcp">TCP</a><a href="#tls">TLS</a><a href="#http">HTTP</a><a href="#cors">CORS</a><a href="#back">Back</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">How this was captured: headless Chromium 141.0.7390.37 on Linux loaded a page from <code>app.example.test:8080</code> that fetched from <code>api.example.test</code>. Both names were answered by our own DNS server, and the API was our own TLS server; the scripts are in the folder's <code>data/</code> directory. Chrome recorded everything in a NetLog. The certificate is self-signed, so Chrome ran with <code>--ignore-certificate-errors</code>; we show where that matters. Source excerpts come from Chromium, BoringSSL and Linux upstream (October 2026), trimmed with <code>// …</code>.</p>
+</header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol>
+    <li><span>Our <code>fetch()</code> runs in the renderer, which cannot open sockets. Blink hands the request over Mojo IPC to Chrome's <b>network service</b>, a separate process.</span></li>
+    <li><span>The network service finds the server: <b>DNS</b> turns the name into an IP address, <b>TCP</b> opens a connection (SYN, SYN-ACK, ACK), and <b>TLS 1.3</b> agrees on keys in one round trip.</span></li>
+    <li><span>Then it writes plain <b>HTTP</b> text (<code>GET /api/users HTTP/1.1</code> plus headers) into the encrypted connection and reads the reply. Later requests to the same server reuse that connection.</span></li>
+    <li><span>Because the API is another origin, <b>CORS</b> decides whether our script may read the reply, sometimes after an extra <code>OPTIONS</code> preflight. If it passes, a task resolves our promise; <code>res.json()</code> parses the body into a second one.</span></li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 360 220" width="360" height="220" style="max-width:100%;height:auto" font-family="monospace" role="img" aria-label="Sequence: renderer, network service and server exchanging DNS, TCP, TLS and HTTP messages"><title>Sequence: renderer, network service and server exchanging DNS, TCP, TLS and HTTP messages</title>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="tl-head-m" fill="#8a94a3" d="M0 0L10 5L0 10z"/></marker></defs>
+      <text class="tl-t s" fill="#8a94a3" font-size="11" x="40" y="14" text-anchor="middle">renderer</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="11" x="150" y="14" text-anchor="middle">network service</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="11" x="356" y="14" text-anchor="end">DNS / API server</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M40 22 V212"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M150 22 V212"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M310 22 V212"/>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M40 34 H146" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="11" x="95" y="30" text-anchor="middle">Mojo IPC</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M150 52 H306" marker-end="url(#ah)"/><text class="tl-t" fill="#8a94a3" font-size="11" x="230" y="48" text-anchor="middle">DNS query (UDP)</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M310 64 H154" marker-end="url(#ah)"/>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M150 86 H306" marker-end="url(#ah)"/><text class="tl-t" fill="#8a94a3" font-size="11" x="230" y="82" text-anchor="middle">TCP handshake</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M310 98 H154" marker-end="url(#ah)"/>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M150 120 H306" marker-end="url(#ah)"/><text class="tl-t" fill="#8a94a3" font-size="11" x="230" y="116" text-anchor="middle">TLS 1.3 handshake</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M310 132 H154" marker-end="url(#ah)"/>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M150 154 H306" marker-end="url(#ah)"/><text class="tl-t" fill="#8a94a3" font-size="11" x="230" y="150" text-anchor="middle">GET (encrypted)</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M310 166 H154" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="11" x="230" y="180" text-anchor="middle">200 OK + JSON</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M150 196 H44" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="11" x="95" y="192" text-anchor="middle">resolve</text>
+    </svg>
+    <figcaption>One request, three processes, four protocols</figcaption>
+  </figure>
+  <div class="tl-more">The <a href="#replay">replay</a> walks through Chrome's own log of this exact request. Each stage below then opens its real bytes: the <a href="#dns">DNS packets</a>, the <a href="#tls">ClientHello</a>, the <a href="#http">HTTP text</a>, and a <a href="#cors">CORS lab</a> checked against Chrome on 2,880 cases.</div>
+</aside>
+
+<section id="replay" data-deeper="cr-netlog,cr-netstack">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the whole trip</span><h2>Replay Chrome's own log of our request</h2></div>
+  <div class="prose">
+    <p>Chrome can record everything its network stack does into a <b>NetLog</b>: each event, its timestamp in milliseconds, and its parameters. Below is our request, replayed from that log. Times are measured from the moment the network service created the request. It all happened on one machine, so the network itself is nearly free; on the real internet, each arrow that crosses to the server costs a round trip.<a class="rd" data-r="cr-netlog"></a></p>
+  </div>
+  <div class="panel" id="rp">
+    <div class="stages" id="rpStages"></div>
+    <div class="clock" aria-hidden="true"><i id="rpClock"></i></div>
+    <div class="ctl">
+      <button type="button" id="rpPrev" aria-label="Previous event">← Back</button>
+      <button type="button" id="rpNext" class="go" aria-label="Next event">Next →</button>
+      <button type="button" id="rpPlay">▶ Play</button>
+      <button type="button" id="rpReset">Reset</button>
+      <span class="pill" id="rpCtr"></span>
+    </div>
+    <div class="evcard" id="rpCard"></div>
+    <div><div class="stagehead">Every event in this replay</div><div class="evlist" id="rpList"></div></div>
+  </div>
+</section>
+
+<section id="blink" data-deeper="mdn-fetch,cr-multiprocess">
+  <div class="sechead"><span class="eyebrow">Frame 1 · the renderer</span><h2>Our <code>fetch()</code> becomes a <code>ResourceRequest</code></h2></div>
+  <div class="prose">
+    <p>Calling <code>fetch()</code> runs Blink's C++ implementation on <code>CrRendererMain</code>, our page's main thread. It returns a pending promise at once. Before that, it copies our URL, method, headers, mode and credentials setting into a <code>ResourceRequest</code> and starts a <code>ThreadableLoader</code>.<a class="rd" data-r="mdn-fetch"></a></p>
+    <p>The renderer is sandboxed and cannot open sockets. The loader sends the request over a Mojo pipe to the <b>network service</b>, which on desktop Chrome runs in its own utility process. The comment on the first line says where CORS lives: not here, but on the other side of that pipe.<a class="rd" data-r="cr-multiprocess"></a></p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">third_party/blink/renderer/core/fetch/fetch_manager.cc · PerformHTTPFetch()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-perform"></pre>
+  </figure>
+</section>
+
+<section id="netsvc" data-deeper="cr-netstack,fetch-cors">
+  <div class="sechead"><span class="eyebrow">Frame 2 · the network service</span><h2>A <code>URLLoader</code> starts, and CORS decides on a preflight</h2></div>
+  <div class="prose">
+    <p>In the network service, a <code>URLLoader</code> wraps the request in net/'s <code>URLRequest</code>, asks the resource scheduler whether it may start, and calls <code>Start()</code>. Before that, the CORS layer asks one question: <b>does this request need a preflight?</b> Only if the method is not GET, HEAD or POST, or a header is not on the safelist. Our first fetch is a plain GET, so the NetLog says <code>preflight_required: false</code>.<a class="rd" data-r="fetch-cors"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">services/network/cors/cors_url_loader.cc · NeedsPreflight()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-needs"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">services/network/url_loader.cc · ScheduleStart()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-start"></pre>
+    </figure>
+  </div>
+</section>
+
+<section id="dns" data-deeper="rfc1035,kurose">
+  <div class="sechead"><span class="eyebrow">Frame 3 · DNS</span><h2>From a name to an address: <code>getaddrinfo()</code> and two small UDP packets</h2></div>
+  <div class="prose">
+    <p>On Linux, this Chrome resolved the name with the operating system's resolver: the NetLog shows <code>HOST_RESOLVER_SYSTEM_TASK</code>. Chrome calls <code>getaddrinfo()</code> on a worker thread because it blocks. glibc reads <code>/etc/resolv.conf</code>, sends a UDP query to port 53, and waits. (Chrome also has a built-in DNS client, used for DNS-over-HTTPS and on some platforms; the log shows which one ran.)</p>
+    <p>The packets are tiny. Click any field or byte below: the query is 34 bytes and the answer is 50. The name travels as length-prefixed labels, <code>3 api 7 example 4 test 0</code>, and the answer points back at it with a 2-byte <b>compression pointer</b> instead of repeating it.<a class="rd" data-r="rfc1035"></a> Our server also saw an AAAA (IPv6) query for the same name.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">net/dns/host_resolver_system_task.cc · SystemHostResolverCall()</span><span class="note">trimmed</span></figcaption>
+    <pre data-code="c-gai"></pre>
+  </figure>
+  <div class="panel dissector" data-tabs="dnsq,dnsr" data-first="dnsq"></div>
+</section>
+
+<section id="tcp" data-deeper="hpbn-tcp,rfc9293">
+  <div class="sechead"><span class="eyebrow">Frame 4 · TCP</span><h2><code>connect()</code>, and the kernel sends a SYN</h2></div>
+  <div class="prose">
+    <p>With an address, Chrome opens a non-blocking socket and calls <code>connect()</code>. The call returns <code>EINPROGRESS</code> immediately; Chrome watches the socket and is told when it becomes writable. Inside the kernel, <code>tcp_connect()</code> builds a segment with only the SYN flag set, transmits it, and arms a retransmit timer in case no SYN-ACK arrives.<a class="rd" data-r="rfc9293"></a></p>
+    <p>That exchange, SYN → SYN-ACK → ACK, is one full round trip before any data can flow. In our capture it took 1 ms because the server was on the same machine. Across the world it costs whatever the round-trip time is, typically 20 to 200 ms.<a class="rd" data-r="hpbn-tcp"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">net/socket/socket_posix.cc · DoConnect()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-connect"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">linux/net/ipv4/tcp_output.c · tcp_connect()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-syn"></pre>
+    </figure>
+  </div>
+  <p class="callout">We met this kernel side before. The <a href="../threads-vs-event-loop/">threads page</a> showed a socket waking a sleeping reader through its wait queue; the network service's IO thread sleeps in <code>epoll_wait</code> on exactly such sockets.</p>
+</section>
+
+<section id="tls" data-deeper="tls13-illustrated,rfc8446,pq-kyber,rfc8701">
+  <div class="sechead"><span class="eyebrow">Frame 5 · TLS 1.3</span><h2>The ClientHello: 1,822 bytes, mostly a post-quantum key</h2></div>
+  <div class="prose">
+    <p>Chrome now runs a TLS handshake through BoringSSL. Before the first byte, it sets the hostname (SNI) and the protocols it can speak (ALPN), then calls <code>SSL_do_handshake()</code>, which writes the <b>ClientHello</b>. TLS 1.3 finishes in one round trip because the ClientHello already carries public keys: the client guesses which key-exchange groups the server will accept.<a class="rd" data-r="rfc8446,tls13-illustrated"></a></p>
+    <p>Chrome's guess is two keys: classic <code>x25519</code> (32 bytes) and the hybrid <code>X25519MLKEM768</code>, which adds a 1,184-byte ML-KEM post-quantum key. That is why this ClientHello is 1,822 bytes instead of a few hundred. Our server, Node 22 with OpenSSL, chose the hybrid group, and the NetLog confirms it: <code>key_exchange_group: 4588</code> is <code>0x11EC</code>.<a class="rd" data-r="pq-kyber"></a></p>
+    <p>Look for the <b>GREASE</b> values like <code>0x9a9a</code>: deliberately meaningless entries that keep servers from breaking when real new values appear. Look also for the hostname, which is still in plaintext.<a class="rd" data-r="rfc8701"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">net/socket/ssl_client_socket_impl.cc</span><span class="note">SNI, ALPN, handshake; trimmed</span></figcaption>
+      <pre data-code="c-ssl"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">net/ssl/ssl_config_service.cc · kDefaultSSLSupportedGroups</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-groups"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">boringssl/ssl/handshake_client.cc · ssl_add_client_hello()</span><span class="note">verbatim</span></figcaption>
+    <pre data-code="c-ch"></pre>
+  </figure>
+  <div class="panel dissector" data-tabs="ch,sh" data-first="ch"></div>
+  <p class="callout">Everything after the ServerHello is encrypted, including the server's certificate. In our capture Chrome still verified that certificate and logged <code>net_error -202</code> (<code>ERR_CERT_AUTHORITY_INVALID</code>, because it is self-signed) before the flag let it continue. On a real site this is where an untrusted certificate stops the request. The handshake took 12 ms here: about 6 ms for the server to compute its key share and signature, and 5 ms for Chrome's certificate check. The network round trip itself cost almost nothing.</p>
+</section>
+
+<section id="http" data-deeper="rfc9112,hpbn-http1">
+  <div class="sechead"><span class="eyebrow">Frame 6 · HTTP/1.1</span><h2>The request is just text, written into the encrypted pipe</h2></div>
+  <div class="prose">
+    <p>ALPN offered <code>h2</code> and <code>http/1.1</code>; our server picked HTTP/1.1, so what Chrome writes is readable text. <code>GenerateRequestLine</code> builds <code>GET /api/users HTTP/1.1\r\n</code>, the headers follow one per line, and a blank line ends them. <code>HttpStreamParser::SendRequest</code> logs those headers to the NetLog (that is the event we replayed), and <code>DoSendHeaders</code> writes the bytes. BoringSSL encrypts them into a TLS record on the way out.<a class="rd" data-r="rfc9112"></a></p>
+    <p>All three requests used the <b>same</b> connection. The first fetch paid for DNS, TCP and TLS. The preflight and the POST found an idle socket in the pool and went straight to HTTP. That is <code>Connection: keep-alive</code> at work.<a class="rd" data-r="hpbn-http1"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">net/http/http_util.cc · GenerateRequestLine()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-line"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">net/http/http_stream_parser.cc</span><span class="note">SendRequest and DoSendHeaders; trimmed</span></figcaption>
+      <pre data-code="c-send"></pre>
+    </figure>
+  </div>
+  <div class="panel" id="hv">
+    <div class="tabs" id="hvTabs"></div>
+    <div class="httpv" id="hvBox"></div>
+    <p class="muted" style="font-size:.82rem;margin:0" id="hvNote"></p>
+  </div>
+</section>
+
+<section id="cors" data-deeper="mdn-cors,fetch-cors">
+  <div class="sechead"><span class="eyebrow">Frame 7 · CORS</span><h2>Who may read the answer: preflights, allow-lists, and a lab</h2></div>
+  <div class="prose">
+    <p>Our page is <code>http://app.example.test:8080</code>; the API is <code>https://api.example.test</code>. Different origins. The browser will send the request, but it lets our script <b>read</b> the response only if the server opts in with <code>Access-Control-Allow-Origin</code>. That is the core of CORS: it protects the user's data on other sites from our script, not the server from requests.<a class="rd" data-r="mdn-cors"></a></p>
+    <p>For anything beyond a "simple" request, the browser first asks permission with an <code>OPTIONS</code> <b>preflight</b>. Our second fetch was a POST with <code>Content-Type: application/json</code>, which is not on the safelist, so the NetLog says <code>preflight_required_reason: disallowed_header</code>. The OPTIONS and its 204 reply are in the HTTP viewer above.<a class="rd" data-r="fetch-cors"></a></p>
+    <p>The lab below implements the rules. It agrees with real Chrome 141 on all 2,880 combinations we ran (every method, header set and credentials mode against every server policy), including one place where <b>Chrome is more lenient than the spec</b>: <code>Access-Control-Allow-Headers: *</code> still lets <code>Authorization</code> through.</p>
+  </div>
+  <div class="panel" id="cl">
+    <div class="corsgrid">
+      <fieldset><legend>Our request</legend>
+        <label>Method <select id="clM"><option>GET</option><option>POST</option><option>PUT</option><option>DELETE</option><option>HEAD</option></select></label>
+        <label>Content-Type <select id="clCT"><option value="">(none)</option><option>text/plain</option><option>application/x-www-form-urlencoded</option><option>application/json</option></select></label>
+        <label><input type="checkbox" id="clX"> X-Requested-With: fetch</label>
+        <label><input type="checkbox" id="clA"> Authorization: Bearer …</label>
+        <label>credentials <select id="clC"><option value="same-origin">same-origin (default)</option><option value="include">include (send cookies)</option></select></label>
+      </fieldset>
+      <fieldset><legend>The API server's reply headers</legend>
+        <label>Allow-Origin <select id="sO"><option value="origin">http://app.example.test:8080</option><option value="*">*</option><option value="">(missing)</option></select></label>
+        <label>Allow-Methods <select id="sM"><option value="">(missing)</option><option>GET, POST</option><option>GET, POST, PUT, DELETE</option><option>*</option></select></label>
+        <label>Allow-Headers <select id="sH"><option value="">(missing)</option><option>content-type</option><option>content-type, x-requested-with, authorization</option><option>*</option></select></label>
+        <label><input type="checkbox" id="sC"> Allow-Credentials: true</label>
+        <label><input type="checkbox" id="clS"> Apply the spec's rule that <code>*</code> never covers Authorization</label>
+      </fieldset>
+    </div>
+    <div class="ctl"><span class="stagehead">Try</span>
+      <button type="button" data-p="simple">Simple GET</button><button type="button" data-p="json">Our JSON POST</button><button type="button" data-p="put">PUT not allowed</button><button type="button" data-p="cred">Cookies + *</button><button type="button" data-p="auth">Authorization + *</button>
+    </div>
+    <div class="verdict" id="clV" aria-live="polite"></div>
+    <ol class="csteps" id="clSteps"></ol>
+    <div class="pair">
+      <div><div class="stagehead">Preflight Chrome would send</div><div class="httpv" id="clPre"></div></div>
+      <div><div class="stagehead">Then the request itself</div><div class="httpv" id="clReq"></div></div>
+    </div>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">services/network/public/cpp/cors/cors.cc</span><span class="note">safelists; trimmed</span></figcaption>
+      <pre data-code="c-safe"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">services/network/cors/preflight_result.cc · EnsureAllowedCrossOriginHeaders()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-wild"></pre>
+    </figure>
+  </div>
+  <p class="callout">The flag in the second excerpt, <code>kCorsNonWildcardRequestHeadersSupport</code>, is declared <code>FEATURE_DISABLED_BY_DEFAULT</code> in <code>services/network/public/cpp/features.cc</code>. Until it ships, Chrome lets <code>*</code> cover <code>Authorization</code> and records a deprecation warning, while the Fetch standard says it must not. We found this because the lab disagreed with Chrome on exactly 40 of the 2,880 cases. A server should list <code>authorization</code> explicitly.</p>
+</section>
+
+<section id="back" data-deeper="mdn-res-timing,v8-fast-async">
+  <div class="sechead"><span class="eyebrow">Frame 8 · back to our code</span><h2>A task resolves our promise, then <code>res.json()</code> resolves another</h2></div>
+  <div class="prose">
+    <p>When the headers arrive, the network service sends them to the renderer with <code>OnReceiveResponse</code>, along with the read end of a <b>Mojo data pipe</b> for the body. In the renderer, that message arrives on the IO thread and becomes a task on <code>CrRendererMain</code>: the same wake chain the <a href="../js-event-loop/#io">event-loop page</a> traced. In that task, Blink builds a <code>Response</code> and calls <code>Resolve</code>, which queues our <code>.then</code> or <code>await</code> continuation as a microtask.</p>
+    <p>Our promise resolves as soon as the <b>headers</b> are in, before the body. <code>res.json()</code> starts a second wait: it reads the data pipe to the end, then parses the text with V8's JSON parser and resolves its own promise. That is why <code>fetch</code> needs two <code>await</code>s.<a class="rd" data-r="v8-fast-async"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">services/network/url_loader.cc · SendResponseToClient()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-resp"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">blink/…/fetch/fetch_manager.cc · DidReceiveResponse()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-resolve"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">blink/…/fetch/body.cc · BodyJsonConsumer</span><span class="note">verbatim</span></figcaption>
+    <pre data-code="c-json"></pre>
+  </figure>
+  <div class="prose"><p>The page can see this timeline too. The Resource Timing API exposes a timestamp at each boundary (the API sent <code>Timing-Allow-Origin: *</code>, which cross-origin pages need before they can read them). These are the real values our page read for its two fetches:<a class="rd" data-r="mdn-res-timing"></a></p></div>
+  <div class="panel">
+    <div class="stagehead">performance.getEntriesByType("resource"), real values</div>
+    <div class="wf" id="wf"></div>
+    <p class="muted" style="font-size:.82rem;margin:0">The second request reused the connection, so its DNS, TCP and TLS bars are zero. Its CORS preflight does not show here as its own entry; the preflight's time folds into the gap before <code>requestStart</code>.</p>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 9 · practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"Which of these cross-origin requests makes Chrome send an OPTIONS preflight first?","options":["GET with Accept: application/json","POST with Content-Type: text/plain","POST with Content-Type: application/json","HEAD with no extra headers"],"answer":2,"explain":"GET, HEAD and POST are safelisted methods, and Accept and Content-Type are safelisted headers, but Content-Type is only safelisted for application/x-www-form-urlencoded, multipart/form-data and text/plain. Our own JSON POST logged preflight_required_reason: disallowed_header."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"A simple GET fails with a CORS error in the console. Did the request reach the server?","options":["No, CORS blocks the request before it is sent","Yes: the server received it and replied; the browser hid the response from our script","Only the headers were sent","It depends on DNS"],"answer":1,"explain":"Simple requests are sent without a preflight. The CORS check happens on the response, so the server did the work (and any side effects). This is why state-changing endpoints must not rely on CORS for protection."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Why is the hostname visible in plaintext in the ClientHello?","options":["TLS forgot to encrypt it","The server needs it to choose a certificate before any keys exist","DNS requires it","It is only visible in TLS 1.2"],"answer":1,"explain":"SNI is sent before keys are agreed, because one IP can host many sites and the server must pick the matching certificate. Encrypted Client Hello (ECH) fixes this; without an ECH config, Chrome sends a GREASE ECH extension, as in our capture."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Our second fetch went straight to HTTP: no DNS, no TCP, no TLS. Why?","options":["The response was cached","Chrome reused the idle keep-alive connection from its socket pool","The server pushed it in advance","HTTP/2 multiplexing"],"answer":1,"explain":"The first exchange left the TLS connection open (Connection: keep-alive). The socket pool keys connections by scheme, host and port, so the next request to https://api.example.test took the same socket. The protocol was HTTP/1.1, so this is reuse in sequence, not multiplexing."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"When does the promise returned by fetch() resolve?","options":["When the TCP connection opens","When the response headers arrive","When the whole body has downloaded","When res.json() finishes"],"answer":1,"explain":"Blink resolves the response promise in DidReceiveResponse, as soon as the headers are in. The body streams through a Mojo data pipe; res.json() waits for all of it, then parses, and resolves a second promise."}</script></div>
+  </div>
+  <h3>See it on our own machine</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Our own NetLog</td><td>Open <code>chrome://net-export</code>, start logging, load a page, stop, and open the file in the <a href="https://netlog-viewer.appspot.com/" target="_blank" rel="noopener">NetLog viewer</a>. Ours is in <code>data/netlog.json</code>.</td></tr>
+      <tr><td>Timing per stage</td><td>DevTools → Network → click a request → Timing. The bars are the Resource Timing values above.</td></tr>
+      <tr><td>DNS packets</td><td><code>dig api.github.com</code> (or <code>nslookup</code> on Windows) prints the answer section, TTL and server.</td></tr>
+      <tr><td>A real TLS 1.3 handshake</td><td><code>openssl s_client -connect example.com:443 -tls1_3 -msg</code> prints each handshake message.</td></tr>
+      <tr><td>The system calls</td><td><code>strace -f -e trace=network curl -s https://example.com -o /dev/null</code> shows <code>socket</code>, <code>connect</code>, <code>sendto</code> and <code>recvfrom</code>.</td></tr>
+      <tr><td>Raw HTTP/1.1</td><td><code>curl -v --http1.1 https://example.com</code> prints the request line, headers and status line.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Record a NetLog while loading any HTTPS site. Find the <code>SSL_CONNECT</code> end event and decode <code>key_exchange_group</code> and <code>cipher_suite</code> with the tables in our dissector.</li>
+    <li>In DevTools, compare the Timing tab of the first and second request to the same API. Which bars disappear, and why?</li>
+    <li>Write a tiny server that sends <code>Access-Control-Allow-Origin: *</code> and fetch it with <code>credentials: "include"</code>. Read the exact console message, then fix the server two different ways.</li>
+    <li>Use <code>dig +noedns api.github.com</code> and <code>dig api.github.com</code> and compare the "Additional" section. What is the OPT record for?</li>
+    <li>Run <code>openssl s_client -groups x25519</code> and then <code>-groups X25519MLKEM768</code> against a site (OpenSSL 3.5 or newer). Compare the size of the ClientHello in the <code>-msg</code> output.</li>
+  </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a computer networks or web systems exam. Write our answer on paper first, then open the model answer and mark ourselves honestly. The marks follow the usual pattern of university theory exams; they are not copied from any real paper.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Trace">
+      <div class="q">A fresh browser (empty caches) on <code>http://app.example.test:8080</code> runs <code>await fetch("https://api.example.test/api/users")</code> and then a JSON <code>POST</code> to the same URL. List, in order, every message exchanged between the browser and the network, say which side sends each, and mark which are encrypted.</div>
+      <div class="a">
+        <table><thead><tr><th>#</th><th>From → to</th><th>Message</th><th>Encrypted?</th></tr></thead><tbody>
+          <tr><td>1–2</td><td>client → DNS server → client</td><td>DNS query for <code>api.example.test</code> (A, and AAAA), then the answer</td><td>no (plain UDP)</td></tr>
+          <tr><td>3–5</td><td>client ↔ server</td><td>TCP SYN, SYN-ACK, ACK</td><td>no</td></tr>
+          <tr><td>6</td><td>client → server</td><td>ClientHello (SNI, ALPN, key shares)</td><td>no</td></tr>
+          <tr><td>7</td><td>server → client</td><td>ServerHello (chosen suite and key share), then EncryptedExtensions, Certificate, CertificateVerify, Finished</td><td>ServerHello no; the rest yes</td></tr>
+          <tr><td>8</td><td>client → server</td><td>Finished (after a compatibility ChangeCipherSpec)</td><td>yes</td></tr>
+          <tr><td>9</td><td>server → client</td><td>NewSessionTicket ×2 (for resumption)</td><td>yes</td></tr>
+          <tr><td>10–11</td><td>client ↔ server</td><td><code>GET /api/users</code>, then <code>200 OK</code> with JSON</td><td>yes</td></tr>
+          <tr><td>12–13</td><td>client ↔ server</td><td><code>OPTIONS</code> preflight, then <code>204 No Content</code> with allow-lists</td><td>yes</td></tr>
+          <tr><td>14–15</td><td>client ↔ server</td><td><code>POST /api/users</code>, then <code>200 OK</code></td><td>yes</td></tr>
+        </tbody></table>
+        <p>No second DNS lookup, TCP handshake or TLS handshake: the later requests reuse the keep-alive connection. This is the order in our real capture.</p>
+        <p class="rub">Marking: 1 for DNS before TCP, 1 for the three-way handshake, 2 for the TLS messages and which are encrypted, 1 for the preflight before the POST, 1 for noting connection reuse.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Decide">
+      <div class="q">The page origin is <code>http://app.example.test:8080</code>. For each request, say whether Chrome sends a preflight and whether our script can read the response.
+        <ol type="a"><li>GET with <code>Accept: application/json</code>; server sends Allow-Origin with our origin.</li><li>POST with <code>Content-Type: application/json</code>; server sends our origin and <code>Allow-Headers: content-type</code>.</li><li>PUT with no headers; server sends our origin and <code>Allow-Methods: GET, POST</code>.</li><li>GET with <code>credentials: "include"</code>; server sends <code>Allow-Origin: *</code> and <code>Allow-Credentials: true</code>.</li><li>DELETE with <code>Authorization</code>; server sends our origin, <code>Allow-Methods: *</code> and <code>Allow-Headers: *</code>.</li></ol></div>
+      <div class="a">
+        <table><thead><tr><th></th><th>Preflight?</th><th>Readable?</th><th>Why</th></tr></thead><tbody>
+          <tr><td>a</td><td>no</td><td>yes</td><td>Safelisted method and header; origin allowed.</td></tr>
+          <tr><td>b</td><td>yes</td><td>yes</td><td>application/json is not safelisted; the preflight allows content-type, and POST is safelisted so Allow-Methods is not needed.</td></tr>
+          <tr><td>c</td><td>yes</td><td>no</td><td>PUT is not safelisted and not in Allow-Methods, so the preflight fails and the PUT is never sent.</td></tr>
+          <tr><td>d</td><td>no</td><td>no</td><td>With credentials, Allow-Origin must name the origin; <code>*</code> is rejected. The server still processed the GET.</td></tr>
+          <tr><td>e</td><td>yes</td><td>Chrome 141: yes. Spec: no</td><td><code>*</code> covers the method (no credentials). The spec says <code>*</code> never covers Authorization; Chrome has not shipped that rule yet.</td></tr>
+        </tbody></table>
+        <p>All five rows were produced by this page's CORS model, which matches real Chrome on 2,880 cases.</p>
+        <p class="rub">Marking: 1 per row; a full mark for (e) needs both the Chrome and the spec answer.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q">TLS 1.2 needs two round trips before application data, and TLS 1.3 needs one. Explain what changed in the ClientHello, and what happens if the client guesses wrong.</div>
+      <div class="a">
+        <p>In TLS 1.2 the client first learns the server's chosen cipher and key-exchange parameters (round trip 1), and only then sends its own key share (round trip 2). In TLS 1.3 the client sends key shares in the first message, in the <code>key_share</code> extension, for the groups it predicts the server will pick. Chrome sends X25519MLKEM768 and x25519. The server answers with its own share in the ServerHello, both sides derive the handshake keys, and the rest of the server's flight is already encrypted.</p>
+        <p>If the server supports none of the offered shares, it replies with a <b>HelloRetryRequest</b> naming a group it does support. The client sends a second ClientHello with that key share, costing one extra round trip.</p>
+        <p class="rub">Marking: 2 for "key shares sent up front", 1 for the server share in ServerHello, 1 for HelloRetryRequest.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Calculate">
+      <div class="q">Our real Resource Timing entry (ms): <code>startTime 29.6</code>, <code>domainLookupStart 32.9</code>, <code>domainLookupEnd 35.5</code>, <code>connectStart 35.5</code>, <code>secureConnectionStart 36.7</code>, <code>connectEnd 49.1</code>, <code>requestStart 49.3</code>, <code>responseStart 50.5</code>, <code>responseEnd 51.9</code>. (a) Compute the time spent in DNS, TCP, TLS, waiting for the first byte, and downloading. (b) Estimate the total for the same fetch to a server 80 ms away (round-trip time), ignoring server and CPU time.</div>
+      <div class="a">
+        <p>(a) DNS 35.5 − 32.9 = <b>2.6 ms</b>; TCP 36.7 − 35.5 = <b>1.2 ms</b>; TLS 49.1 − 36.7 = <b>12.4 ms</b>; waiting for the first byte 50.5 − 49.3 = <b>1.2 ms</b>; download 51.9 − 50.5 = <b>1.4 ms</b>. Total 51.9 − 29.6 = 22.3 ms, including 3.3 ms of queueing before DNS.</p>
+        <p>(b) Count the exchanges that must wait for an answer: TCP 1 RTT, TLS 1.3 1 RTT, and request plus response 1 RTT, so 3 × 80 = <b>240 ms</b>, plus DNS. A DNS lookup costs up to another round trip if no nearby resolver has the name cached, so between 240 and about 320 ms in total. TLS 1.2 adds one more round trip (+80 ms). Locally the network was nearly free, which is why our TLS time was all computation.</p>
+        <p class="rub">Marking: 3 for the five durations, 2 for the round-trip estimate with reasons.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Explain">
+      <div class="q">The DNS answer we captured contains the bytes <code>c0 0c</code> where the name should be. Explain these two bytes and why the value is 12.</div>
+      <div class="a">
+        <p>This is DNS <b>message compression</b> (RFC 1035, Section 4.1.4). A length byte can only go up to 63, so a byte whose top two bits are <code>11</code> marks a pointer instead of a label. The remaining 14 bits, <code>0x000c</code> = 12, are an offset from the start of the message.</p>
+        <p>The DNS header is exactly 12 bytes (ID, flags, and four counts), so offset 12 is where the question's name begins. The answer says "the name at offset 12", reusing <code>api.example.test</code> instead of repeating 18 bytes.</p>
+        <p class="rub">Marking: 2 for "pointer, top bits 11", 2 for "header is 12 bytes, so it points at the question's name".</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for the RFCs and specifications the code implements.</p>
+  <div id="reading-list"></div>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files and data</h2></div>
+  <ul class="src-list">
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/fetch/fetch_manager.cc">blink/…/fetch/fetch_manager.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:third_party/blink/renderer/core/fetch/body.cc">blink/…/fetch/body.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:services/network/url_loader.cc">services/network/url_loader.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:services/network/cors/cors_url_loader.cc">services/network/cors/cors_url_loader.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:services/network/public/cpp/cors/cors.cc">services/network/public/cpp/cors/cors.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:services/network/cors/preflight_result.cc">services/network/cors/preflight_result.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:services/network/public/cpp/features.cc">services/network/public/cpp/features.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/dns/host_resolver_system_task.cc">net/dns/host_resolver_system_task.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/socket/socket_posix.cc">net/socket/socket_posix.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/socket/ssl_client_socket_impl.cc">net/socket/ssl_client_socket_impl.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/ssl/ssl_config_service.cc">net/ssl/ssl_config_service.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/http/http_util.cc">net/http/http_util.cc</a></li>
+    <li><a href="https://source.chromium.org/chromium/chromium/src/+/main:net/http/http_stream_parser.cc">net/http/http_stream_parser.cc</a></li>
+    <li><a href="https://boringssl.googlesource.com/boringssl/+/refs/heads/main/ssl/handshake_client.cc">boringssl/ssl/handshake_client.cc</a></li>
+    <li><a href="https://github.com/torvalds/linux/blob/master/net/ipv4/tcp_output.c">linux/net/ipv4/tcp_output.c</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/fetch-to-the-wire/data">Our capture: NetLog, lab servers and page (data/)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">Chromium and BoringSSL code is used under their BSD-style licenses and the Linux excerpt under GPL-2.0, quoted for study.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-perform">void FetchLoaderBase::PerformHTTPFetch(ExceptionState& exception_state) {
+» // CORS preflight fetch procedure is implemented inside ThreadableLoader.
+
+  // "1. Let |HTTPRequest| be a copy of |request|, except that |HTTPRequest|'s
+  //  body is a tee of |request|'s body."
+  // We use ResourceRequest class for HTTPRequest.
+  // FIXME: Support body.
+» ResourceRequest request(fetch_request_data_->Url());
+  request.SetRequestorOrigin(fetch_request_data_->Origin());
+  // …
+  request.SetHttpMethod(fetch_request_data_->Method());
+  // …
+  request.SetMode(fetch_request_data_->Mode());
+  // …
+  request.SetCredentialsMode(fetch_request_data_->Credentials());
+  for (const auto& header : fetch_request_data_->HeaderList()->List()) {
+    request.AddHttpHeaderField(AtomicString(header.first),
+                               AtomicString(header.second));
+  // …
+  CreateLoader(std::move(request), resource_loader_options);
+}
+
+void FetchManager::Loader::CreateLoader(
+    ResourceRequest request,
+    const ResourceLoaderOptions& resource_loader_options) {
+  threadable_loader_ = MakeGarbageCollected<ThreadableLoader>(
+      *GetExecutionContext(), this, resource_loader_options);
+» threadable_loader_->Start(std::move(request));
+}</script>
+
+<script type="text/plain" id="c-needs">std::optional<PreflightRequiredReason> NeedsPreflight(
+    const ResourceRequest& request) {
+  if (!IsCorsEnabledRequestMode(request.mode))
+    return std::nullopt;
+
+  if (request.mode == mojom::RequestMode::kCorsWithForcedPreflight) {
+    return PreflightRequiredReason::kCorsWithForcedPreflightMode;
+  }
+
+» if (!IsCorsSafelistedMethod(request.method))
+»   return PreflightRequiredReason::kDisallowedMethod;
+  // …
+  if (!CorsUnsafeNotForbiddenRequestHeaderNames(
+           request.headers.GetHeaderVector(), is_revalidating_for_headers,
+           is_ad_auction_trusted_signals_request)
+           .empty()) {
+»   return PreflightRequiredReason::kDisallowedHeader;
+  }
+
+  return std::nullopt;
+}</script>
+
+<script type="text/plain" id="c-start">void URLLoader::ScheduleStart() {
+  TRACE_EVENT("loading", "URLLoader::ScheduleStart",
+              net::NetLogWithSourceToFlow(url_request_->net_log()));
+  bool defer = false;
+  if (resource_scheduler_client_) {
+    resource_scheduler_request_handle_ =
+        resource_scheduler_client_->ScheduleRequest(
+            !(options_ & mojom::kURLLoadOptionSynchronous), url_request_.get());
+    resource_scheduler_request_handle_->set_resume_callback(
+        base::BindOnce(&URLLoader::ResumeStart, base::Unretained(this)));
+    resource_scheduler_request_handle_->WillStartRequest(&defer);
+  }
+  if (defer)
+    url_request_->LogBlockedBy("ResourceScheduler");
+  else
+»   url_request_->Start();
+}</script>
+
+<script type="text/plain" id="c-gai">int SystemHostResolverCall(const std::string& host,
+                           AddressFamily address_family,
+                           HostResolverFlags host_resolver_flags,
+                           AddressList* addrlist,
+                           int* os_error_opt,
+                           handles::NetworkHandle network) {
+  struct addrinfo hints = {0};
+  hints.ai_family = AddressFamilyToAF(address_family);
+  // …
+  // On other operating systems, AI_ADDRCONFIG may reduce the amount of
+  // unnecessary DNS lookups, e.g. getaddrinfo() will not send a request for
+  // AAAA records if the current machine has no IPv6 addresses configured and
+  // therefore could not use the resulting AAAA record anyway. …
+  hints.ai_flags = AI_ADDRCONFIG;
+  // …
+  // Restrict result set to only this socket type to avoid duplicates.
+  hints.ai_socktype = SOCK_STREAM;
+
+  // This function can block for a long time. Use ScopedBlockingCall to increase
+  // the current thread pool's capacity and thus avoid reducing CPU usage by the
+  // current process during that time.
+» base::ScopedBlockingCall scoped_blocking_call(FROM_HERE,
+»                                               base::BlockingType::WILL_BLOCK);
+  DnsReloaderMaybeReload();
+
+» auto [ai, err, os_error] = AddressInfo::Get(host, hints, nullptr, network);
+  // …   (AddressInfo::Get calls getter->getaddrinfo(host, &hints, …))</script>
+
+<script type="text/plain" id="c-connect">int SocketPosix::DoConnect() {
+» int rv = HANDLE_EINTR(
+»     connect(socket_fd_, peer_address_->addr(), peer_address_->addr_len));
+  DCHECK_GE(0, rv);
+  return rv == 0 ? OK : MapConnectError(errno, socket_fd_);
+}</script>
+
+<script type="text/plain" id="c-syn">int tcp_connect(struct sock *sk)
+{
+  struct tcp_sock *tp = tcp_sk(sk);
+  struct sk_buff *buff;
+  int err;
+  // …
+  tcp_connect_init(sk);
+  // …
+  buff = tcp_stream_alloc_skb(sk, sk->sk_allocation, true);
+  if (unlikely(!buff))
+    return -ENOBUFS;
+
+  /* SYN eats a sequence byte, write_seq updated by
+   * tcp_connect_queue_skb().
+   */
+» tcp_init_nondata_skb(buff, sk, tp->write_seq, TCPHDR_SYN);
+  // …
+  /* Send off SYN; include data in Fast Open. */
+» err = tp->fastopen_req ? tcp_send_syn_data(sk, buff) :
+»       tcp_transmit_skb(sk, buff, 1, sk->sk_allocation);
+  // …
+  /* Timer for repeating the SYN until an answer. */
+» tcp_reset_xmit_timer(sk, ICSK_TIME_RETRANS,
+                       inet_csk(sk)->icsk_rto, false);
+  return 0;
+}</script>
+
+<script type="text/plain" id="c-ssl">  // In SSLClientSocketImpl::Init():
+  if (!host_is_ip_address &&
+»     !SSL_set_tlsext_host_name(ssl_.get(), host_and_port_.host().c_str())) {
+    return ERR_UNEXPECTED;
+  }
+  // …
+  if (!ssl_config_.alpn_protos.empty()) {
+    std::vector<uint8_t> wire_protos =
+        SerializeNextProtos(ssl_config_.alpn_protos);
+»   SSL_set_alpn_protos(ssl_.get(), wire_protos.data(), wire_protos.size());
+  // …
+
+int SSLClientSocketImpl::DoHandshake() {
+  crypto::OpenSSLErrStackTracer err_tracer(FROM_HERE);
+
+» int rv = SSL_do_handshake(ssl_.get());
+  int net_error = OK;
+  if (rv <= 0) {
+    int ssl_error = SSL_get_error(ssl_.get(), rv);
+    // …</script>
+
+<script type="text/plain" id="c-groups">// The default NamedGroups supported by Chromium.
+// This default list matches the result of prepending our preferred post-quantum
+// group (X25519MLKEM768) to BoringSSL's kDefaultSupportedGroupIds and
+// evaluating BoringSSL's default logic for selecting key shares.
+const SSLNamedGroupInfo kDefaultSSLSupportedGroups[] = {
+»   {.group_id = SSL_GROUP_X25519_MLKEM768, .send_key_share = true},
+»   {.group_id = SSL_GROUP_X25519, .send_key_share = true},
+    {.group_id = SSL_GROUP_SECP256R1, .send_key_share = false},
+    {.group_id = SSL_GROUP_SECP384R1, .send_key_share = false},
+};</script>
+
+<script type="text/plain" id="c-ch">bool ssl_add_client_hello(SSL_HANDSHAKE *hs) {
+  SSLImpl *const ssl = hs->ssl;
+  ScopedCBB cbb;
+  CBB body;
+  ssl_client_hello_type_t type = hs->selected_ech_config
+                                     ? ssl_client_hello_outer
+                                     : ssl_client_hello_unencrypted;
+  Array<uint8_t> msg;
+» if (!ssl->method->init_message(ssl, cbb.get(), &body, SSL3_MT_CLIENT_HELLO) ||
+»     !ssl_write_client_hello_without_extensions(hs, &body, type,
+                                                 /*empty_session_id=*/false) ||
+»     !ssl_add_clienthello_tlsext(hs, &body, /*out_encoded=*/nullptr, type) ||
+      !ssl->method->finish_message(ssl, cbb.get(), &msg)) {
+    return false;
+  }
+
+  return ssl->method->add_message(ssl, std::move(msg));
+}</script>
+
+<script type="text/plain" id="c-line">std::string HttpUtil::GenerateRequestLine(std::string_view method,
+                                          const GURL& url,
+                                          bool is_for_get_to_http_proxy) {
+» static constexpr char kSuffix[] = " HTTP/1.1\r\n";
+  const std::string path = is_for_get_to_http_proxy
+                               ? HttpUtil::SpecForRequest(url)
+                               : url.PathForRequest();
+» return base::StrCat({method, " ", path, kSuffix});
+}</script>
+
+<script type="text/plain" id="c-send">int HttpStreamParser::SendRequest(
+    const std::string& request_line,
+    const HttpRequestHeaders& headers,
+    const NetworkTrafficAnnotationTag& traffic_annotation,
+    HttpResponseInfo* response,
+    CompletionOnceCallback callback) {
+  // …
+» NetLogRequestHeaders(net_log_,
+»                      NetLogEventType::HTTP_TRANSACTION_SEND_REQUEST_HEADERS,
+»                      request_line, &headers);
+  // …
+
+int HttpStreamParser::DoSendHeaders() {
+  int bytes_remaining = request_headers_->BytesRemaining();
+  DCHECK_GT(bytes_remaining, 0);
+
+  // Record our best estimate of the 'request time' as the time when we send
+  // out the first bytes of the request headers.
+  if (bytes_remaining == request_headers_->size())
+    response_->request_time = base::Time::Now();
+
+  io_state_ = STATE_SEND_HEADERS_COMPLETE;
+» return stream_socket_->Write(
+      request_headers_.get(), bytes_remaining, io_callback_,
+      NetworkTrafficAnnotationTag(traffic_annotation_));
+}</script>
+
+<script type="text/plain" id="c-safe">bool IsCorsSafelistedMethod(const std::string& method) {
+  // https://fetch.spec.whatwg.org/#cors-safelisted-method
+  // "A CORS-safelisted method is a method that is `GET`, `HEAD`, or `POST`."
+  std::string method_upper = base::ToUpperASCII(method);
+» return method_upper == net::HttpRequestHeaders::kGetMethod ||
+»        method_upper == net::HttpRequestHeaders::kHeadMethod ||
+»        method_upper == net::HttpRequestHeaders::kPostMethod;
+}
+// …
+bool IsCorsSafelistedHeader(const std::string& name,
+                            const std::string& value,
+                            bool is_ad_auction_trusted_signals_request) {
+  const std::string lower_name = base::ToLowerASCII(name);
+
+  // If |value|’s length is greater than 128, then return false.
+  if (value.size() > 128) {
+    return false;
+  }
+
+  // CORS-Safelisted headers are the only headers permitted in a CORS request.
+  static constexpr auto safe_names = base::MakeFixedFlatSet<std::string_view>({
+      // …
+»     "accept",
+»     "accept-language",
+»     "content-language",
+»     "content-type",
+      // Simple range values are safelisted.
+      // https://fetch.spec.whatwg.org/#simple-range-header-value
+»     "range",
+      // …
+  // (and content-type is only safe for these three:)
+  return *mime_type == "application/x-www-form-urlencoded" ||   // …</script>
+
+<script type="text/plain" id="c-wild">std::optional<CorsErrorStatus> PreflightResult::EnsureAllowedCrossOriginHeaders(
+    const net::HttpRequestHeaders& headers,
+    bool is_revalidating,
+    NonWildcardRequestHeadersSupport non_wildcard_request_headers_support,
+    bool is_ad_auction_trusted_signals_request) const {
+» const bool has_wildcard = !credentials_ && headers_.contains("*");
+  if (has_wildcard) {
+»   if (non_wildcard_request_headers_support) {
+      // "authorization" is the only member of
+      // https://fetch.spec.whatwg.org/#cors-non-wildcard-request-header-name.
+      if (headers.HasHeader(kAuthorization) &&
+          !headers_.contains(kAuthorization)) {
+        // … return kHeaderDisallowedByPreflightResponse
+      }
+    }
+»   return std::nullopt;
+  }
+  // … otherwise every non-safelisted header must be listed explicitly</script>
+
+<script type="text/plain" id="c-resp">void URLLoader::SendResponseToClient() {
+  TRACE_EVENT("loading", "network::URLLoader::SendResponseToClient",
+              net::NetLogWithSourceToFlow(url_request_->net_log()), "url",
+              url_request_->url());
+  DCHECK_EQ(emitted_devtools_raw_request_, emitted_devtools_raw_response_);
+  response_->emitted_extra_info = emitted_devtools_raw_request_;
+
+» url_loader_client_.Get()->OnReceiveResponse(
+»     response_->Clone(), std::move(consumer_handle_), std::nullopt);
+}</script>
+
+<script type="text/plain" id="c-resolve">void FetchManager::Loader::DidReceiveResponse(
+    uint64_t,
+    const ResourceResponse& response) {
+  received_response_headers_ = true;
+  // …
+  Response* r = Response::Create(response_resolver_->GetExecutionContext(),
+                                 tainted_response);
+  r->headers()->SetGuard(Headers::kImmutableGuard);
+  if (GetFetchRequestData()->Integrity().empty() &&
+      response.GetUnencodedDigests().empty()) {
+»   response_resolver_->Resolve(r);
+    response_resolver_.Clear();
+  } else {
+    // … subresource integrity checks first
+</script>
+
+<script type="text/plain" id="c-json">class BodyJsonConsumer final : public BodyConsumerBase {
+ public:
+  using BodyConsumerBase::BodyConsumerBase;
+  using ResolveType = IDLAny;
+
+» void DidFetchDataLoadedString(const String& string) override {
+    if (!Resolver()->GetExecutionContext() ||
+        Resolver()->GetExecutionContext()->IsContextDestroyed())
+      return;
+    ScriptState::Scope scope(Resolver()->GetScriptState());
+    v8::Isolate* isolate = Resolver()->GetScriptState()->GetIsolate();
+    v8::TryCatch try_catch(isolate);
+    v8::Local<v8::Value> parsed =
+»       FromJSONString(Resolver()->GetScriptState(), string);
+    if (try_catch.HasCaught()) {
+      Resolver()->Reject(try_catch.Exception());
+      return;
+    }
+»   ResolveLater<ResolveType>(
+        WrapPersistent(WrapDisallowNew(ScriptValue(isolate, parsed))));
+  }
+};</script>
+
+<script src="../assets/reading.js?v=8ff78d5c"></script>
+<script src="wire-model.js?v=b4128530"></script>
+<script src="captured.js?v=6523d196"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+  /* ---- source blocks ---- */
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|\b(if|else|return|const|bool|int|void|struct|static|constexpr|for|auto|class|public|override|std|using|true|false|nullptr)\b|\b([A-Za-z_]\w*)(?=\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+  if(typeof CAPTURED==="undefined"||typeof Wire==="undefined")return;
+  var C=CAPTURED;
+
+  /* ---- replay ---- */
+  var STG=[["js","Our code","st-js"],["cors","CORS","st-cors"],["request","Request","st-http"],["dns","DNS","st-dns"],["tcp","TCP","st-tcp"],["tls","TLS","st-tls"],["http","HTTP","st-http"],["body","Body","st-js"]];
+  var SCLS={};STG.forEach(function(s){SCLS[s[0]]=s[2]});
+  var TL=C.timeline,maxT=TL.reduce(function(a,e){return Math.max(a,e.t)},1),ri=-1,rTimer=null;
+  $("rpStages").innerHTML=STG.map(function(s){return '<div class="stg '+s[2]+'" data-s="'+s[0]+'"><b>'+s[1]+'</b><span></span></div>'}).join("");
+  $("rpList").innerHTML=TL.map(function(e,i){return '<button type="button" class="'+SCLS[e.stage]+'" data-i="'+i+'"><span class="sn">'+e.t+' ms</span><span>'+esc(e.stage.toUpperCase())+'</span><span>'+esc(e.label)+'</span></button>'}).join("");
+  [].forEach.call($("rpList").querySelectorAll("button"),function(b){b.onclick=function(){stopR();ri=+b.getAttribute("data-i");drawR()}});
+  function drawR(){
+    $("rpCtr").textContent=(ri+1)+" / "+TL.length;
+    var seen={};for(var k=0;k<=ri;k++)seen[TL[k].stage]=1;
+    [].forEach.call($("rpStages").children,function(d){var s=d.getAttribute("data-s");d.classList.toggle("on",ri>=0&&TL[ri].stage===s);d.classList.toggle("done",!!seen[s]&&!(ri>=0&&TL[ri].stage===s))});
+    if(ri<0){$("rpStages").firstChild.classList.add("on");$("rpCard").className="evcard st-js";$("rpCard").innerHTML='<div class="evh"><b>Our page calls fetch()</b><span class="ms">before t = 0</span></div><p>Blink built a ResourceRequest and sent it over Mojo to the network service. Press Next to follow it there.</p>';$("rpClock").style.width="0";}
+    else{var e=TL[ri];$("rpClock").style.width=(100*e.t/maxT)+"%";
+      var pj=Object.keys(e.params||{}).length?'<pre>'+esc(JSON.stringify(e.params,null,1))+'</pre>':"";
+      $("rpCard").className="evcard "+SCLS[e.stage];
+      $("rpCard").innerHTML='<div class="evh"><span class="ms">t = '+e.t+' ms</span><b>'+esc(e.label)+'</b><code>'+esc(e.event)+(e.phase?" "+e.phase:"")+'</code></div><p>'+esc(e.text)+'</p>'+pj;}
+    [].forEach.call($("rpList").children,function(b,i){b.classList.toggle("cur",i===ri);b.classList.toggle("past",i<ri)});
+    var cur=$("rpList").children[ri];if(cur){var L=$("rpList");if(cur.offsetTop<L.scrollTop||cur.offsetTop>L.scrollTop+L.clientHeight-30)L.scrollTop=cur.offsetTop-40}
+  }
+  function stopR(){if(rTimer){clearInterval(rTimer);rTimer=null;$("rpPlay").textContent="▶ Play"}}
+  $("rpNext").onclick=function(){stopR();if(ri<TL.length-1){ri++;drawR()}};
+  $("rpPrev").onclick=function(){stopR();if(ri>-1){ri--;drawR()}};
+  $("rpReset").onclick=function(){stopR();ri=-1;drawR()};
+  $("rpPlay").onclick=function(){if(rTimer){stopR();return}if(ri>=TL.length-1)ri=-1;$("rpPlay").textContent="❚❚ Pause";rTimer=setInterval(function(){if(ri>=TL.length-1){stopR();return}ri++;drawR()},1100)};
+  drawR();
+
+  /* ---- byte dissectors ---- */
+  var SOURCES={
+    dnsq:{label:"DNS query (34 B)",make:function(){return Wire.dns(C.dns.query)},note:"Sent by glibc to UDP port 53 of our DNS server."},
+    dnsr:{label:"DNS answer (50 B)",make:function(){return Wire.dns(C.dns.response)},note:"Our server's reply: the question echoed, plus one A record."},
+    ch:{label:"ClientHello ("+(C.clientHello.length/2)+" B)",make:function(){return Wire.tls(C.clientHello)},note:"The first bytes Chrome wrote to the TCP connection (NetLog SOCKET_BYTES_SENT)."},
+    sh:{label:"Server's first flight ("+(C.serverFlight.length/2)+" B)",make:function(){return Wire.tls(C.serverFlight)},note:"ServerHello in plaintext, a ChangeCipherSpec, then four encrypted records (EncryptedExtensions, Certificate, CertificateVerify, Finished)."}
+  };
+  [].forEach.call(document.querySelectorAll(".dissector"),function(host){
+    var tabs=host.getAttribute("data-tabs").split(",");
+    host.innerHTML='<div class="tabs">'+tabs.map(function(t){return '<button type="button" data-t="'+t+'">'+esc(SOURCES[t].label)+'</button>'}).join("")+'</div><p class="muted dnote" style="font-size:.82rem;margin:0"></p><div class="dis"><div class="hexbox" tabindex="0" aria-label="Bytes"></div><div class="fields" aria-label="Fields"></div></div><div class="disinfo" aria-live="polite">Click a field to light up its bytes, or click a byte to find its field.</div>';
+    var hexEl=host.querySelector(".hexbox"),fEl=host.querySelector(".fields"),info=host.querySelector(".disinfo"),D=null,cells=[];
+    function show(t){
+      [].forEach.call(host.querySelectorAll(".tabs button"),function(b){b.classList.toggle("sel",b.getAttribute("data-t")===t)});
+      host.querySelector(".dnote").textContent=SOURCES[t].note;
+      D=SOURCES[t].make();var b=D.bytes,owner=[];
+      D.fields.forEach(function(f,i){if(f.group)return;for(var k=f.s;k<f.e;k++)if(owner[k]===undefined||(D.fields[owner[k]].e-D.fields[owner[k]].s)>(f.e-f.s))owner[k]=i});
+      var h="";for(var r=0;r<b.length;r+=16){h+='<div class="hexrow"><span class="off">'+("000"+r.toString(16)).slice(-4)+'</span><span>';for(var c=r;c<Math.min(r+16,b.length);c++){var o=owner[c];h+='<span class="hb f'+(o===undefined?0:o%4)+'" data-b="'+c+'">'+("0"+b[c].toString(16)).slice(-2)+'</span>'}h+='</span></div>'}
+      hexEl.innerHTML=h;cells=hexEl.querySelectorAll(".hb");
+      fEl.innerHTML=D.fields.map(function(f,i){return '<button type="button" class="fld'+(f.group?" grp":"")+'" data-f="'+i+'" style="padding-left:'+(8+f.depth*14)+'px"><span class="rng">'+f.s+'–'+(f.e-1)+'</span><span class="lb">'+esc(f.label)+'</span>'+(f.value!==""?'<span class="vl">'+esc(f.value)+'</span>':"")+'</button>'}).join("");
+      [].forEach.call(fEl.querySelectorAll(".fld"),function(btn){btn.onclick=function(){pick(+btn.getAttribute("data-f"),true)}});
+      hexEl.onclick=function(ev){var x=ev.target.closest(".hb");if(!x)return;var k=+x.getAttribute("data-b");if(owner[k]!==undefined)pick(owner[k],false,true)};
+      info.textContent="Click a field to light up its bytes, or click a byte to find its field.";
+    }
+    function pick(i,scrollHex,scrollField){
+      var f=D.fields[i];[].forEach.call(cells,function(c,k){c.classList.toggle("hi",k>=f.s&&k<f.e)});
+      [].forEach.call(fEl.querySelectorAll(".fld"),function(b){b.classList.toggle("cur",+b.getAttribute("data-f")===i)});
+      info.innerHTML='<b>'+esc(f.label)+'</b> · bytes '+f.s+' to '+(f.e-1)+' ('+(f.e-f.s)+' B)'+(f.value!==""?' · <code>'+esc(f.value)+'</code>':"")+(f.note?'<br>'+esc(f.note):"");
+      if(scrollHex&&cells[f.s]){var row=cells[f.s].parentNode.parentNode;hexEl.scrollTop=row.offsetTop-hexEl.offsetTop-20}
+      if(scrollField){var fb=fEl.querySelector('[data-f="'+i+'"]');if(fb)fEl.scrollTop=fb.offsetTop-fEl.offsetTop-30}
+    }
+    [].forEach.call(host.querySelectorAll(".tabs button"),function(b){b.onclick=function(){show(b.getAttribute("data-t"))}});
+    show(host.getAttribute("data-first"));
+  });
+
+  /* ---- HTTP viewer ---- */
+  var HV=[["get","GET request",0],["get","200 response",1],["options","OPTIONS preflight",0],["options","204 response",1],["post","POST request",0],["post","200 response",1]];
+  $("hvTabs").innerHTML=HV.map(function(h,i){return '<button type="button" data-i="'+i+'">'+esc(h[1])+'</button>'}).join("");
+  function httpHTML(text,showCrlf){
+    var head=text.split("\r\n\r\n")[0],body=text.slice(head.length+4),lines=head.split("\r\n"),out=[];
+    lines.forEach(function(l,i){var crlf=showCrlf?'<span class="crlf"> \\r\\n</span>':"";
+      if(i===0){out.push('<div class="start">'+esc(l)+crlf+'</div>');return}
+      var k=l.indexOf(":"),n=l.slice(0,k),cors=/^(origin|access-control-|timing-allow)/i.test(n);
+      out.push('<div'+(cors?' class="cors"':"")+'><span class="hn">'+esc(n)+'</span>'+esc(l.slice(k))+crlf+'</div>')});
+    out.push('<div class="crlf">'+(showCrlf?"\\r\\n  (blank line: end of headers)":"")+'</div>');
+    if(body)out.push('<div class="body">'+esc(body)+'</div>');
+    return out.join("");
+  }
+  function showHV(i){var h=HV[i],text=C.http[h[0]][h[2]];
+    [].forEach.call($("hvTabs").children,function(b,j){b.classList.toggle("sel",j===i)});
+    $("hvBox").innerHTML=httpHTML(text,true);
+    var P=Wire.http(text);
+    $("hvNote").textContent=text.length+" bytes of plaintext, from the NetLog's SSL_SOCKET_BYTES_"+(h[2]?"RECEIVED":"SENT")+" event. "+P.headers.length+" headers. Red rows are the CORS-related headers. "+(h[2]?"":"On the wire, these bytes travel inside an encrypted TLS record.");
+  }
+  [].forEach.call($("hvTabs").children,function(b){b.onclick=function(){showHV(+b.getAttribute("data-i"))}});
+  showHV(0);
+
+  /* ---- CORS lab ---- */
+  var ORIGIN="http://app.example.test:8080";
+  var PRESETS={
+    simple:{m:"GET",ct:"",x:false,a:false,c:"same-origin",o:"origin",am:"",ah:"",cc:false},
+    json:{m:"POST",ct:"application/json",x:false,a:false,c:"same-origin",o:"origin",am:"GET, POST",ah:"content-type",cc:false},
+    put:{m:"PUT",ct:"",x:false,a:false,c:"same-origin",o:"origin",am:"GET, POST",ah:"",cc:false},
+    cred:{m:"GET",ct:"",x:false,a:false,c:"include",o:"*",am:"",ah:"",cc:true},
+    auth:{m:"DELETE",ct:"",x:false,a:true,c:"same-origin",o:"origin",am:"*",ah:"*",cc:false}
+  };
+  function setP(p){$("clM").value=p.m;$("clCT").value=p.ct;$("clX").checked=p.x;$("clA").checked=p.a;$("clC").value=p.c;$("sO").value=p.o;$("sM").value=p.am;$("sH").value=p.ah;$("sC").checked=p.cc;runC()}
+  function runC(){
+    var h={};if($("clCT").value)h["Content-Type"]=$("clCT").value;if($("clX").checked)h["X-Requested-With"]="fetch";if($("clA").checked)h["Authorization"]="Bearer abc123";
+    var req={method:$("clM").value,headers:h,credentials:$("clC").value};
+    var srv={acao:$("sO").value||null,acam:$("sM").value||null,acah:$("sH").value||null,acac:$("sC").checked};
+    var r=Wire.cors(req,srv,{strict:$("clS").checked});
+    var v=$("clV");v.className="verdict "+(r.ok?"ok":"bad");
+    v.textContent=r.ok?"✓ fetch() resolves and our script can read the response"+(r.preflight?" (after a preflight)":""):"✗ TypeError: Failed to fetch. "+(r.preflight&&/^Preflight/.test(r.steps[r.steps.length-1].t)?"The real request was never sent.":"The server did receive and answer the request.");
+    $("clSteps").innerHTML=r.steps.map(function(s){return '<li class="'+(s.k==="fail"?"fail":s.k==="ok"?"ok":s.k==="warn"?"warn":"")+'">'+esc(s.t)+'</li>'}).join("");
+    var host="api.example.test",hdrs=[];
+    if(r.preflight){
+      var pre=["OPTIONS /api/users HTTP/1.1","Host: "+host,"Accept: */*","Access-Control-Request-Method: "+req.method];
+      if(r.requestHeaders.length)pre.push("Access-Control-Request-Headers: "+r.requestHeaders.join(","));
+      pre.push("Origin: "+ORIGIN);
+      $("clPre").innerHTML=httpHTML(pre.join("\r\n")+"\r\n\r\n",false);
+    } else $("clPre").innerHTML='<div class="crlf">(none: this is a simple request)</div>';
+    var preFailed=r.preflight&&!r.ok&&/^Preflight fails/.test(r.steps[r.steps.length-1].t);
+    if(preFailed){$("clReq").innerHTML='<div class="crlf">(never sent: the preflight failed)</div>'}
+    else{var q=[req.method+" /api/users HTTP/1.1","Host: "+host];Object.keys(h).forEach(function(k){q.push(k+": "+h[k])});q.push("Origin: "+ORIGIN);if(req.credentials==="include")q.push("Cookie: session=… (if we have cookies for the API)");$("clReq").innerHTML=httpHTML(q.join("\r\n")+"\r\n\r\n",false)}
+  }
+  ["clM","clCT","clX","clA","clC","sO","sM","sH","sC","clS"].forEach(function(id){$(id).addEventListener("change",runC)});
+  [].forEach.call(document.querySelectorAll("#cl [data-p]"),function(b){b.onclick=function(){setP(PRESETS[b.getAttribute("data-p")])}});
+  setP(PRESETS.json);
+
+  /* ---- timing waterfall ---- */
+  var T0=C.timing[0],T1=C.timing[1],end=Math.max(T0.responseEnd,T1.responseEnd),beg=T0.startTime;
+  function row(name,a,b,cls){var w=Math.max(0,b-a);return '<div class="wfrow '+cls+'"><span class="nm">'+name+'</span><span class="tr"><span class="bar" style="left:'+(100*(a-beg)/(end-beg))+'%;width:'+(100*w/(end-beg))+'%"></span></span><span class="v">'+w.toFixed(1)+' ms</span></div>'}
+  $("wf").innerHTML='<div class="stagehead">fetch 1 · GET</div>'+
+    row("queued",T0.startTime,T0.domainLookupStart,"st-js")+row("DNS",T0.domainLookupStart,T0.domainLookupEnd,"st-dns")+row("TCP",T0.connectStart,T0.secureConnectionStart,"st-tcp")+row("TLS",T0.secureConnectionStart,T0.connectEnd,"st-tls")+row("request → 1st byte",T0.requestStart,T0.responseStart,"st-http")+row("download",T0.responseStart,T0.responseEnd,"st-http")+
+    '<div class="stagehead" style="margin-top:6px">fetch 2 · POST (connection reused)</div>'+
+    row("DNS + TCP + TLS",T1.domainLookupStart,T1.connectEnd,"st-dns")+row("preflight + wait",T1.connectEnd,T1.requestStart,"st-cors")+row("request → 1st byte",T1.requestStart,T1.responseStart,"st-http")+row("download",T1.responseStart,T1.responseEnd,"st-http");
+})();
+</script>
+<script src="../assets/root-kit.js?v=076d2a97"></script>
+</body>
+</html>

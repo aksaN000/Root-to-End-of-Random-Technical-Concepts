@@ -1,0 +1,9 @@
+<!doctype html><meta charset="utf-8"><title>app</title>
+<script>
+window.result=(async()=>{
+  const r1=await fetch('https://api.example.test/api/users');const users=await r1.json();
+  const r2=await fetch('https://api.example.test/api/users',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:'Grace'})});await r2.text();
+  const entries=performance.getEntriesByType('resource').map(e=>e.toJSON());
+  return {users,status1:r1.status,status2:r2.status,entries};
+})();
+</script>
