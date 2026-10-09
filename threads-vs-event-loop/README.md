@@ -1,6 +1,6 @@
 # One core, two ways to wait
 
-A root-to-end companion to my CSE321 (Operating Systems) Theory Assignment 01, *A Comparative Analysis of Multi-Threading and Event-Driven Concurrency*. The report compares the two models at the level of ideas; this page traces both down to the kernel code they are built on.
+A root-to-end companion to our CSE321 (Operating Systems) Theory Assignment 01, *A Comparative Analysis of Multi-Threading and Event-Driven Concurrency*. The report compares the two models at the level of ideas; this page traces both down to the kernel code they are built on.
 
 ## What it covers
 
@@ -8,7 +8,7 @@ A root-to-end companion to my CSE321 (Operating Systems) Theory Assignment 01, *
 2. **Two echo servers**: the same server written thread-per-connection and with epoll.
 3. **What a thread is**: the `clone` flags in glibc's `create_thread()`.
 4. **The context switch**: `context_switch()` in `kernel/sched/core.c`, with `switch_mm_irqs_off` and `switch_to`.
-5. **Races and mutexes**: glibc's futex lock (`__lll_lock`, `__lll_lock_wait`), plus a step-through race simulator where you act as the scheduler.
+5. **Races and mutexes**: glibc's futex lock (`__lll_lock`, `__lll_lock_wait`), plus a step-through race simulator where we act as the scheduler.
 6. **How the loop is woken**: `ep_poll_callback` and libuv's `uv__io_poll`.
 7. **One-core timeline simulator**: the same requests through both models (I/O-bound, CPU-bound, head-of-line blocking).
 8. **Scale model**: what 10,000 connections cost in each model.

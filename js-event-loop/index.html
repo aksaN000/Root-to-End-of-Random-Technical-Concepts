@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
-/* Layout: a two-column source-trace. Left rail is a live call stack (root frame at the bottom, your JS at the top); right column walks the same frames from root to end. */
+/* Layout: a two-column source-trace. Left rail is a live call stack (root frame at the bottom, our JS at the top); right column walks the same frames from root to end. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
@@ -157,8 +157,8 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <nav class="rail" aria-label="Sections as a call stack">
   <div class="lbl"><span>Call stack</span><span>top = newest</span></div>
   <ol class="frames" id="frames">
-    <li><a href="#os"><b>The OS gives you a process</b>kernel · CreateProcess / fork</a></li>
-    <li><a href="#processes"><b>Chrome's processes and threads</b>which thread is your tab</a></li>
+    <li><a href="#os"><b>The OS gives us a process</b>kernel · CreateProcess / fork</a></li>
+    <li><a href="#processes"><b>Chrome's processes and threads</b>which thread is our tab</a></li>
     <li><a href="#launch"><b>Launching a renderer</b>wWinMain → ContentMain</a></li>
     <li><a href="#renderermain"><b>RendererMain</b>the line that starts the loop</a></li>
     <li><a href="#loop"><b>Inside run_loop.Run()</b>MessagePumpDefault::Run</a></li>
@@ -166,9 +166,9 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#io"><b>The IO thread wakes it</b>Chrome_ChildIOThread</a></li>
     <li><a href="#v8"><b>V8: .then() and microtasks</b>PerformPromiseThen</a></li>
     <li><a href="#trace"><b>Full trace, step by step</b>JS + C++ stacks together</a></li>
-    <li><a href="#react"><b>Where React fits</b>your useEffect</a></li>
+    <li><a href="#react"><b>Where React fits</b>our useEffect</a></li>
     <li><a href="#node"><b>Node.js is different</b>uv_run</a></li>
-    <li><a href="#try"><b>See it on your machine</b>tools and exercises</a></li>
+    <li><a href="#try"><b>See it on our machine</b>tools and exercises</a></li>
   </ol>
   <div class="base">— bottom: CPU / kernel</div>
 </nav>
@@ -177,7 +177,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <header class="hero">
   <span class="eyebrow">A root-to-end trace through real Chromium, V8 and libuv source</span>
   <h1>From the power button to <code>.then()</code></h1>
-  <p class="lede">You know processes, threads, syscalls and scheduling. This page uses exactly those ideas to follow one <code>fetch().then()</code> through the actual code that runs it: the process that hosts your React tab, the C++ thread that runs your JavaScript, the exact line that starts its event loop, the system call it sleeps in, and the V8 builtin that queues your callback.</p>
+  <p class="lede">We already know processes, threads, syscalls and scheduling. This page uses exactly those ideas to follow one <code>fetch().then()</code> through the actual code that runs it: the process that hosts our React tab, the C++ thread that runs our JavaScript, the exact line that starts its event loop, the system call it sleeps in, and the V8 builtin that queues our callback.</p>
   <div class="chain" aria-label="The call chain this page follows">
     <a href="#os">kernel</a><span>→</span>
     <a href="#launch">wWinMain</a><span>→</span>
@@ -188,7 +188,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#loop">MessagePumpDefault::Run</a><span>→</span>
     <a href="#loop">DoWork</a><span>→</span>
     <a href="#v8">V8</a><span>→</span>
-    <a href="#trace" class="you">your callback</a>
+    <a href="#trace" class="you">our callback</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#os">OS</a><a href="#processes">Processes</a><a href="#launch">Launch</a><a href="#renderermain">RendererMain</a><a href="#loop">Loop</a><a href="#sleep">Sleep</a><a href="#io">IO thread</a><a href="#v8">V8</a><a href="#trace">Trace</a><a href="#react">React</a><a href="#node">Node</a><a href="#try">Try it</a>
@@ -199,8 +199,8 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="os">
   <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>The OS gives Chrome a process</h2></div>
   <div class="prose">
-    <p>Everything starts the way any program does. When you launch Chrome, the kernel creates a process: a fresh virtual address space, a handle table, and one thread whose instruction pointer starts at the executable's entry point. On Windows that entry point is <code>wWinMain</code> in <code>chrome.exe</code>. Nothing about events, promises or JavaScript exists at this point.</p>
-    <p>Chrome then becomes many processes. It does this with the same primitives you studied: <code>CreateProcess</code> on Windows, <code>fork()</code> plus <code>execvp()</code> on Linux. The browser process launches itself again, as <code>chrome.exe --type=renderer …</code>, and the command-line flag decides which <code>main</code> the child runs.</p>
+    <p>Everything starts the way any program does. When we launch Chrome, the kernel creates a process: a fresh virtual address space, a handle table, and one thread whose instruction pointer starts at the executable's entry point. On Windows that entry point is <code>wWinMain</code> in <code>chrome.exe</code>. Nothing about events, promises or JavaScript exists at this point.</p>
+    <p>Chrome then becomes many processes. It does this with the same primitives we studied: <code>CreateProcess</code> on Windows, <code>fork()</code> plus <code>execvp()</code> on Linux. The browser process launches itself again, as <code>chrome.exe --type=renderer …</code>, and the command-line flag decides which <code>main</code> the child runs.</p>
   </div>
   <figure class="src">
     <figcaption><span class="path">base/process/launch_posix.cc · LaunchProcess()</span><span class="note">Linux/ChromeOS child launch, trimmed</span></figcaption>
@@ -210,7 +210,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 </section>
 
 <section id="processes">
-  <div class="sechead"><span class="eyebrow">Frame 1 · the layout</span><h2>Chrome's processes, and which thread is your tab</h2></div>
+  <div class="sechead"><span class="eyebrow">Frame 1 · the layout</span><h2>Chrome's processes, and which thread is our tab</h2></div>
   <div class="prose">
     <p>Each box is a separate OS process with its own address space. Inside, each item is an OS thread. The thread names are the strings Chrome passes to <code>SetName</code> or <code>base::Thread</code>. Two of them appear verbatim in the excerpts on this page: <code>CrRendererMain</code> and <code>Chrome_ChildIOThread</code>.</p>
   </div>
@@ -223,22 +223,22 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       </ul></div>
     <div class="proc"><h4>Network service</h4><div class="cmd">chrome.exe --type=utility --utility-sub-type=network.mojom.NetworkService</div>
       <ul class="thr">
-        <li><code>network.CrUtilityMain</code><span>DNS, sockets, TLS, HTTP. Your fetch() bytes arrive here</span></li>
+        <li><code>network.CrUtilityMain</code><span>DNS, sockets, TLS, HTTP. Our fetch() bytes arrive here</span></li>
       </ul></div>
     <div class="proc"><h4>GPU process</h4><div class="cmd">chrome.exe --type=gpu-process</div>
       <ul class="thr">
         <li><code>CrGpuMain</code><span>talks to the graphics driver, draws frames</span></li>
       </ul></div>
-    <div class="proc yours"><h4>Renderer process: your React tab</h4><div class="cmd">chrome.exe --type=renderer …</div>
+    <div class="proc yours"><h4>Renderer process: our React tab</h4><div class="cmd">chrome.exe --type=renderer …</div>
       <ul class="thr">
-        <li class="main"><code>CrRendererMain</code><span>Blink + V8. Your JavaScript, the DOM, layout and the event loop run here, one task at a time</span></li>
+        <li class="main"><code>CrRendererMain</code><span>Blink + V8. Our JavaScript, the DOM, layout and the event loop run here, one task at a time</span></li>
         <li><code>Chrome_ChildIOThread</code><span>receives IPC messages and posts them as tasks to the main thread</span></li>
         <li><code>Compositor</code><span>scrolling and layer compositing off the main thread</span></li>
         <li><code>ThreadPool workers</code><span>V8 background compile and GC helpers, decoding</span></li>
       </ul></div>
   </div>
-  <div class="legend"><span><i style="background:var(--trace-bg);border:1px solid var(--trace)"></i>the thread that runs your JS</span><span><i style="border:2px solid var(--accent)"></i>the process that hosts your tab</span></div>
-  <p class="callout">So "JavaScript is single-threaded" means precisely this: <b>your code only ever runs on <code>CrRendererMain</code></b>, which is one OS thread in one renderer process. The process itself has many threads. Your <code>fetch</code> is performed by a different process entirely. Web Workers get their own threads, each with its own event loop.</p>
+  <div class="legend"><span><i style="background:var(--trace-bg);border:1px solid var(--trace)"></i>the thread that runs our JS</span><span><i style="border:2px solid var(--accent)"></i>the process that hosts our tab</span></div>
+  <p class="callout">So "JavaScript is single-threaded" means precisely this: <b>our code only ever runs on <code>CrRendererMain</code></b>, which is one OS thread in one renderer process. The process itself has many threads. Our <code>fetch</code> is performed by a different process entirely. Web Workers get their own threads, each with its own event loop.</p>
 </section>
 
 <section id="launch">
@@ -262,16 +262,16 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 </section>
 
 <section id="renderermain">
-  <div class="sechead"><span class="eyebrow">Frame 3 · the answer</span><h2>The line that starts your tab's event loop</h2></div>
+  <div class="sechead"><span class="eyebrow">Frame 3 · the answer</span><h2>The line that starts our tab's event loop</h2></div>
   <div class="prose">
-    <p>This is the main thread of the renderer process. Read it top to bottom and you watch the event loop get assembled: name the thread, initialize Blink, build a scheduler around a message pump, create the <code>RenderThreadImpl</code> (which also starts the IO thread), engage the sandbox, and finally call <code>run_loop.Run()</code>.</p>
-    <p>That call does not return until the tab's process shuts down. Every task this renderer ever runs, including parsing your HTML, executing <code>main.jsx</code>, and every React render, happens <em>inside</em> it, deeper on this thread's C++ stack.</p>
+    <p>This is the main thread of the renderer process. Read it top to bottom and we watch the event loop get assembled: name the thread, initialize Blink, build a scheduler around a message pump, create the <code>RenderThreadImpl</code> (which also starts the IO thread), engage the sandbox, and finally call <code>run_loop.Run()</code>.</p>
+    <p>That call does not return until the tab's process shuts down. Every task this renderer ever runs, including parsing our HTML, executing <code>main.jsx</code>, and every React render, happens <em>inside</em> it, deeper on this thread's C++ stack.</p>
   </div>
   <figure class="src">
     <figcaption><span class="path">content/renderer/renderer_main.cc · RendererMain()</span><span class="note">trimmed</span></figcaption>
     <pre data-code="c-renderermain"></pre>
   </figure>
-  <p class="callout">Note <code>MessagePumpType::DEFAULT</code>. The renderer main thread's pump does not watch sockets or pipes itself. It sleeps on a plain event and is woken by other threads. You will see why that matters in <a href="#io">the IO thread section</a>.</p>
+  <p class="callout">Note <code>MessagePumpType::DEFAULT</code>. The renderer main thread's pump does not watch sockets or pipes itself. It sleeps on a plain event and is woken by other threads. We will see why that matters in <a href="#io">the IO thread section</a>.</p>
 </section>
 
 <section id="loop">
@@ -290,7 +290,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     </figure>
   </div>
   <div class="prose">
-    <p><code>delegate-&gt;DoWork()</code> is where a <em>task</em>, in the HTML-spec sense, actually runs. The scheduler chooses the next task from several prioritized queues (input, loading, timers, and others), runs it, then calls <code>DidRunTask</code>. The comment in the source says that last call can process microtasks. That is the microtask checkpoint you traced earlier, happening right after each task.</p>
+    <p><code>delegate-&gt;DoWork()</code> is where a <em>task</em>, in the HTML-spec sense, actually runs. The scheduler chooses the next task from several prioritized queues (input, loading, timers, and others), runs it, then calls <code>DidRunTask</code>. The comment in the source says that last call can process microtasks. That is the microtask checkpoint we traced earlier, happening right after each task.</p>
   </div>
   <figure class="src">
     <figcaption><span class="path">…/thread_controller_with_message_pump_impl.cc · DoWorkImpl()</span><span class="note">trimmed</span></figcaption>
@@ -330,13 +330,13 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <figcaption><span class="path">content/child/child_process.cc · ChildProcess()</span><span class="note">trimmed</span></figcaption>
     <pre data-code="c-iothread"></pre>
   </figure>
-  <h3>The complete wake chain for your fetch reply</h3>
+  <h3>The complete wake chain for usr fetch reply</h3>
   <div class="wake">
     <div><b>NIC → kernel</b><p>The network card raises an interrupt. The kernel's TCP stack reassembles the bytes and marks a socket readable.</p></div>
-    <div><b>network process</b><p>Its thread wakes from epoll or IOCP, reads the socket, decrypts TLS, parses HTTP, and sends the response over a Mojo pipe to your renderer.</p></div>
+    <div><b>network process</b><p>Its thread wakes from epoll or IOCP, reads the socket, decrypts TLS, parses HTTP, and sends the response over a Mojo pipe to usr renderer.</p></div>
     <div><b>Chrome_ChildIOThread</b><p>Wakes from its own epoll or IOCP wait on that pipe, decodes the Mojo message, and posts a task to the main thread's loading queue.</p></div>
     <div><b>PostTask</b><p>Enqueues the task and calls <code>ScheduleWork()</code>, then <code>event_.Signal()</code>, then <code>SetEvent</code> or a condition-variable broadcast.</p></div>
-    <div><b>CrRendererMain</b><p>Returns from <code>WaitForSingleObject</code>, goes back around <code>for (;;)</code>, and <code>DoWork</code> picks the task. The task resolves <code>p1</code>, which queues your <code>.then</code> callback as a microtask.</p></div>
+    <div><b>CrRendererMain</b><p>Returns from <code>WaitForSingleObject</code>, goes back around <code>for (;;)</code>, and <code>DoWork</code> picks the task. The task resolves <code>p1</code>, which queues our <code>.then</code> callback as a microtask.</p></div>
   </div>
 </section>
 
@@ -350,7 +350,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <pre data-code="c-then"></pre>
   </figure>
   <div class="prose">
-    <p>This is the branch you watched in the simulator. If the promise is still pending, <code>.then</code> stores a <code>PromiseReaction</code> on it, and nothing is queued. That is the "stapling" step. If the promise has already settled, it skips straight to <code>EnqueueMicrotask</code>.</p>
+    <p>This is the branch we watched in the simulator. If the promise is still pending, <code>.then</code> stores a <code>PromiseReaction</code> on it, and nothing is queued. That is the "stapling" step. If the promise has already settled, it skips straight to <code>EnqueueMicrotask</code>.</p>
   </div>
   <figure class="src">
     <figcaption><span class="path">v8/src/builtins/promise-abstract-operations.tq · PerformPromiseThenImpl</span><span class="note">trimmed</span></figcaption>
@@ -382,7 +382,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="trace">
   <div class="sechead"><span class="eyebrow">Frame 8 · everything at once</span><h2>The full trace, with both stacks visible</h2></div>
   <div class="prose">
-    <p>This is the simulator from before with one addition: the real C++ stack of <code>CrRendererMain</code> at each step, bottom frame first. Watch how your JS frames only ever appear on top of <code>DoWork</code>, and how an idle loop's stack ends in a kernel wait.</p>
+    <p>This is the simulator from before with one addition: the real C++ stack of <code>CrRendererMain</code> at each step, bottom frame first. Watch how our JS frames only ever appear on top of <code>DoWork</code>, and how an idle loop's stack ends in a kernel wait.</p>
   </div>
   <div class="sim" id="sim">
     <div class="ctl">
@@ -419,7 +419,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 </section>
 
 <section id="react">
-  <div class="sechead"><span class="eyebrow">Frame 9 · your code</span><h2>Where your React app sits in all of this</h2></div>
+  <div class="sechead"><span class="eyebrow">Frame 9 · our code</span><h2>Where our React app sits in all of this</h2></div>
   <div class="prose">
     <p>With <code>npm run dev</code>, Vite serves an <code>index.html</code> containing <code>&lt;script type="module" src="/src/main.jsx"&gt;</code>. Module scripts are deferred, so after parsing finishes, one task on <code>CrRendererMain</code> executes <code>main.jsx</code>. Inside that task, <code>createRoot(...).render(&lt;App /&gt;)</code> runs. React then schedules its work, and effects run in later turns of the same loop.</p>
     <p>A typical data-loading component maps directly onto the trace:</p>
@@ -436,7 +436,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="node">
   <div class="sechead"><span class="eyebrow">Frame 10 · contrast</span><h2>Node.js: same V8, a different loop</h2></div>
   <div class="prose">
-    <p>Node embeds the same V8, so <code>.then</code> and the microtask queue are the identical Torque code above. The task loop is different: libuv's <code>uv_run</code>, with named phases. Node runs your entire script <em>first</em> and only then spins the loop, and the loop exits by itself once <code>uv_loop_alive</code> reports nothing left to wait for. That is why a Node script ends but a tab does not.</p>
+    <p>Node embeds the same V8, so <code>.then</code> and the microtask queue are the identical Torque code above. The task loop is different: libuv's <code>uv_run</code>, with named phases. Node runs our entire script <em>first</em> and only then spins the loop, and the loop exits by itself once <code>uv_loop_alive</code> reports nothing left to wait for. That is why a Node script ends but a tab does not.</p>
   </div>
   <div class="pair">
     <figure class="src">
@@ -451,7 +451,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="tbl"><table>
     <thead><tr><th></th><th>Chrome renderer</th><th>Node.js</th></tr></thead>
     <tbody>
-      <tr><td>Loop starts</td><td>Before any JS exists (<code>run_loop.Run()</code> in RendererMain)</td><td>After your main script finishes (<code>SpinEventLoop</code>)</td></tr>
+      <tr><td>Loop starts</td><td>Before any JS exists (<code>run_loop.Run()</code> in RendererMain)</td><td>After our main script finishes (<code>SpinEventLoop</code>)</td></tr>
       <tr><td>Loop ends</td><td>When the tab's process is told to quit</td><td>When nothing is pending (<code>uv_loop_alive</code> is 0)</td></tr>
       <tr><td>Where it sleeps</td><td>Main thread waits on an event; the IO thread waits in epoll / IOCP</td><td>The main thread itself waits in epoll / kqueue / IOCP (<code>uv__io_poll</code>)</td></tr>
       <tr><td>Task order</td><td>Prioritized task queues, plus rendering</td><td>Fixed phases: timers, pending, poll, check, close</td></tr>
@@ -460,15 +460,15 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 </section>
 
 <section id="try">
-  <div class="sechead"><span class="eyebrow">Frame 11 · verify it yourself</span><h2>See these processes and threads on your own machine</h2></div>
+  <div class="sechead"><span class="eyebrow">Frame 11 · verify it ourselves</span><h2>See these processes and threads on our own machine</h2></div>
   <div class="tbl"><table>
     <thead><tr><th>What to look at</th><th>How</th></tr></thead>
     <tbody>
-      <tr><td>One process per tab or site</td><td>Chrome's own Task Manager: <code>Shift+Esc</code> on Windows/Linux. Your localhost React tab appears as its own row with a PID.</td></tr>
-      <tr><td>Why that process exists</td><td>Open <code>chrome://process-internals</code> to see the site-isolation decisions that assigned your tab its renderer.</td></tr>
+      <tr><td>One process per tab or site</td><td>Chrome's own Task Manager: <code>Shift+Esc</code> on Windows/Linux. Our localhost React tab appears as its own row with a PID.</td></tr>
+      <tr><td>Why that process exists</td><td>Open <code>chrome://process-internals</code> to see the site-isolation decisions that assigned our tab its renderer.</td></tr>
       <tr><td>The <code>--type=renderer</code> command line</td><td>Windows: Process Explorer (Sysinternals), or in PowerShell <code>Get-CimInstance Win32_Process -Filter "Name='chrome.exe'" | Select ProcessId, CommandLine</code>. Linux: <code>ps -eo pid,args | grep type=renderer</code>.</td></tr>
       <tr><td>Thread names</td><td>Windows: Process Explorer → Properties → Threads. Linux: <code>cat /proc/&lt;pid&gt;/task/*/comm</code>. Linux truncates names to 15 characters, so <code>Chrome_ChildIOThread</code> shows as <code>Chrome_ChildIOT</code>.</td></tr>
-      <tr><td>Tasks and microtasks in time</td><td>DevTools → Performance → record while your fetch runs. On the Main track, each grey <b>Task</b> bar is one <code>RunTask</code>, and <b>Run Microtasks</b> blocks appear inside them.</td></tr>
+      <tr><td>Tasks and microtasks in time</td><td>DevTools → Performance → record while our fetch runs. On the Main track, each grey <b>Task</b> bar is one <code>RunTask</code>, and <b>Run Microtasks</b> blocks appear inside them.</td></tr>
       <tr><td>The 50 ms long-task line</td><td>Any Task bar over 50 ms is marked with a red corner. That is a task that kept the <code>for (;;)</code> from coming back around.</td></tr>
     </tbody>
   </table></div>
@@ -476,7 +476,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <ol class="ex">
     <li>Predict, then run: <code>console.log(1); setTimeout(()=&gt;console.log(2)); Promise.resolve().then(()=&gt;console.log(3)); console.log(4)</code>. Name the C++ function that runs <code>3</code> before <code>2</code> can be selected.</li>
     <li>Put <code>const t = Date.now(); while (Date.now() - t &lt; 2000) {}</code> in a button's click handler, record a Performance trace, and click. Find the single 2-second Task and explain why scrolling still worked or didn't. Hint: the compositor thread.</li>
-    <li>In the Performance trace of your <code>fetch</code>, find the Task in which the response handler runs. Is it a separate Task from the one that called <code>fetch()</code>? Match it to the wake chain above.</li>
+    <li>In the Performance trace of our <code>fetch</code>, find the Task in which the response handler runs. Is it a separate Task from the one that called <code>fetch()</code>? Match it to the wake chain above.</li>
     <li>Write <code>Promise.resolve().then(function loop(){ Promise.resolve().then(loop) })</code>. Predict what happens to the page, using the rule that a checkpoint drains until the ring buffer is empty. Then check with a <code>setTimeout</code> that never fires.</li>
     <li>Run the same <code>fetch().then()</code> in Node 18+ with <code>node -e</code>. Using <code>uv_run</code>, explain why the process exits on its own after printing.</li>
   </ol>
@@ -544,7 +544,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   base::CommandLine* command_line = base::CommandLine::ForCurrentProcess();
 
 » const std::string process_type =
-»     command_line->GetSwitchValueASCII(switches::kProcessType);   // "renderer" for your tab
+»     command_line->GetSwitchValueASCII(switches::kProcessType);   // "renderer" for our tab
   // …
   // Load and launch the chrome dll. *Everything* happens inside.
   VLOG(1) << "About to load main DLL.";
@@ -1050,7 +1050,7 @@ export default function User() {
   function P(a,b,c,d,j){var o={p1:a,p2:b,p3:c,p4:d,pj:j};Object.keys(o).forEach(function(k){if(o[k]===undefined)delete o[k]});return o}
   var pend=P("pending","pending","pending","pending"),W=["network process: GET users/1"],AB=["A: start","B: end"];
   var base=[
-    {ph:0,l:-1,r:["eng","Scheduler selected a task: execute main.jsx"],c:task(["blink: execute module script main.jsx"]),s:["(module script)"],w:[],t:[],m:[],o:[],p:{},n:"The renderer has been looping since RendererMain called run_loop.Run(). DoWork selected the 'execute script' task. Your file starts running on top of a C++ stack that is already several frames deep."},
+    {ph:0,l:-1,r:["eng","Scheduler selected a task: execute main.jsx"],c:task(["blink: execute module script main.jsx"]),s:["(module script)"],w:[],t:[],m:[],o:[],p:{},n:"The renderer has been looping since RendererMain called run_loop.Run(). DoWork selected the 'execute script' task. Our file starts running on top of a C++ stack that is already several frames deep."},
     {ph:0,l:0,r:["you","Line 1"],c:script(),s:["(module script)","console.log"],w:[],t:[],m:[],o:["A: start"],p:{},n:"Ordinary synchronous JS. V8 pushes a frame, runs it, pops it."},
     {ph:0,l:1,r:["you","Line 2: fetch()"],c:script(["blink: FetchManager (C++ binding)"]),s:["(module script)","fetch"],w:W,t:[],m:[],o:["A: start"],p:P("pending"),n:"fetch is a C++ function Blink installed on window. It sends a Mojo message asking the network process to start the request, allocates p1 on the V8 heap, and returns it pending. The request now proceeds in another process."},
     {ph:0,l:2,r:["you","Line 3: .then(cb1) is called; cb1 is not"],c:script(["v8: PromisePrototypeThen","v8: PerformPromiseThenImpl"]),s:["(module script)",".then"],w:W,t:[],m:[],o:["A: start"],p:P("pending","pending"),n:"PromisePrototypeThen allocates p2 with NewJSPromise. p1 is pending, so PerformPromiseThenImpl stores a PromiseReaction holding cb1 on p1. Nothing is queued."},
@@ -1064,11 +1064,11 @@ export default function User() {
   var ok=[
     {ph:3,l:-1,r:["idle","Still blocked. Bytes arrive on another thread"],c:sleep(),s:[],w:["Chrome_ChildIOThread: Mojo message received"],t:["loading: response headers"],m:[],o:AB,p:pend,n:"The network process sent the response headers over a Mojo pipe. Chrome_ChildIOThread woke from epoll or IOCP, decoded the message and called PostTask on the main thread. PostTask calls ScheduleWork, which calls event_.Signal()."},
     {ph:0,l:-1,q:2,r:["eng","Woken. DoWork runs the network task"],c:task(["blink: fetch response handler","v8: ResolvePromise → FulfillPromise","v8: TriggerPromiseReactions → EnqueueMicrotask"]),s:["(network task)"],w:["body still streaming"],t:[],m:["cb1(response)"],o:AB,p:P("fulfilled: Response","pending","pending","pending"),n:"WaitForSingleObject returned and the for (;;) came back around. The task resolves p1: FulfillPromise sets the state to fulfilled and TriggerPromiseReactions morphs the stored reaction into a job that EnqueueMicrotask writes into the ring buffer."},
-    {ph:1,l:2,r:["you","Checkpoint runs cb1"],c:micro(["v8: PromiseReactionJob","cb1 (your arrow function)"]),s:["cb1(res)","res.json"],w:["reading body stream"],t:[],m:[],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","pending"),n:"After the task, DidRunTask drains microtasks. cb1 runs; res.json() returns a new promise pj. Because cb1 returned a promise, p2 is resolved with pj and will follow it."},
+    {ph:1,l:2,r:["you","Checkpoint runs cb1"],c:micro(["v8: PromiseReactionJob","cb1 (our arrow function)"]),s:["cb1(res)","res.json"],w:["reading body stream"],t:[],m:[],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","pending"),n:"After the task, DidRunTask drains microtasks. cb1 runs; res.json() returns a new promise pj. Because cb1 returned a promise, p2 is resolved with pj and will follow it."},
     {ph:3,l:-1,r:["idle","Blocked again"],c:sleep(),s:[],w:["network process: streaming body"],t:[],m:[],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","pending"),n:"Back in TimedWait until the rest of the body arrives."},
     {ph:0,l:-1,r:["eng","Woken. Body complete; pj fulfilled"],c:task(["blink: body loaded, JSON parsed","v8: FulfillPromise(pj)","v8: EnqueueMicrotask"]),s:["(network task)"],w:[],t:[],m:["p2 adopts pj's value"],o:AB,p:P("fulfilled: Response","pending → follows pj","pending","pending","fulfilled: {id:1, …}"),n:"The IO thread posted another task. The JSON is parsed and pj fulfills. The internal reaction that links p2 to pj is queued. The spec uses one extra job here (PromiseResolveThenableJob), simplified to one step."},
     {ph:1,l:-1,q:3,r:["eng","Checkpoint: p2 fulfilled, cb2 queued"],c:micro(["v8: PromiseReactionJob","v8: FulfillPromise(p2) → EnqueueMicrotask"]),s:["(reaction job)"],w:[],t:[],m:["cb2(data)"],o:AB,p:P("fulfilled: Response","fulfilled: {id:1, …}","pending","pending","fulfilled: {id:1, …}"),n:"Same checkpoint. Fulfilling p2 enqueues cb2 into the ring buffer that RunMicrotasks is draining, so it runs in this same drain."},
-    {ph:1,l:3,r:["you","Checkpoint runs cb2"],c:micro(["v8: PromiseReactionJob","cb2 (your arrow function)"]),s:["cb2(data)","console.log"],w:[],t:[],m:["p4 reaction"],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","pending","fulfilled: {id:1, …}"),n:"cb2 logs and returns undefined, so p3 fulfills and p3's reaction for the .catch link is queued."},
+    {ph:1,l:3,r:["you","Checkpoint runs cb2"],c:micro(["v8: PromiseReactionJob","cb2 (our arrow function)"]),s:["cb2(data)","console.log"],w:[],t:[],m:["p4 reaction"],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","pending","fulfilled: {id:1, …}"),n:"cb2 logs and returns undefined, so p3 fulfills and p3's reaction for the .catch link is queued."},
     {ph:1,l:-1,k:4,r:["eng","Checkpoint: cb3 skipped, p4 fulfilled"],c:micro(["v8: PromiseReactionJob (no handler: pass through)"]),s:["(reaction job)"],w:[],t:[],m:[],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","fulfilled: undefined","fulfilled: {id:1, …}"),n:"The reaction's onFulfilled is undefined, so the job passes the value through to p4. cb3 never runs. The ring buffer is empty, so RunMicrotasks returns."},
     {ph:3,l:-1,r:["idle","All settled. Back in the kernel wait"],c:sleep(),s:[],w:[],t:[],m:[],o:["A: start","B: end","C: Leanne Graham"],p:P("fulfilled: Response","fulfilled: {id:1, …}","fulfilled: undefined","fulfilled: undefined","fulfilled: {id:1, …}"),n:"Done. If cb2 had called a React setState, a render would follow before this sleep. The loop waits for the next click, timer or message."}
   ];
@@ -1077,13 +1077,13 @@ export default function User() {
     {ph:0,l:-1,r:["eng","Woken. p1 rejected"],c:task(["blink: fetch error handler","v8: RejectPromise","v8: TriggerPromiseReactions → EnqueueMicrotask"]),s:["(network task)"],w:[],t:[],m:["p2 reaction"],o:AB,p:P("rejected: TypeError","pending","pending","pending"),n:"RejectPromise sets the state to rejected and queues the stored reaction as a reject job."},
     {ph:1,l:-1,k:2,r:["eng","Checkpoint: cb1 skipped, p2 rejected"],c:micro(["v8: PromiseReactionJob (no onRejected)"]),s:["(reaction job)"],w:[],t:[],m:["p3 reaction"],o:AB,p:P("rejected: TypeError","rejected: TypeError","pending","pending"),n:"This link has no onRejected handler, so the rejection passes through to p2, which queues its own reaction."},
     {ph:1,l:-1,k:3,q:4,r:["eng","Checkpoint: cb2 skipped, cb3 queued"],c:micro(["v8: PromiseReactionJob (no onRejected)"]),s:["(reaction job)"],w:[],t:[],m:["cb3(err)"],o:AB,p:P("rejected: TypeError","rejected: TypeError","rejected: TypeError","pending"),n:"p3 rejects, and its reaction does have onRejected: cb3."},
-    {ph:1,l:4,r:["you","Checkpoint runs cb3"],c:micro(["v8: PromiseReactionJob","cb3 (your arrow function)"]),s:["cb3(err)","console.log"],w:[],t:[],m:[],o:["A: start","B: end","Oops: Failed to fetch"],p:P("rejected: TypeError","rejected: TypeError","rejected: TypeError","fulfilled: undefined"),n:"cb3 handles the error and returns normally, so p4 is fulfilled. Then the loop goes back to sleeping."}
+    {ph:1,l:4,r:["you","Checkpoint runs cb3"],c:micro(["v8: PromiseReactionJob","cb3 (our arrow function)"]),s:["cb3(err)","console.log"],w:[],t:[],m:[],o:["A: start","B: end","Oops: Failed to fetch"],p:P("rejected: TypeError","rejected: TypeError","rejected: TypeError","fulfilled: undefined"),n:"cb3 handles the error and returns normally, so p4 is fulfilled. Then the loop goes back to sleeping."}
   ];
   var sc="ok",i=0;
   function steps(){return base.concat(sc==="ok"?ok:fail)}
   function chips(id,arr,cls){var el=document.getElementById(id);el.innerHTML=arr.length?arr.map(function(x){return '<span class="chip '+(cls||"")+'">'+esc(x)+'</span>'}).join(""):'<span class="empty">empty</span>'}
   function pcls(v){return v.indexOf("fulfilled")===0?"f":v.indexOf("rejected")===0?"r":""}
-  var RL={you:"Your code",eng:"Engine code",idle:"Nothing running"};
+  var RL={you:"Our code",eng:"Engine code",idle:"Nothing running"};
   function draw(){
     var S=steps();i=Math.max(0,Math.min(i,S.length-1));var st=S[i];
     for(var k=0;k<4;k++)document.getElementById("ph"+k).className="ph"+(k===st.ph?" on":"");

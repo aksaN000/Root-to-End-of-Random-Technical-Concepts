@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>One Core, Two Ways to Wait</title>
-<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to your server, with simulators.">
+<meta name="description" content="Multi-threading versus event-driven concurrency, traced from the Linux kernel's schedule() through glibc's pthread and futex code and epoll to usr server, with simulators.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
 <style>
@@ -151,7 +151,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <li><a href="#sim"><b>One core, both models</b>timeline simulator</a></li>
     <li><a href="#scale"><b>At 10,000 connections</b>memory model</a></li>
     <li><a href="#notes"><b>Sharpening the report</b>precision notes</a></li>
-    <li><a href="#try"><b>Verify on your machine</b>tools and exercises</a></li>
+    <li><a href="#try"><b>Verify on our machine</b>tools and exercises</a></li>
   </ol>
   <div class="base">— bottom: CPU / kernel</div>
 </nav>
@@ -161,7 +161,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <a class="back" href="../">← Root to End</a>
   <span class="eyebrow">Companion to CSE321 Theory Assignment 01 · traced through Linux, glibc and libuv source</span>
   <h1>One core, two ways to wait: <span class="t">threads</span> and the <span class="l">event loop</span></h1>
-  <p class="lede">My report compares multi-threading with event-driven concurrency at the level of ideas. This page goes one layer down. Both models are built from the same kernel primitive, a task that marks itself asleep and calls <code>schedule()</code>, and they differ only in <em>how many</em> tasks sleep and <em>on what</em>. Everything below is real code from the Linux kernel, glibc and libuv, plus two simulators you can drive.</p>
+  <p class="lede">Our report compares multi-threading with event-driven concurrency at the level of ideas. This page goes one layer down. Both models are built from the same kernel primitive, a task that marks itself asleep and calls <code>schedule()</code>, and they differ only in <em>how many</em> tasks sleep and <em>on what</em>. Everything below is real code from the Linux kernel, glibc and libuv, plus two simulators we can drive.</p>
   <div class="chain" aria-label="The layers this page follows">
     <a href="#root">schedule()</a><span>→</span>
     <a href="#thread" class="t">clone(CLONE_VM | CLONE_THREAD …)</a><span>/</span>
@@ -169,12 +169,12 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <a href="#switch" class="t">context_switch</a><span>·</span>
     <a href="#mutex" class="t">futex</a><span>·</span>
     <a href="#loop" class="l">uv__io_poll</a><span>→</span>
-    <a href="#sim">your server</a>
+    <a href="#sim">our server</a>
   </div>
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#root">Root</a><a href="#servers">Servers</a><a href="#thread">Thread</a><a href="#switch">Switch</a><a href="#mutex">Mutex</a><a href="#loop">Loop</a><a href="#sim">Simulator</a><a href="#scale">Scale</a><a href="#notes">Notes</a><a href="#try">Try it</a>
   </nav>
-  <p class="muted" style="font-size:.86rem">Kernel, glibc and libuv excerpts were fetched from their upstream repositories in October 2026 and trimmed with <code>// …</code>. The two small servers in the second section are my own example programs. Highlighted lines are the ones each explanation hinges on.</p>
+  <p class="muted" style="font-size:.86rem">Kernel, glibc and libuv excerpts were fetched from their upstream repositories in October 2026 and trimmed with <code>// …</code>. The two small servers in the second section are our own example programs. Highlighted lines are the ones each explanation hinges on.</p>
 </header>
 
 <section id="root">
@@ -212,20 +212,20 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <pre data-code="c-srv-loop"></pre>
     </figure>
   </div>
-  <p class="callout">The left program has N+1 kernel tasks for N clients, each with its own stack, and the kernel's scheduler decides who runs. The right program has one task, and <b>your loop</b> decides who runs, by the order in which it handles ready events. That is the whole architectural difference. The rest of this page follows each side down to the kernel code that pays for it.</p>
+  <p class="callout">The left program has N+1 kernel tasks for N clients, each with its own stack, and the kernel's scheduler decides who runs. The right program has one task, and <b>our loop</b> decides who runs, by the order in which it handles ready events. That is the whole architectural difference. The rest of this page follows each side down to the kernel code that pays for it.</p>
 </section>
 
 <section id="thread">
   <div class="sechead"><span class="eyebrow">Frame 2 · threads</span><h2>What <code>pthread_create</code> actually asks the kernel for</h2></div>
   <div class="claim"><b>From the report, §2.1</b>Threads in a process share the address space, file descriptors and globals, but each has its own program counter, registers and stack.</div>
   <div class="prose">
-    <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what your report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.</p>
+    <p>On Linux there is no separate "thread" object in the kernel. A thread is a task created by <code>clone</code> with flags saying which resources to share with its creator. glibc's <code>create_thread</code> spells out exactly what our report describes: share memory (<code>CLONE_VM</code>), cwd and umask (<code>CLONE_FS</code>), file descriptors (<code>CLONE_FILES</code>) and signal handlers (<code>CLONE_SIGHAND</code>), join the same thread group so the process has one PID (<code>CLONE_THREAD</code>), and give the new task its own stack and thread-local storage.</p>
   </div>
   <figure class="src t">
     <figcaption><span class="path">glibc/nptl/pthread_create.c · create_thread()</span><span class="note">verbatim</span></figcaption>
     <pre data-code="c-clone"></pre>
   </figure>
-  <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in your §4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
+  <p class="callout">The stack passed in <code>.stack</code> is mapped by glibc with <code>mmap</code> before this call. Its default size comes from <code>RLIMIT_STACK</code>, which is usually 8 MB on Linux. That is the "8 MB per thread" in our §4.3. The kernel also allocates a separate kernel stack for every task (16 KB on x86-64). Both appear in the <a href="#scale">scale model</a> below.</p>
 </section>
 
 <section id="switch">
@@ -238,7 +238,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <figcaption><span class="path">linux/kernel/sched/core.c · context_switch()</span><span class="note">trimmed</span></figcaption>
     <pre data-code="c-ctxsw"></pre>
   </figure>
-  <p class="callout">An event loop never reaches this function to move between clients. Switching from one client to another is just your loop calling a different handler: a function call on the same stack. That is where "no context switches within the loop" in your Table 1 comes from.</p>
+  <p class="callout">An event loop never reaches this function to move between clients. Switching from one client to another is just our loop calling a different handler: a function call on the same stack. That is where "no context switches within the loop" in our Table 1 comes from.</p>
 </section>
 
 <section id="mutex">
@@ -263,7 +263,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <button type="button" id="rMutex">Mutex: off</button>
       <button type="button" id="rBad">Play the losing interleaving</button>
       <button type="button" id="rReset">Reset</button>
-      <span class="muted" style="font-size:.84rem">or step manually: you are the scheduler</span>
+      <span class="muted" style="font-size:.84rem">or step manually: we are the scheduler</span>
     </div>
     <div class="race">
       <div class="th" id="T1"></div>
@@ -283,8 +283,8 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="sechead"><span class="eyebrow">Frame 5 · event loop</span><h2>How a single <code>epoll_wait</code> learns about N sockets</h2></div>
   <div class="claim"><b>From the report, §3.1</b>Node.js's event loop is built on libuv, which hides platform features like Linux's <code>epoll</code>, macOS's <code>kqueue</code> and Windows I/O completion ports.</div>
   <div class="prose">
-    <p>When you <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.</p>
-    <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs your JavaScript callback.</p>
+    <p>When we <code>epoll_ctl(ADD)</code> a socket, the kernel hooks a callback, <code>ep_poll_callback</code>, onto that socket's own wait queue: the same queue a blocked <code>read()</code> would sleep on. When a packet arrives and the TCP stack wakes the socket's queue, this callback runs instead of waking a thread. It appends the socket to the epoll instance's <b>ready list</b> and wakes the one task sleeping in <code>ep_poll</code>.</p>
+    <p>libuv's <code>uv__io_poll</code> is the user-space side: call <code>epoll_pwait</code>, then loop over the returned events and dispatch each to its watcher. In Node, that dispatch eventually runs our JavaScript callback.</p>
   </div>
   <div class="pair">
     <figure class="src l">
@@ -296,7 +296,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <pre data-code="c-uvpoll"></pre>
     </figure>
   </div>
-  <p class="callout">Note what is <em>not</em> here: no per-connection thread and no per-connection stack. The per-connection kernel state is an <code>epitem</code> on a list. What a connection costs in an event loop is that small kernel record plus whatever your callback closures hold. The full path from <code>epoll_wait</code> up through V8's microtask queue is traced on the <a href="../js-event-loop/">event-loop page</a>.</p>
+  <p class="callout">Note what is <em>not</em> here: no per-connection thread and no per-connection stack. The per-connection kernel state is an <code>epitem</code> on a list. What a connection costs in an event loop is that small kernel record plus whatever our callback closures hold. The full path from <code>epoll_wait</code> up through V8's microtask queue is traced on the <a href="../js-event-loop/">event-loop page</a>.</p>
 </section>
 
 <section id="sim">
@@ -316,7 +316,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <label for="q">Time slice <input type="range" id="q" min="1" max="10" step="1" value="3"><output id="qo">3 ms</output></label>
       <label for="cs">Switch cost <input type="range" id="cs" min="0" max="1" step="0.1" value="0.3"><output id="cso">0.3 ms</output></label>
     </div>
-    <p class="muted" style="font-size:.84rem">The switch cost is drawn about 100 times larger than reality (a real switch costs microseconds) so you can see it on a millisecond axis. Set it to 0 to compare pure scheduling order.</p>
+    <p class="muted" style="font-size:.84rem">The switch cost is drawn about 100 times larger than reality (a real switch costs microseconds) so we can see it on a millisecond axis. Set it to 0 to compare pure scheduling order.</p>
     <div class="metrics" id="metrics"></div>
     <div class="gantt" id="gantt"></div>
     <div class="legend">
@@ -354,13 +354,13 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <div class="note"><div class="said">The kernel saves registers into the process control block (PCB).</div><div class="fix">Linux has no structure called a PCB. On a switch, user registers are already saved on the task's kernel stack (from the system call or interrupt entry), and <code>switch_to</code> saves the stack pointer and callee-saved state into <code>task_struct</code> (its <code>thread</code> field). "PCB" is the textbook name for the role <code>task_struct</code> plays.</div></div>
     <div class="note"><div class="said">If the threads belong to different processes, the TLB may need to be flushed.</div><div class="fix">On modern x86 with PCID, switching address spaces usually does not flush the TLB; entries are tagged with an address-space ID. Switching between two threads of the same process skips <code>switch_mm</code>'s real work entirely, because both share one <code>mm_struct</code>.</div></div>
     <div class="note"><div class="said">Event-driven code has no race conditions on in-process data.</div><div class="fix">There are no data races, since only one callback runs at a time, but there are still <b>logical</b> races. Any state read before an <code>await</code> can be changed by another callback before execution resumes, for example a check-then-act on a balance across an <code>await db.query()</code>.</div></div>
-    <div class="note"><div class="said">fs.readFile hands the request to a thread pool or the kernel's asynchronous I/O facility.</div><div class="fix">On Linux, libuv performs regular file I/O on its worker thread pool (4 threads by default, <code>UV_THREADPOOL_SIZE</code>), because epoll cannot report readiness for regular files. Newer libuv versions can use io_uring for some file operations. Sockets, by contrast, go through epoll. So a Node process is never truly single-threaded; only your JavaScript is.</div></div>
-    <div class="note"><div class="said">A context switch typically costs between one and ten microseconds.</div><div class="fix">The direct cost of a thread switch within one process is often around a microsecond or less. The larger cost is the indirect one the report mentions: cold caches and branch predictors afterwards. Measure it yourself with <code>perf bench sched pipe</code> (exercise 3).</div></div>
+    <div class="note"><div class="said">fs.readFile hands the request to a thread pool or the kernel's asynchronous I/O facility.</div><div class="fix">On Linux, libuv performs regular file I/O on its worker thread pool (4 threads by default, <code>UV_THREADPOOL_SIZE</code>), because epoll cannot report readiness for regular files. Newer libuv versions can use io_uring for some file operations. Sockets, by contrast, go through epoll. So a Node process is never truly single-threaded; only our JavaScript is.</div></div>
+    <div class="note"><div class="said">A context switch typically costs between one and ten microseconds.</div><div class="fix">The direct cost of a thread switch within one process is often around a microsecond or less. The larger cost is the indirect one the report mentions: cold caches and branch predictors afterwards. Measure it ourselves with <code>perf bench sched pipe</code> (exercise 3).</div></div>
   </div>
 </section>
 
 <section id="try">
-  <div class="sechead"><span class="eyebrow">Frame 9 · verify it yourself</span><h2>See it on your own machine</h2></div>
+  <div class="sechead"><span class="eyebrow">Frame 9 · verify it ourselves</span><h2>See it on our own machine</h2></div>
   <div class="tbl"><table>
     <thead><tr><th>What to see</th><th>How (Linux or WSL2)</th></tr></thead>
     <tbody>
