@@ -2,6 +2,10 @@
 
 A root-to-end companion to our CSE321 (Operating Systems) Theory Assignment 01, *A Comparative Analysis of Multi-Threading and Event-Driven Concurrency*. The report compares the two models at the level of ideas; this page traces both down to the kernel code they are built on.
 
+## The assignment
+
+- [Our submitted report (PDF)](assignment/CSE321_Theory_Assignment_01_Report.pdf)
+
 ## What it covers
 
 1. **The common root**: a thread blocked in `read()` (`sk_wait_data`) and an event loop blocked in `epoll_wait()` (`ep_poll`) both sleep the same way and call `schedule()`.
