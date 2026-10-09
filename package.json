@@ -1,0 +1,14 @@
+{
+  "name": "root-to-end-of-random-technical-concepts",
+  "private": true,
+  "description": "Interactive simulations that trace CS concepts from the root layer to our code. This file only exists to run the checks.",
+  "scripts": {
+    "test": "node tools/run-all-checks.js",
+    "test:quick": "node tools/run-all-checks.js --quick",
+    "test:pages": "node tools/check-pages.js",
+    "test:live": "node tools/check-pages.js --live"
+  },
+  "devDependencies": {
+    "playwright": "1.56.0"
+  }
+}

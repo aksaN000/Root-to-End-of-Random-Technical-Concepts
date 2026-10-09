@@ -31,4 +31,15 @@ Each simulation is a static HTML page with a few shared files in `assets/`. Open
 - **Reading markers** in the text, **quizzes**, **exam-style questions** with model answers, and a reading list.
 - A **"Tell us" link** on every section to report a mistake or something unclear.
 
+## Check our claims
+
+Every simulator is verified against the real system it models (Node's V8, Chrome's HTML parser, real Chromium's CORS decisions, the Dragon Book, GNU Bison, scapy). To rerun all of it:
+
+```bash
+npm install && npx playwright install chromium && pip install scapy
+npm test
+```
+
+[TESTING.md](TESTING.md) explains each check, how to test in your own browser with no install, and how to recapture the raw data.
+
 How pages are written and built is in [STYLE.md](STYLE.md). Found a mistake? [Report it](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml). Want a topic? [Suggest it](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml).

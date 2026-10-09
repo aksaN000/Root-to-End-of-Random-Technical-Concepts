@@ -1,4 +1,4 @@
-const {chromium}=require('/opt/npm-tools/node_modules/playwright');const fs=require('fs'),http=require('http');
+let chromium;try{chromium=require('playwright').chromium}catch(e){chromium=require('/opt/npm-tools/node_modules/playwright').chromium}const fs=require('fs'),http=require('http');
 const srv=http.createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end(fs.readFileSync(__dirname+'/page.html'))}).listen(8099);
 const CATS=['devtools.timeline','disabled-by-default-devtools.timeline','blink','loading','v8.execute','disabled-by-default-devtools.timeline.frame'];
 (async()=>{const env=Object.fromEntries(Object.entries(process.env).filter(([k])=>!/proxy/i.test(k)));

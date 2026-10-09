@@ -74,6 +74,7 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 
 ## Before publishing a page
 
+0. Add the page's verify scripts to `tools/run-all-checks.js` (`tools/check-pages.js` finds every page by itself). Run `npm test`; everything must PASS (SKIP is only for missing tools, with a reason).
 0. Run `python3 tools/stamp-assets.py`. It adds a content hash (`?v=1a2b3c4d`) to every local CSS and JS link. GitHub Pages lets browsers cache files for 10 minutes, so without it a browser can pair a new page with an old stylesheet.
 1. jsdom smoke test: no script errors, footnotes, quizzes and exam questions render.
 2. Playwright screenshots at 1300 px and 390 px, light and dark; no horizontal scroll.
@@ -82,6 +83,7 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 
 ## Changelog
 
+- **2026-10-09**: One command for all checks (`npm test` → `tools/run-all-checks.js`), a page checker for local, live and other browsers (`tools/check-pages.js`), a Dragon Book and Bison check for the LR page, and `TESTING.md`.
 - **2026-10-09**: Browser track page 2 (`html-to-pixels`). New rules: live in-browser checks, and cross-checking against numbers the real system reports.
 - **2026-10-09**: Added the Browser track and its first page (`fetch-to-the-wire`). New rules: real captures with reproducible scripts in `data/`, teach model-versus-reality differences found in the source, tracks. Inline code in the lede, 60-second box and exam questions now wraps on phones.
 - **2026-10-09**: Versioned asset links (`tools/stamp-assets.py`) and fallback attributes on diagrams, after a cached old stylesheet made the new diagrams render as large black shapes.

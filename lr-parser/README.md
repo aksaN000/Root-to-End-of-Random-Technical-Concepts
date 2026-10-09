@@ -16,4 +16,4 @@ An LR parser built in front of us from any grammar we type, then compared with a
 
 ## Verification
 
-`lr-engine.js` reproduces the Dragon Book's (2nd ed.) twelve states, SLR table (Fig. 4.37) and moves for `id * id + id` (Fig. 4.38). All Bison output on the page comes from GNU Bison 3.8.2.
+`node verify/check-dragon-book.js` checks every ACTION and GOTO cell against Fig. 4.37, the moves against Fig. 4.38, the conflicts the page teaches, and (if installed) GNU Bison's own conflict reports. `lr-engine.js` reproduces the Dragon Book's (2nd ed.) twelve states, SLR table (Fig. 4.37) and moves for `id * id + id` (Fig. 4.38). All Bison output on the page comes from GNU Bison 3.8.2.

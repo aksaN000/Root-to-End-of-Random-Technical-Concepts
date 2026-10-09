@@ -1,0 +1,106 @@
+# Testing Root to End
+
+Every page makes claims about real systems: what V8 emits, what Chrome parses, how CORS decides. This guide shows how anyone can check those claims, from a five-minute look in a browser to rerunning every verification and recapturing the raw data.
+
+## 1. No install: test it in your browser (5 minutes)
+
+Open the site: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/
+
+Two pages check themselves against **your** browser while you use them:
+
+| Page | What to do | What it proves |
+|---|---|---|
+| [Event loop](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/#playground) | Write any code in the playground (or pick an example) and wait a second | The bar under the playground runs the same code in a Web Worker with your browser's real JavaScript engine and says whether the output matches the model |
+| [HTML to pixels](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/#lab) | Type any HTML in the parser lab and press **Check against this browser** | Your browser's own HTML parser builds the tree, and the page compares it with the model's tree |
+
+Try to break them. Odd inputs are the most useful: misnested tags, unusual entities, chains of `await`.
+
+A quick checklist for any page:
+
+- [ ] The 60-second version and its diagram look right (in light and dark mode).
+- [ ] Each lab responds: step forward and back, try the presets, type your own input.
+- [ ] Quizzes show an explanation after you answer; exam questions open their model answers.
+- [ ] The numbered reading markers open, and the links work.
+- [ ] On a phone, nothing scrolls sideways and everything can be tapped.
+- [ ] Anything wrong or unclear? Use the **"Tell us"** link at the end of that section. It opens a GitHub issue that already names the page and section.
+
+The most valuable help right now: **Firefox, Safari, and real phones.** All automated tests run in Chromium.
+
+## 2. Run every check (about a minute)
+
+Requirements:
+
+- [Git](https://git-scm.com/) and [Node.js 22](https://nodejs.org/). The V8 bytecode check needs Node 22 exactly, because bytecode differs between V8 versions; with another version that one check is skipped.
+- Python 3 with scapy for the packet dissector check: `pip install scapy`
+- Optional: [GNU Bison](https://www.gnu.org/software/bison/) for two extra LR checks.
+
+```bash
+git clone https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts.git
+cd Root-to-End-of-Random-Technical-Concepts
+npm install                          # installs Playwright (the only dependency)
+npx playwright install chromium      # downloads the browser Playwright drives
+pip install scapy
+npm test
+```
+
+On Windows, run the same commands in PowerShell or WSL. Anything that cannot run on your machine is reported as **SKIP** with the reason, never silently ignored.
+
+Expected summary:
+
+```
+PASS V8 bytecode model vs this Node's V8
+PASS LR engine vs Dragon Book tables (and Bison if installed)
+PASS Event-loop playground vs Node
+PASS DNS/TLS byte dissectors vs scapy
+PASS CORS model vs real Chromium (2,880 cases)
+PASS HTML parser model vs real Chrome
+PASS Every page loads cleanly (desktop and phone width)
+
+7 passed, 0 failed, 0 skipped
+```
+
+Other commands:
+
+| Command | What it does |
+|---|---|
+| `npm run test:quick` | Same checks with fewer random cases |
+| `npm run test:pages` | Only the page checks, on your local copy |
+| `npm run test:live` | The page checks against the published site |
+| `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
+
+### What each check compares
+
+| Check | Our code | Compared with | Script |
+|---|---|---|---|
+| V8 bytecode | `v8-pipeline/v8-model.js` | `node --print-bytecode` on random expressions, byte for byte | `v8-pipeline/verify/compare-with-node.js [count] [seed]` |
+| LR parsing | `lr-parser/lr-engine.js` | Dragon Book 2nd ed. Fig. 4.37 (every table cell) and Fig. 4.38 (every move); GNU Bison's conflict reports | `lr-parser/verify/check-dragon-book.js` |
+| Event loop | `js-event-loop/loop-model.js` | Node running the same programs | `js-event-loop/verify/compare-loop-with-node.js` |
+| Packet dissectors | `fetch-to-the-wire/wire-model.js` | scapy parsing the same captured DNS and TLS bytes | `fetch-to-the-wire/verify/check-dissectors.py` |
+| CORS | `fetch-to-the-wire/wire-model.js` | Real Chromium: 2,880 combinations of request and server policy, recording whether a preflight was sent and whether `fetch()` succeeded | `fetch-to-the-wire/verify/cors-matrix.js` |
+| HTML parsing | `html-to-pixels/html-model.js` | Real Chrome's `DOMParser` on hand-picked and random HTML, compared tree by tree | `html-to-pixels/verify/compare-with-chrome.js [count] [seed]` |
+| Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes | `tools/check-pages.js [--live] [--browser=…]` |
+
+Random checks take a count and a seed, so a failure can be reproduced exactly, for example `node verify/compare-with-chrome.js 5000 123` inside `html-to-pixels/`.
+
+## 3. Recapture the raw data
+
+Captured data lives in each page's `data/` folder, together with the script that produced it.
+
+- **HTML to pixels traces**: `cd html-to-pixels/data && node trace.js`. This loads `page.html` in headless Chromium, applies the seven changes, and writes `trace-*.json`. It overwrites the committed traces; timings will differ slightly, but the stage counts (for example 20 Layout events versus 1) should not. Open a trace in DevTools → Performance → Load profile, or in [Perfetto](https://ui.perfetto.dev/).
+- **fetch() capture**: needs Linux and root, because it runs a DNS server on port 53 and a TLS server on port 443. Start `node servers.js` in `fetch-to-the-wire/data/`, point `/etc/resolv.conf` at `127.0.0.1`, run `node run.js`, then restore `/etc/resolv.conf`. It writes a new `netlog.json` (open it in the [NetLog viewer](https://netlog-viewer.appspot.com/)) and `capture.json` with the raw bytes. Key exchange and GREASE values are random per connection, so bytes will differ; structure and sizes should match.
+- **Bison outputs on the LR page** came from GNU Bison 3.8.2; `bison -v -Wcounterexamples` on the grammars shown reproduces them.
+
+## 4. If something fails
+
+1. Rerun that one script on its own. Most take a count and a seed, so the failing case can be reproduced.
+2. Check versions: Node (`node -v`), Chrome (printed by the script), Python and scapy.
+3. Open an issue with the command, its output and your versions: https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml
+
+A mismatch is not necessarily a bug in our code. When the CORS check disagreed with Chrome on 40 cases, the cause was a Chrome feature flag that leaves a spec rule unshipped, and the page now teaches that difference.
+
+## 5. What these checks do not cover
+
+- Browsers other than Chromium (help wanted; see the commands above).
+- Real phones and touch input; the 390 px check is a desktop browser made narrow.
+- Whether the explanations are clear. Only readers can test that. Please use the "Tell us" links.
+- Static source excerpts drift as upstream code changes; each page says when its excerpts were fetched.
