@@ -6,14 +6,6 @@ This is how every page in this repo is written and built. It is a living documen
 
 A CS undergraduate or graduate who already knows the basics (processes, compilers, data structures) and wants to see how a concept *actually* works, all the way down. Pages also have to work for a student revising the night before an exam, which is why each one opens with a 60-second version.
 
-## Voice
-
-- First person plural: **we, our, us**. "Our callback", "we step through it". Never "you/your" in page text. (The landing page intro is the author's own voice, "I build…".)
-- Plain, direct sentences. Define a term the first time we use it.
-- No hype words, no filler. Say what the code does.
-- Section references are written as words: "Section 4.1", "Sections 5 to 7". No § sign.
-- Precise about what is verified and what is a model.
-
 ## Page anatomy (in this order)
 
 1. **Hero**: back link "← Root to End", eyebrow (course or scope, and what it was checked against), a short H1, a lede that says where this page picks up from another page, a muted line about where the excerpts come from.
