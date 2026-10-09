@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Root to End</title>
+<meta name="description" content="Interactive simulations that trace computer science concepts from the root layer to the code you write, using real source code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@700;800&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column; each simulation is a row that reads like a stack frame, root layer on the left, your code on the right. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;padding-inline:20px;padding-block:0 64px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+header{padding-block:64px 8px;display:flex;flex-direction:column;gap:16px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2.3rem,7vw,4rem);line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.lede{max-width:62ch;color:var(--muted);font-size:1.1rem;margin:0}
+.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:12px;margin:0;padding:0;list-style:none}
+.principles li{border-top:2px solid var(--rule);padding-top:10px;font-size:.92rem;color:var(--muted)}
+.principles b{display:block;color:var(--ink);font-weight:600;font-size:.95rem}
+h2{font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
+.sim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;align-items:center;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:20px 22px}
+.sim:hover{border-color:var(--accent)}
+.sim:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.sim h3{font-family:var(--display);font-weight:800;font-size:1.45rem;margin:0;line-height:1.15}
+.sim h3 code{font-family:var(--mono);font-size:.85em;color:var(--accent)}
+.sim p{margin:6px 0 0;color:var(--muted);font-size:.95rem;max-width:60ch}
+.chain{display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:12px;font-family:var(--mono);font-size:.72rem}
+.chain span{border:1px solid var(--rule);border-radius:5px;padding:2px 7px;background:var(--bg)}
+.chain span.you{background:var(--trace-bg);border-color:var(--trace);color:var(--trace)}
+.chain i{font-style:normal;color:var(--muted)}
+.go{font-family:var(--mono);font-size:.8rem;color:var(--accent);white-space:nowrap}
+.meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.tag{font-family:var(--mono);font-size:.7rem;padding:2px 8px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+footer{font-size:.84rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:16px}
+footer a{color:var(--accent)}
+@media (max-width:560px){.sim{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="eyebrow">aksaN000 · learning in public</span>
+    <h1>Root to End of <span>Random Technical Concepts</span></h1>
+    <p class="lede">Interactive simulations I build while learning computer science. Each one starts at the lowest layer that matters and traces upward to the code I actually write, using the real source of the systems involved.</p>
+    <ul class="principles">
+      <li><b>Trace from the root</b>Kernel, compiler or protocol first; my own code last.</li>
+      <li><b>Show the real code</b>Excerpts from the actual source, trimmed and linked.</li>
+      <li><b>Make it steppable</b>Every simulation can be walked one step at a time.</li>
+    </ul>
+  </header>
+
+  <section>
+    <h2>Simulations</h2>
+    <a class="sim" href="js-event-loop/">
+      <div style="min-width:0">
+        <h3>From the power button to <code>.then()</code></h3>
+        <p>How one <code>fetch().then()</code> in a React app actually runs in Chrome: the renderer process and its threads, the line that starts the event loop, the kernel wait, and V8's microtask queue.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>kernel</span><i>→</i><span>RendererMain</span><i>→</i><span>run_loop.Run()</span><i>→</i><span>MessagePumpDefault</span><i>→</i><span>V8</span><i>→</i><span class="you">your callback</span>
+        </div>
+        <div class="meta"><span class="tag">JavaScript</span><span class="tag">Chromium</span><span class="tag">V8</span><span class="tag">event loop</span></div>
+      </div>
+      <span class="go">Open →</span>
+    </a>
+  </section>
+
+  <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>
+</main>
+</body>
+</html>

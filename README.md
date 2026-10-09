@@ -10,7 +10,7 @@ Interactive simulations I build while learning computer science, each one tracin
 
 ## How to view
 
-Each simulation is a single self-contained HTML file. Open it in a browser, or enable GitHub Pages for this repo (Settings → Pages → deploy from the `main` branch) and visit `https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/`.
+Each simulation is a single self-contained HTML file. Open it in a browser, or visit the live site: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/ (each simulation lives at its folder path, e.g. `/js-event-loop/`).
 
 ## Principles
 
