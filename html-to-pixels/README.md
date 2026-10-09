@@ -16,7 +16,7 @@ Browser track, page 2 of 3. How Chrome turns the bytes of an HTML document into 
 
 ## Verification
 
-- `node verify/compare-with-chrome.js 3000 2026` parses hand-picked and random HTML with `html-model.js` and with real Chrome's `DOMParser`, and compares the trees in html5lib format. Runs with seeds 7, 2026 and 99 gave 7,183/7,183 identical trees.
+- `node verify/compare-with-chrome.js 1000:7 3000:2026 3000:99 2000:4242` parses 61 hand-picked and 9,000 random snippets with `html-model.js` and with real Chrome's `DOMParser`, removes duplicates, and compares the trees in html5lib format: 8,929/8,929 distinct inputs identical. Latest numbers: [VALIDATION.md](../VALIDATION.md).
 - For the traced test page (450 bytes), the model's tokenizer emits 46 tokens; Chrome's `ParseHTML` trace event recorded `parsed_tokens: 46`, `parsed_bytes: 450`.
 
 The model covers the head and body insertion modes. Tables, forms, `select`, `template`, framesets, ruby and SVG/MathML have their own insertion modes; the lab says so instead of guessing.

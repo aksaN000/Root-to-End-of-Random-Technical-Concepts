@@ -23,7 +23,7 @@
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;padding-inline:20px;padding-block:0 64px}
 main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
-header{padding-block:64px 8px;display:flex;flex-direction:column;gap:16px}
+header{padding-block:48px 0;display:flex;flex-direction:column;gap:16px}
 .eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(2.3rem,7vw,4rem);line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
 h1 span{color:var(--accent)}
@@ -55,6 +55,31 @@ footer a{color:var(--accent)}
 .map .soon{border:1px dashed var(--rule);color:var(--muted);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;line-height:1.3}
 .map .soon small{font-size:.68rem}
 .maplede{font-size:.9rem;color:var(--muted);margin:0 0 12px;max-width:64ch}
+.demo{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 24px}
+.demo h2{grid-column:1/-1;margin:0}
+.demo pre{margin:0;align-self:start;font-family:var(--mono);font-size:.84rem;line-height:1.6;background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;overflow-x:auto}
+.demo pre b{font-weight:500;color:var(--accent)}
+.demo .ask{margin:0 0 8px;font-size:.95rem}
+.demo .picks{display:flex;gap:8px;flex-wrap:wrap}
+.demo button{font:inherit;font-family:var(--mono);font-size:.9rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
+.demo button:hover{border-color:var(--accent)}
+.demo button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.demo button:disabled{opacity:1;color:var(--muted);border-style:dashed;cursor:default}
+.demo .seq{font-family:var(--mono);margin:10px 0 0;min-height:1.6em}
+.demo .out{margin:8px 0 0;font-size:.92rem}
+.demo .out a{color:var(--accent)}
+.demo .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.starts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
+.starts a{display:block;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:14px 16px}
+.starts a:hover{border-color:var(--accent)}
+.starts a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.starts b{display:block;font-size:1rem}
+.starts span{display:block;color:var(--muted);font-size:.88rem;margin-top:4px}
+.starts code{font-family:var(--mono);font-size:.85em}
+.need{font-size:.84rem;color:var(--muted);margin:8px 0 0}
+.verified{font-size:.9rem;color:var(--muted);margin:0}
+.verified a{color:var(--accent)}
+@media (max-width:640px){.demo{grid-template-columns:1fr}}
 @media (max-width:560px){.sim{grid-template-columns:1fr}}
 </style>
 <!-- seo:start -->
@@ -82,6 +107,34 @@ footer a{color:var(--accent)}
     <span class="eyebrow">aksaN000 · learning in public</span>
     <h1>Root to End of <span>Random Technical Concepts</span></h1>
     <p class="lede">Interactive simulations I build while learning computer science. Each one starts at the lowest layer that matters and traces upward to the code I actually write, using the real source of the systems involved.</p>
+  </header>
+
+  <section class="demo" aria-labelledby="demo-h">
+    <h2 id="demo-h">Try one first: in what order does this print?</h2>
+    <pre tabindex="0" role="region" aria-label="Four lines of JavaScript"><b>log</b>("A");
+setTimeout(() =&gt; <b>log</b>("B"), 0);
+Promise.resolve().then(() =&gt; <b>log</b>("C"));
+<b>log</b>("D");</pre>
+    <div>
+      <p class="ask">Click the letters in the order you think they appear.</p>
+      <div class="picks" id="picks"><button type="button">A</button><button type="button">B</button><button type="button">C</button><button type="button">D</button></div>
+      <p class="seq" id="seq" aria-live="polite">Your guess: </p>
+      <div class="row"><button type="button" id="run" disabled>Run it in this browser</button><button type="button" id="again">Start over</button></div>
+      <p class="out" id="out" aria-live="polite"></p>
+    </div>
+  </section>
+
+
+  <section aria-labelledby="start-h">
+    <h2 id="start-h">Where to start</h2>
+    <div class="starts">
+      <a href="js-event-loop/"><b>We are learning JavaScript</b><span>Start with the event loop: why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8. Then V8 and the Browser track.</span></a>
+      <a href="lr-parser/"><b>We are taking a compilers course</b><span>Start with LR parsing (grammar to SLR table to parse tree), then follow a real compiler in V8: scanner, parser, bytecode, JIT.</span></a>
+      <a href="fetch-to-the-wire/"><b>We want to know what the browser does</b><span>The Browser track: one <code>fetch()</code> down to the bytes on the wire, then HTML bytes up to pixels.</span></a>
+    </div>
+  </section>
+
+  <section aria-label="How the pages work">
     <ul class="principles">
       <li><b>Trace from the root</b>Kernel, compiler or protocol first; my own code last.</li>
       <li><b>Show the real code</b>Excerpts from the actual source, trimmed and linked.</li>
@@ -89,10 +142,11 @@ footer a{color:var(--accent)}
       <li><b>Fast or deep</b>A 60-second version on top; the full trace from the source below.</li>
       <li><b>Read deeper, then test</b>Reading markers in the text, predict-first quizzes, and exam-style questions with model answers.</li>
     </ul>
-  </header>
+  </section>
 
   <section>
     <h2>Simulations</h2>
+    <p class="verified" style="margin-bottom:12px">Every simulator is our own model, labelled as such on its page and checked against the real system: V8, GNU Bison, Node, scapy and Chromium. <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/VALIDATION.md">What was checked, how, and what is not covered</a>. Reading times count the prose only; the labs take as long as we like.</p>
     <a class="sim" href="js-event-loop/">
       <div style="min-width:0">
         <h3>From the power button to <code>.then()</code></h3>
@@ -100,7 +154,8 @@ footer a{color:var(--accent)}
         <div class="chain" aria-label="Layers traced">
           <span>kernel</span><i>→</i><span>RendererMain</span><i>→</i><span>run_loop.Run()</span><i>→</i><span>MessagePumpDefault</span><i>→</i><span>V8</span><i>→</i><span class="you">our callback</span>
         </div>
-        <div class="meta"><span class="tag">JavaScript</span><span class="tag">Chromium</span><span class="tag">V8</span><span class="tag">event loop</span></div>
+        <div class="meta"><span class="tag">JavaScript</span><span class="tag">Chromium</span><span class="tag">V8</span><span class="tag">event loop</span><span class="tag">About 25 min</span></div>
+        <p class="need">Needs: basic JavaScript and promises.</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -111,7 +166,8 @@ footer a{color:var(--accent)}
         <div class="chain" aria-label="Layers traced">
           <span>schedule()</span><i>→</i><span>clone / epoll_wait</span><i>→</i><span>context_switch</span><i>→</i><span>futex</span><i>→</i><span class="you">our server</span>
         </div>
-        <div class="meta"><span class="tag">Operating systems</span><span class="tag">Linux</span><span class="tag">glibc</span><span class="tag">concurrency</span></div>
+        <div class="meta"><span class="tag">Operating systems</span><span class="tag">Linux</span><span class="tag">glibc</span><span class="tag">concurrency</span><span class="tag">About 20 min</span></div>
+        <p class="need">Needs: some C. Pairs well with the event-loop page.</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -122,7 +178,8 @@ footer a{color:var(--accent)}
         <div class="chain" aria-label="Layers traced">
           <span>scanner</span><i>→</i><span>parser</span><i>→</i><span>Ignition bytecode</span><i>→</i><span>feedback</span><i>→</i><span>TurboFan</span><i>→</i><span class="you">our function</span>
         </div>
-        <div class="meta"><span class="tag">Compilers</span><span class="tag">V8</span><span class="tag">JIT</span><span class="tag">interpreters</span></div>
+        <div class="meta"><span class="tag">Compilers</span><span class="tag">V8</span><span class="tag">JIT</span><span class="tag">interpreters</span><span class="tag">About 15 min</span></div>
+        <p class="need">Needs: basic JavaScript. The LR page helps with the parser part.</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -133,7 +190,8 @@ footer a{color:var(--accent)}
         <div class="chain" aria-label="Layers traced">
           <span>grammar</span><i>→</i><span>items</span><i>→</i><span>SLR table</span><i>→</i><span>yyparse()</span><i>→</i><span class="you">our parse tree</span>
         </div>
-        <div class="meta"><span class="tag">Compilers</span><span class="tag">parsing</span><span class="tag">Bison</span><span class="tag">CSE420</span></div>
+        <div class="meta"><span class="tag">Compilers</span><span class="tag">parsing</span><span class="tag">Bison</span><span class="tag">CSE420</span><span class="tag">About 15 min</span></div>
+        <p class="need">Needs: context-free grammars (what a production is).</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -144,18 +202,20 @@ footer a{color:var(--accent)}
         <div class="chain" aria-label="Layers traced">
           <span>fetch()</span><i>→</i><span>network service</span><i>→</i><span>DNS · TCP · TLS</span><i>→</i><span>HTTP</span><i>→</i><span>CORS</span><i>→</i><span class="you">our promise</span>
         </div>
-        <div class="meta"><span class="tag">Browser track 1/3</span><span class="tag">networking</span><span class="tag">web APIs</span><span class="tag">Chromium</span></div>
+        <div class="meta"><span class="tag">Browser track 1/3</span><span class="tag">networking</span><span class="tag">web APIs</span><span class="tag">Chromium</span><span class="tag">About 25 min</span></div>
+        <p class="need">Needs: the event-loop page; TCP/IP basics help.</p>
       </div>
       <span class="go">Open →</span>
     </a>
     <a class="sim" href="html-to-pixels/" style="margin-top:12px">
       <div style="min-width:0">
         <h3>From HTML bytes to pixels</h3>
-        <p>Blink's HTML tokenizer and tree builder, stepped token by token on any HTML we type, with a model that builds the same tree as Chrome on 7,183 inputs. Then the rendering lifecycle: real traces showing which stages a color, width or transform change runs, and why a read-after-write loop forced 20 layouts.</p>
+        <p>Blink's HTML tokenizer and tree builder, stepped token by token on any HTML we type, with a model that builds the same tree as Chrome on 8,929 distinct inputs. Then the rendering lifecycle: real traces showing which stages a color, width or transform change runs, and why a read-after-write loop forced 20 layouts.</p>
         <div class="chain" aria-label="Layers traced">
           <span>bytes</span><i>→</i><span>tokens</span><i>→</i><span>DOM</span><i>→</i><span>style · layout</span><i>→</i><span>paint · composite</span><i>→</i><span class="you">pixels</span>
         </div>
-        <div class="meta"><span class="tag">Browser track 2/3</span><span class="tag">DOM</span><span class="tag">rendering</span><span class="tag">Blink</span></div>
+        <div class="meta"><span class="tag">Browser track 2/3</span><span class="tag">DOM</span><span class="tag">rendering</span><span class="tag">Blink</span><span class="tag">About 15 min</span></div>
+        <p class="need">Needs: basic HTML and CSS. Browser track page 1 comes first.</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -185,5 +245,24 @@ footer a{color:var(--accent)}
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Found a mistake? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml">Report it</a>, or <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml">suggest a topic</a>. Want to check our claims? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/TESTING.md">Here is how to test everything</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>
 </main>
+<script>
+/* The demo runs the real code in this browser and prints what the engine actually did, so the answer is observed, not typed. */
+(function(){
+  var guess=[],picks=document.querySelectorAll("#picks button"),seq=document.getElementById("seq"),run=document.getElementById("run"),out=document.getElementById("out");
+  function draw(){seq.textContent="Your guess: "+guess.join(" ");run.disabled=guess.length<4}
+  [].forEach.call(picks,function(b){b.onclick=function(){guess.push(b.textContent);b.disabled=true;draw();if(guess.length===4)run.focus()}});
+  document.getElementById("again").onclick=function(){guess=[];[].forEach.call(picks,function(b){b.disabled=false});out.textContent="";draw();picks[0].focus()};
+  run.onclick=function(){
+    var got=[];function log(x){got.push(x)}
+    log("A");setTimeout(function(){log("B")},0);Promise.resolve().then(function(){log("C")});log("D");
+    setTimeout(function(){setTimeout(function(){
+      var ok=got.join(" ")===guess.join(" ");
+      out.innerHTML="This browser printed: <b>"+got.join(" ")+"</b>. "+(ok?"We called it. ":"Not what we guessed. ")+
+        "A and D run first because they are in the current task; C is a microtask, which runs as soon as that task ends; B is a new task, which waits for the next turn of the event loop. "+
+        '<a href="js-event-loop/#playground">Trace it into Chrome and V8 →</a>';
+    },0)},0);
+  };
+})();
+</script>
 </body>
 </html>

@@ -28,9 +28,11 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Verification
 
-- A simulator or model must be checked against the real system, and the page says how. Examples: the V8 bytecode model against `node --print-bytecode` (746 expressions), the LR engine against the Dragon Book tables, the event-loop playground against real V8 in a Web Worker and against Node (`verify/` scripts).
+- A simulator or model must be checked against the real system, and the page says how. Examples: the V8 bytecode model against `node --print-bytecode` (300 seeded expressions per run), the LR engine against the Dragon Book tables, the event-loop playground against real V8 in a Web Worker and against Node (`verify/` scripts).
 - Exam model answers are produced or checked with the page's engine or the real tool where possible.
-- Each folder that has a model keeps its check script in `<folder>/verify/`.
+- Each folder that has a model keeps its check script in `<folder>/verify/`. The script reports through `tools/report.js` (latest numbers in `validation/results/`, failing inputs in `validation/failures/`), and `tools/make-validation.js` turns those into `VALIDATION.md`. Numbers on a page must match `VALIDATION.md`: count distinct inputs, never repeats.
+- Random checks use fixed seeds, so every run (and CI) tests the same inputs and a failure can be replayed.
+- **Label what kind of evidence each thing is.** Code figures get a badge from the kit: *Observed* (`figure.src.real`, captured from the real system), *Source* (upstream code, the default), *Our example* (`data-kind="example"`). Each lab starts with a scope box, `<div class="scope" data-kind="model|observed|illustration">` with three paragraphs: **What it is.** **Checked against.** **Not covered.** Use *model* only when a verify script checks it; otherwise it is an *illustration*.
 - **Capture real data when we can run the system.** Run the real thing locally (a real browser, compiler or kernel tool), record its own logs and bytes, and keep the scripts that reproduce the capture in `<folder>/data/`. Say on the page how it was captured and how the lab differs from the real world (for example a self-signed certificate, or a server on the same machine so round trips cost nothing).
 - **When the model and the real system disagree, find out why in the source and teach it.** Do not tune the model until the numbers match. Example: the CORS lab disagreed with Chrome on 40 of 2,880 cases, and the reason was a Chrome feature flag that leaves a spec rule unshipped; the page now teaches the difference.
 - Before publishing captured data, check it for local paths, tokens, proxy settings or anything else private.
@@ -60,28 +62,30 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 - Accent (blue) means "where we are / our code". Trace (amber) means "the key line / the root". Green means done or correct, red means conflict or wrong.
 - Diagrams are inline SVG using the `.tl-box`, `.tl-t`, `.tl-a` classes so they work in both themes. Each shape also carries plain fallback attributes (`fill`, `stroke`, `font-size`, and `width`/`height` on the `<svg>`), so a diagram stays readable even if the stylesheet fails to load.
 - Every page works at 390 px wide with no sideways scrolling; long code wraps or scrolls inside its own box.
-- Motion is small and respects `prefers-reduced-motion`.
+- Motion is small and respects `prefers-reduced-motion` (the kit also stops all animation for readers who ask for reduced motion).
+- Accessibility: WCAG 2.2 AA, checked by axe-core in light and dark mode on every run. Text, including code comments, needs 4.5:1 contrast on its own background; show "off" or "skipped" states with dashes or strikethrough, not by fading text with `opacity`. Every control is a real `<button>`, link or input with a visible focus ring. Anything that scrolls is focusable (the kit adds `tabindex="0"` and a label from the figure caption). Lab parts that are not buttons get keys of their own, for example arrow keys in the byte dissector.
 
 ## Shared kit
 
-`assets/root-kit.css` and `assets/root-kit.js` provide footnotes, go-deeper strips, the reading list, quizzes, exam questions with self-marking, "report a mistake" links on every section, the page footer and the reading progress bar. Load order: `root-kit.css` in the head, `reading.js` before the page script, `root-kit.js` last.
+`assets/root-kit.css` and `assets/root-kit.js` provide footnotes, go-deeper strips, the reading list, quizzes, exam questions with self-marking, "report a mistake" links on every section, the page footer, the reading progress bar, evidence labels and scope boxes, and keyboard access to scrolling boxes. Load order: `root-kit.css` in the head, `reading.js` before the page script, `root-kit.js` last.
 
 ## Getting found and getting feedback
 
 - Head: a descriptive `<title>` ending in "| Root to End", a meta description of about 160 characters, a canonical URL, Open Graph and Twitter tags, a 1200×630 preview in `assets/og/<slug>.png`, and JSON-LD (`LearningResource`).
-- Add each page to `sitemap.xml`, the landing page (card and topic map), and the root README table.
+- Add each page to `sitemap.xml`, the landing page (card with reading time and prerequisites, the topic map, and a "Where to start" path if it opens a new one), and the root README table. Reading time is the rendered prose at 200 words a minute, rounded to 5 minutes.
 - Every section has a "Something wrong or unclear in this section?" link to a prefilled GitHub issue; templates live in `.github/ISSUE_TEMPLATE/`.
 
 ## Before publishing a page
 
 0. Add the page's verify scripts to `tools/run-all-checks.js` (`tools/check-pages.js` finds every page by itself). Run `npm test`; everything must PASS (SKIP is only for missing tools, with a reason).
 0. Run `python3 tools/stamp-assets.py`. It adds a content hash (`?v=1a2b3c4d`) to every local CSS and JS link. GitHub Pages lets browsers cache files for 10 minutes, so without it a browser can pair a new page with an old stylesheet.
-1. jsdom smoke test: no script errors, footnotes, quizzes and exam questions render.
-2. Playwright screenshots at 1300 px and 390 px, light and dark; no horizontal scroll.
-3. Run the folder's `verify/` script.
-4. Commit as `aksaN000 <aksangoni.alif@gmail.com>`, with no co-author or tool attribution lines, push, and check the live URL.
+1. Look at it: screenshots at 1300 px and 390 px, light and dark. Then put the mouse away and Tab through the whole page; every stop must show a focus ring and every lab must work from the keyboard.
+2. Commit `validation/results/` and the regenerated `VALIDATION.md` with the page. CI (`.github/workflows/checks.yml`) reruns everything on each push and nightly.
+3. Commit as `aksaN000 <aksangoni.alif@gmail.com>`, with no co-author or tool attribution lines, push, and check the live URL.
 
 ## Changelog
+
+- **2026-10-09**: Evidence labels (Observed, Source, Our example, Model, Illustration) and a scope box on every lab. `VALIDATION.md` generated from each run, with failing inputs kept for replay. Accessibility pass: contrast fixed in both themes, scrolling boxes focusable, keyboard bytes in the dissector, axe-core in every page check. CI on every push and nightly. Landing page: a live demo, three starting points, reading times and prerequisites. `CONTRIBUTING.md`.
 
 - **2026-10-09**: One command for all checks (`npm test` → `tools/run-all-checks.js`), a page checker for local, live and other browsers (`tools/check-pages.js`), a Dragon Book and Bison check for the LR page, and `TESTING.md`.
 - **2026-10-09**: Browser track page 2 (`html-to-pixels`). New rules: live in-browser checks, and cross-checking against numbers the real system reports.

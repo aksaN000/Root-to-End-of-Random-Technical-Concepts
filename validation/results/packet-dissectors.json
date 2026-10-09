@@ -1,0 +1,30 @@
+{
+ "id": "packet-dissectors",
+ "date": "2026-10-09T08:33:30.520155+00:00",
+ "platform": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
+ "passed": true,
+ "cases": 18,
+ "matched": 18,
+ "reference": "scapy 2.8.0 (Python 3.13.16)",
+ "checks": [
+  "ok   DNS transaction ID",
+  "ok   DNS question name",
+  "ok   DNS question type",
+  "ok   DNS reply carries same ID",
+  "ok   DNS answer TTL",
+  "ok   DNS answer address",
+  "ok   ClientHello cipher suite count",
+  "ok   ClientHello SNI",
+  "ok   ClientHello supported_groups",
+  "ok   ClientHello signature algorithm count",
+  "ok   ClientHello ALPN",
+  "ok   ClientHello supported_versions",
+  "ok   ClientHello key shares (group|bytes)",
+  "ok   ServerHello cipher suite",
+  "ok   ServerHello negotiated version",
+  "ok   ServerHello key share",
+  "ok   NetLog says the same group",
+  "ok   NetLog says the same cipher"
+ ],
+ "failureCount": 0
+}

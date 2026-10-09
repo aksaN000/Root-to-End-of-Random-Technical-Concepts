@@ -5,6 +5,7 @@
    - <div class="quiz"><script type="application/json">{...}</script></div>   predict-the-output quiz
    - <div class="exq" data-marks="5"><div class="q">…</div><div class="a">…</div></div>   exam question, answer hidden
    - every main section gets a "report a mistake" link; main gets a footer with issue links
+   - figure.src gets an evidence label (observed / source / example via data-kind); .scope[data-kind] boxes get a header
    Requires assets/reading.js (window.ROOT_READING) to be loaded first. */
 (function () {
   "use strict";
@@ -174,6 +175,59 @@
     f.innerHTML = '<span>Found a mistake, or still confused after reading?</span><a href="' + esc(issueUrl("General", "")) + '" target="_blank" rel="noopener">Report it on GitHub</a><a href="' + REPO + '/issues/new?labels=topic-request&title=' + encodeURIComponent("Topic request: ") + '" target="_blank" rel="noopener">Suggest a topic</a><a href="../">All topics</a>';
     main.appendChild(f);
   }
+
+  /* 9. evidence labels: every code figure says whether it is observed output, upstream source, or our own example;
+        every lab carries a scope box (.scope[data-kind]) saying what it is, what it was checked against and what it leaves out */
+  var KIND = {
+    observed: ["Observed", "Captured from the real system (real output, real bytes, real traces)"],
+    source: ["Source", "Real upstream source code, trimmed only with // …"],
+    example: ["Our example", "Code or input we wrote to demonstrate the idea"],
+    model: ["Model", "Our simplification, checked against the real system"],
+    illustration: ["Illustration", "Our simplification, not checked against the real system"]
+  };
+  function kindBadge(k) { var d = KIND[k]; return '<span class="kind ' + k + '" title="' + esc(d[1]) + '">' + d[0] + "</span>"; }
+  var usedKinds = {};
+  [].slice.call(document.querySelectorAll("figure.src")).forEach(function (f) {
+    var k = f.getAttribute("data-kind") || (f.classList.contains("real") ? "observed" : "source");
+    var cap = f.querySelector("figcaption"); if (!cap || cap.querySelector(".kind")) return;
+    cap.insertAdjacentHTML("afterbegin", kindBadge(k)); usedKinds[k] = 1;
+  });
+  [].slice.call(document.querySelectorAll(".scope[data-kind]")).forEach(function (sc) {
+    var k = sc.getAttribute("data-kind"); if (!KIND[k] || sc.querySelector(".sh")) return;
+    sc.insertAdjacentHTML("afterbegin", '<div class="sh">' + kindBadge(k) + "<span>Scope and limits</span></div>"); usedKinds[k] = 1;
+  });
+  var tl = document.querySelector(".tldr");
+  if (tl && Object.keys(usedKinds).length) {
+    var lg = document.createElement("div"); lg.className = "kinds-legend";
+    lg.innerHTML = "<b>Labels on this page</b>" + ["observed", "source", "example", "model", "illustration"].filter(function (k) { return usedKinds[k]; }).map(function (k) { return "<span>" + kindBadge(k) + " " + esc(KIND[k][1].charAt(0).toLowerCase() + KIND[k][1].slice(1)) + "</span>"; }).join("");
+    tl.insertAdjacentElement("afterend", lg);
+  }
+
+  /* 10. keyboard access to scrolling boxes: any code block, table or lab panel that scrolls gets tabindex="0"
+         (so arrow keys can scroll it) and a name for screen readers. Rechecked on resize, because whether a box
+         scrolls depends on the width. Boxes the page already made focusable are left alone. */
+  function nameFor(el) {
+    var fig = el.closest("figure"), cap = fig && fig.querySelector("figcaption");
+    if (cap) return cap.textContent.replace(/\s+/g, " ").trim().slice(0, 120);
+    var h = el.closest("section") && el.closest("section").querySelector("h2,h3");
+    return (h ? h.textContent.trim() + ": " : "") + "scrollable " + (el.tagName === "PRE" ? "code" : "panel");
+  }
+  function markScrollers() {
+    [].slice.call(document.querySelectorAll("main *, body > section *")).forEach(function (el) {
+      if (el.hasAttribute("tabindex") && !el.hasAttribute("data-rk-scroll")) return;
+      var cs = getComputedStyle(el), scrolls = /(auto|scroll)/.test(cs.overflowX + cs.overflowY) &&
+        (el.scrollWidth > el.clientWidth + 1 || el.scrollHeight > el.clientHeight + 1);
+      if (scrolls && !el.hasAttribute("data-rk-scroll")) {
+        el.setAttribute("tabindex", "0"); el.setAttribute("data-rk-scroll", "");
+        if (!el.getAttribute("aria-label") && !el.getAttribute("aria-labelledby")) { el.setAttribute("aria-label", nameFor(el)); if (!el.getAttribute("role")) el.setAttribute("role", "region"); }
+      } else if (!scrolls && el.hasAttribute("data-rk-scroll")) {
+        el.removeAttribute("tabindex"); el.removeAttribute("data-rk-scroll");
+      }
+    });
+  }
+  markScrollers(); setTimeout(markScrollers, 800);
+  var rkT; addEventListener("resize", function () { clearTimeout(rkT); rkT = setTimeout(markScrollers, 250); });
+  window.rkMarkScrollers = markScrollers;
 
   /* 6. reading progress bar */
   var bar = document.createElement("div");

@@ -46,14 +46,15 @@ const page = http.createServer((req, res) => { res.setHeader("Content-Type", "te
     }
     return out;
   }, { cases, HEADERS });
-  await b.close(); api.close(); page.close();
-  let bad = 0;
+  const version = b.version(); await b.close(); api.close(); page.close();
+  let bad = 0; const failures = [];
   for (const c of cases) {
     const m = Wire.cors({ method: c.m, headers: HEADERS[c.h], credentials: c.c }, { acao: ACAO[c.o], acam: ACAM[c.am], acah: ACAH[c.ah], acac: c.cc });
     const ok = m.ok === real[c.id] && m.preflight === preflights.has(c.id);
-    if (!ok) { bad++; if (bad <= 15) console.log("MISMATCH", JSON.stringify(c), "model", { ok: m.ok, preflight: m.preflight, error: m.error }, "chrome", { ok: real[c.id], preflight: preflights.has(c.id) }); }
+    if (!ok) { bad++; failures.push({ request: { method: c.m, headers: HEADERS[c.h], credentials: c.c }, server: { acao: ACAO[c.o], acam: ACAM[c.am], acah: ACAH[c.ah], acac: c.cc }, chrome: { ok: real[c.id], preflight: preflights.has(c.id) }, model: { ok: m.ok, preflight: m.preflight } }); if (bad <= 15) console.log("MISMATCH", JSON.stringify(c), "model", { ok: m.ok, preflight: m.preflight, error: m.error }, "chrome", { ok: real[c.id], preflight: preflights.has(c.id) }); }
   }
   const okCount = real.filter(Boolean).length;
+  require("../../tools/report.js")("cors", { passed: !bad, cases: cases.length, matched: cases.length - bad, reference: "Chromium " + version + " (Playwright " + require((function () { try { return require.resolve("playwright/package.json"); } catch (e) { return "/opt/npm-tools/node_modules/playwright/package.json"; } })()).version + ")", detail: okCount + " fetches succeeded, " + preflights.size + " preflights sent", failures: failures });
   console.log(`${cases.length - bad}/${cases.length} cases match real Chromium (preflight sent? and fetch succeeded?). ${okCount} succeeded, ${preflights.size} preflights.`);
   process.exit(bad ? 1 : 0);
 })();

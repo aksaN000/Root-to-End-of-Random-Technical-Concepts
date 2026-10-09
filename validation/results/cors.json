@@ -1,0 +1,13 @@
+{
+ "id": "cors",
+ "date": "2026-10-09T08:33:45.367Z",
+ "platform": "linux 6.18.44-fc-v80 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "passed": true,
+ "cases": 2880,
+ "matched": 2880,
+ "reference": "Chromium 141.0.7390.37 (Playwright 1.56.0)",
+ "detail": "659 fetches succeeded, 2112 preflights sent",
+ "failureCount": 0
+}

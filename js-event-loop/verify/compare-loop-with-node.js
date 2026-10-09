@@ -49,7 +49,7 @@ const bump = () => { count = count + 1; console.log("count " + count); };
 Promise.resolve().then(bump).then(bump); setTimeout(bump, 0); bump();`,
 ];
 (async () => {
-  let ok = 0;
+  let ok = 0; const failures = [];
   for (const [i, src] of PROGRAMS.entries()) {
     const m = M.run(src);
     const real = await new Promise(res => {
@@ -60,7 +60,9 @@ Promise.resolve().then(bump).then(bump); setTimeout(bump, 0); bump();`,
     });
     const same = !m.error && JSON.stringify(m.out) === JSON.stringify(real);
     if (same) ok++;
-    else console.log("MISMATCH #" + i, "\n model:", m.error || m.out.join(" | "), "\n node: ", real.join(" | "));
+    else { failures.push({ input: src, node: real, model: m.error || m.out }); console.log("MISMATCH #" + i, "\n model:", m.error || m.out.join(" | "), "\n node: ", real.join(" | ")); }
   }
+  require("../../tools/report.js")("event-loop", { passed: ok === PROGRAMS.length, cases: PROGRAMS.length, matched: ok, reference: "Node " + process.versions.node + " (V8 " + process.versions.v8 + ", libuv " + process.versions.uv + ")", failures: failures });
   console.log(ok + "/" + PROGRAMS.length + " programs print the same lines in the same order as Node " + process.version);
+  process.exitCode = ok === PROGRAMS.length ? 0 : 1;
 })();

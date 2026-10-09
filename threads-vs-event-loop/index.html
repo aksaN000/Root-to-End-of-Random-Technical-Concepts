@@ -7,26 +7,26 @@
 <meta name="description" content="Multi-threading versus event-driven concurrency from schedule(), clone flags, context_switch, futex mutexes and epoll, with a race-condition stepper, a one-core timeline simulator and exam practice.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
 <style>
 /* Layout: same two-column source-trace as the event-loop page. Left rail is a call stack (kernel at the bottom), right column walks it upward. Signature element: paired timelines, threads above, event loop below, on one shared time axis. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
-  --thr:#6d3fc4; --thr-soft:#ece5fb; --loop:#0f7b74; --loop-soft:#dcf2ef; --sw:#c2410c; --io:#9aa5b4; --ready:#e7c76a;
-  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --thr:#6d3fc4; --thr-soft:#ece5fb; --loop:#0b6b65; --loop-soft:#dcf2ef; --sw:#a8380a; --io:#9aa5b4; --ready:#e7c76a;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --thr:#b79bff; --thr-soft:#2a2145; --loop:#4fd1c5; --loop-soft:#123430; --sw:#ff8a4c; --io:#55606f; --ready:#b8952e;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --thr:#b79bff; --thr-soft:#2a2145; --loop:#4fd1c5; --loop-soft:#123430; --sw:#ff8a4c; --io:#55606f; --ready:#b8952e;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -233,11 +233,11 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <p>These are minimal C programs, not from any project, written to make the structural difference concrete. The left one creates a thread per connection, and each thread spends its life blocked in <code>read()</code>. The right one has a single thread that blocks in <code>epoll_wait()</code> and handles whichever sockets are ready. Error handling is omitted.<a class="rd" data-r="ostep-events,tlpi"></a></p>
   </div>
   <div class="pair">
-    <figure class="src t">
+    <figure class="src t" data-kind="example">
       <figcaption><span class="path">echo_threads.c</span><span class="note">thread per connection</span></figcaption>
       <pre data-code="c-srv-thr"></pre>
     </figure>
-    <figure class="src l">
+    <figure class="src l" data-kind="example">
       <figcaption><span class="path">echo_epoll.c</span><span class="note">one thread, one event loop</span></figcaption>
       <pre data-code="c-srv-loop"></pre>
     </figure>
@@ -288,6 +288,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <pre data-code="c-lllwait"></pre>
     </figure>
   </div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> Two threads running <code>counter++</code> as three instructions (load, add, store), with us choosing the interleaving.</p><p><b>Checked against.</b> Not checked automatically. Whether a real program loses updates depends on the compiler, optimisation level and CPU; Exercise 1 shows how to observe it with Listing 1.</p><p><b>Not covered.</b> Caches, memory ordering, and the instructions a real compiler emits (at <code>-O2</code> the loop may become a single add).</p></div>
   <div class="panel" id="race">
     <div class="ctl">
       <button type="button" id="rMutex">Mutex: off</button>
@@ -334,6 +335,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="prose">
     <p>This is a small discrete-event simulation with one CPU core. Each request needs some CPU time, may wait on I/O (a database or network call), then needs more CPU. In the <span style="color:var(--thr);font-weight:600">threads</span> model, each request gets a thread, the scheduler runs ready threads round-robin with a time slice, and every switch between threads costs CPU time. In the <span style="color:var(--loop);font-weight:600">event loop</span> model, one thread runs each callback to completion and starts I/O without blocking.</p>
   </div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> A discrete-event simulation of one CPU core running the same requests under round-robin threads and under an event loop.</p><p><b>Checked against.</b> Not a measurement. It follows the scheduling rules described above; the switch cost is drawn about 100 times larger than reality so it is visible.</p><p><b>Not covered.</b> Multiple cores, real scheduler policy (EEVDF), caches, and I/O latency variation.</p></div>
   <div class="panel">
     <div class="ctl">
       <label for="wl">Workload
@@ -367,6 +369,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="scale" data-deeper="c10k,tlpi">
   <div class="sechead"><span class="eyebrow">Frame 7 · scale</span><h2>What 10,000 idle connections cost in each model</h2></div>
   <div class="claim"><b>From the report, Section 4.3</b>A pthread on Linux defaults to an 8 MB stack. An event-driven server holds only a small descriptor and a few callback closures per connection.</div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> Arithmetic on default sizes: an 8 MiB reserved stack and a 16 KiB kernel stack per thread.</p><p><b>Checked against.</b> The defaults come from glibc and the kernel; the totals are calculated, not measured. Exercise 2 shows how to measure them with <code>/proc</code>.</p><p><b>Not covered.</b> Pages actually touched, socket buffers, allocator overhead, and per-connection application state.</p></div>
   <div class="panel">
     <div class="ctl"><label for="nc">Connections <input type="range" id="nc" min="1" max="5" step="0.01" value="4" style="width:240px"><output id="nco"></output></label></div>
     <div class="tbl"><table id="scaleTbl"></table></div>
@@ -941,6 +944,6 @@ __lll_lock_wait (int *futex, int private)
   document.getElementById("nc").addEventListener("input",scale);scale();
 })();
 </script>
-<script src="../assets/root-kit.js?v=076d2a97"></script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
 </body>
 </html>

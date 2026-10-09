@@ -1,0 +1,18 @@
+{
+ "id": "v8-bytecode",
+ "date": "2026-10-09T08:33:28.372Z",
+ "platform": "linux 6.18.44-fc-v80 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "passed": true,
+ "cases": 300,
+ "matched": 300,
+ "seeds": [
+  {
+   "count": 300,
+   "seed": 7
+  }
+ ],
+ "reference": "V8 12.4.254.21-node.33 (Node 22.22.0)",
+ "failureCount": 0
+}

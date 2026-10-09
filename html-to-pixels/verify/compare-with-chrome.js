@@ -39,8 +39,11 @@ function random(n, seed) {
   return out;
 }
 (async () => {
-  const N = +(process.argv[2] || 1000), SEED = +(process.argv[3] || 7);
-  const cases = FIXED.concat(random(N, SEED));
+  // usage: compare-with-chrome.js [count] [seed]   or   compare-with-chrome.js 1000:7 3000:2026 …
+  const specs = process.argv.slice(2).some(a => a.includes(":")) ? process.argv.slice(2).map(a => a.split(":").map(Number)) : [[+(process.argv[2] || 1000), +(process.argv[3] || 7)]];
+  const seen = new Set(), cases = [];
+  FIXED.concat(...specs.map(([n, s]) => random(n, s))).forEach(c => { if (!seen.has(c)) { seen.add(c); cases.push(c); } });
+  const N = specs.reduce((a, s) => a + s[0], 0), SEED = specs.map(s => s[1]).join(", ");
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/proxy/i.test(k)));
   const b = await chromium.launch({ env });
   const p = await b.newPage();
@@ -54,7 +57,8 @@ function random(n, seed) {
     const m = H.serialize(r.doc);
     if (m === real[i]) ok++; else bad.push([c, m, real[i]]);
   });
+  require("../../tools/report.js")("html-parser", { passed: !bad.length, cases: cases.length - skipped, matched: ok, skipped: skipped, seeds: specs.map(([n, s]) => ({ count: n, seed: s })), handPicked: FIXED.length, reference: "Chrome " + version + " DOMParser", detail: `${FIXED.length} hand-picked + ${N} random (seeds ${SEED}); ${cases.length} distinct inputs after removing duplicates`, failures: bad.map(([c, m, rl]) => ({ input: c, model: m, chrome: rl })) });
   bad.slice(0, 6).forEach(([c, m, rl]) => console.log("MISMATCH " + JSON.stringify(c) + "\n--- model\n" + m + "\n--- chrome\n" + rl + "\n"));
-  console.log(`${ok}/${cases.length - skipped} trees identical to Chrome ${version} (${FIXED.length} hand-picked + ${N} random, seed ${SEED}; ${skipped} outside the model's subset skipped)`);
+  console.log(`${ok}/${cases.length - skipped} distinct inputs give trees identical to Chrome ${version} (${FIXED.length} hand-picked + ${N} random, seeds ${SEED}; ${skipped} outside the model's subset skipped)`);
   process.exit(bad.length ? 1 : 0);
 })();

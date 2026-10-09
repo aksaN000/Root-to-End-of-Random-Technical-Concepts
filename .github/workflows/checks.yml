@@ -1,0 +1,54 @@
+# Reruns the verifications on every push and every night, so a claim on the site cannot silently go stale.
+# fast:    the checks that need no browser (V8 bytecode, LR + Bison, event loop, packet dissectors)
+# browser: the checks that drive real Chromium (CORS matrix, HTML parser, every page incl. axe-core)
+# Versions are pinned: Node 22.22.0 (V8 12.4, which the bytecode check needs), Playwright 1.56.0
+# (Chromium 141), axe-core 4.13.0, scapy 2.8.0. Random checks use fixed seeds, so every run tests the same inputs.
+# When anything fails, the failing inputs (validation/failures/) and the results are uploaded as an artifact.
+name: checks
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"   # nightly, 03:17 UTC
+permissions:
+  contents: read
+jobs:
+  fast:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install scapy==2.8.0
+      - run: sudo apt-get update && sudo apt-get install -y bison
+      - run: node tools/run-all-checks.js --only=v8,lr,loop,packets
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fast-results
+          path: validation/
+          if-no-files-found: ignore
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: node tools/run-all-checks.js --only=cors,html,pages
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: browser-results
+          path: validation/
+          if-no-files-found: ignore

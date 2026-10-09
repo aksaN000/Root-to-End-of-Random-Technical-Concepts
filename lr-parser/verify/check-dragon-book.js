@@ -7,7 +7,8 @@
 const path = require("path"), fs = require("fs"), os = require("os"), { execFileSync } = require("child_process");
 const LR = require(path.join(__dirname, "..", "lr-engine.js"));
 let fails = 0;
-function check(what, ok, detail) { if (!ok) fails++; console.log((ok ? "ok   " : "FAIL ") + what + (ok || !detail ? "" : "\n     " + detail)); }
+const results = [];
+function check(what, ok, detail) { results.push({ what: what, ok: !!ok, detail: ok ? undefined : detail }); if (!ok) fails++; console.log((ok ? "ok   " : "FAIL ") + what + (ok || !detail ? "" : "\n     " + detail)); }
 
 const EXPR = "E -> E + T | T\nT -> T * F | F\nF -> ( E ) | id";
 // Fig. 4.37, columns id + * ( ) $ | E T F; "." = blank
@@ -57,5 +58,6 @@ if (bison) {
   const outLR = run("lr", "%token ID\n%%\nS : L '=' R | R ;\nL : '*' R | ID ;\nR : L ;\n");
   check(bison + ": S -> L = R | R has no conflicts (LALR handles it)", !/conflict/.test(outLR), outLR.trim());
 } else console.log("skip GNU Bison checks (bison not installed)");
+require("../../tools/report.js")("lr-dragon", { passed: !fails, cases: results.length, matched: results.length - fails, reference: "Dragon Book 2nd ed. Fig. 4.37 and 4.38" + (bison ? "; " + bison : " (Bison not installed: Bison checks skipped)"), checks: results.map(r => (r.ok ? "ok   " : "FAIL ") + r.what), failures: results.filter(r => !r.ok) });
 console.log(fails ? fails + " check(s) failed" : "all checks passed");
 process.exit(fails ? 1 : 0);

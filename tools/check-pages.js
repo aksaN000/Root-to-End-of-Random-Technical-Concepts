@@ -4,10 +4,14 @@
 //   node tools/check-pages.js --browser=firefox   (or webkit) to try another engine
 // Per page, at 1300 px and 390 px wide: no script errors, no failed requests, no sideways scroll;
 // the 60-second version, quizzes, exam questions and reading list are present and respond to clicks;
-// every local CSS/JS link carries a ?v= hash that matches the file (local mode).
+// every local CSS/JS link carries a ?v= hash that matches the file (local mode);
+// axe-core finds no WCAG 2.2 A/AA violations, in light and in dark mode (after the quizzes and exam answers are opened).
+// Local runs of the default engine write validation/results/pages.json for VALIDATION.md.
 const http = require("http"), fs = require("fs"), path = require("path"), crypto = require("crypto");
 let pw; try { pw = require("playwright"); } catch (e) { pw = require("/opt/npm-tools/node_modules/playwright"); }
 const ROOT = path.resolve(__dirname, "..");
+let AXE = null; try { AXE = fs.readFileSync(require.resolve("axe-core/axe.min.js"), "utf8"); } catch (e) { console.log("axe-core not installed (npm install): accessibility not checked"); }
+const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 const LIVE = "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/";
 const args = process.argv.slice(2), live = args.includes("--live");
 const engine = (args.find(a => a.startsWith("--browser=")) || "--browser=chromium").split("=")[1];
@@ -32,8 +36,16 @@ function serve() {
   if (!live) { srv = await serve(); base = "http://127.0.0.1:" + srv.address().port + "/"; }
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/proxy/i.test(k)));
   const browser = await pw[engine].launch(live ? {} : { env, args: engine === "chromium" ? ["--no-proxy-server"] : [] });
-  let fails = 0;
-  const fail = (page, w, msg) => { fails++; console.log(`FAIL ${page} @${w}px: ${msg}`); };
+  let fails = 0; const rows = [], failures = [];
+  const fail = (page, w, msg) => { fails++; failures.push({ page, width: w, problem: msg }); console.log(`FAIL ${page} @${w}px: ${msg}`); };
+  async function axeRun(page) {
+    await page.addScriptTag({ content: AXE });
+    return page.evaluate(async tags => {
+      if (window.rkMarkScrollers) window.rkMarkScrollers();
+      const r = await axe.run(document, { runOnly: { type: "tag", values: tags } });
+      return r.violations.map(v => ({ id: v.id, impact: v.impact, nodes: v.nodes.length, first: v.nodes[0].target.join(" ") }));
+    }, AXE_TAGS);
+  }
 
   // stamped asset hashes (local mode)
   if (!live) {
@@ -85,11 +97,28 @@ function serve() {
           if (clicks.examOk !== clicks.exq) fail(name, w, `only ${clicks.examOk}/${clicks.exq} exam answers opened`);
         }
       }
-      console.log(`page ${name.padEnd(22)} ${String(w).padStart(4)}px  ${errs.length ? errs.length + " problem(s)" : "clean"}  quizzes ${info.quizzes}, exam ${info.exq}, reading ${info.cards}`);
+      let a11y = null;
+      if (AXE) {
+        a11y = 0;
+        for (const scheme of ["light", "dark"]) {
+          await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" }); await page.waitForTimeout(150); // reduced motion: decorative fades would otherwise be measured mid-animation
+          for (const v of await axeRun(page)) { a11y += v.nodes; fail(name, w, `accessibility (${scheme}): ${v.id} [${v.impact}] on ${v.nodes} element(s), first: ${v.first}`); }
+        }
+      }
+      rows.push({ page: name, width: w, problems: errs.length + (info.hscroll ? 1 : 0), a11y });
+      console.log(`page ${name.padEnd(22)} ${String(w).padStart(4)}px  ${errs.length ? errs.length + " problem(s)" : "clean"}  quizzes ${info.quizzes}, exam ${info.exq}, reading ${info.cards}, a11y ${a11y === null ? "not checked" : a11y + " violation(s)"}`);
       await page.close();
     }
   }
+  const version = browser.version();
   await browser.close(); if (srv) srv.close();
+  if (!live && engine === "chromium") {
+    const pwv = require(require.resolve("playwright/package.json")).version;
+    require("./report")("pages", { reference: `Chromium ${version} (Playwright ${pwv})${AXE ? `, axe-core ${require(require.resolve("axe-core/package.json")).version}` : ""}`,
+      cases: rows.length, matched: rows.filter(r => !r.problems && !r.a11y).length, passed: fails === 0,
+      detail: `${PAGES.length + 1} pages × 2 widths; accessibility checked in light and dark mode against ${AXE_TAGS.join(", ")}`,
+      pages: rows, failures });
+  }
   console.log(fails ? `${fails} problem(s) found` : `all pages passed in ${engine} (${live ? "live site" : "local checkout"})`);
   process.exit(fails ? 1 : 0);
 })();

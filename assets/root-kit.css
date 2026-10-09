@@ -118,3 +118,22 @@ a.rd:hover,a.rd[aria-expanded="true"]{background:var(--accent);color:var(--surfa
 .rk-report{font-size:.78rem;color:var(--muted);text-decoration:none;font-family:var(--mono);align-self:flex-start}
 .rk-report:hover{color:var(--accent);text-decoration:underline}
 .rk-foot{margin-top:56px;border-top:1px solid var(--rule);padding-top:16px;font-size:.88rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 18px}
+
+/* what kind of evidence is this? observed / source / example / model / illustration */
+.kind{display:inline-flex;align-items:center;font-family:var(--mono);font-size:.62rem;font-weight:600;text-transform:uppercase;letter-spacing:.06em;padding:1px 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;line-height:1.5;vertical-align:1px}
+.kind.observed{color:var(--ok);background:var(--ok-bg)}
+.kind.source{color:var(--accent);background:var(--accent-soft)}
+.kind.example{color:var(--muted);background:var(--code)}
+.kind.model{color:var(--trace);background:var(--trace-bg)}
+.kind.illustration{color:var(--trace);background:transparent;border-style:dashed}
+figure.src figcaption .kind{margin-right:2px}
+.kinds-legend{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;font-size:.82rem;color:var(--muted);margin-top:14px}
+.kinds-legend b{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.07em;font-weight:500}
+.scope{border:1px solid var(--rule);border-left:3px solid var(--trace);border-radius:8px;padding:8px 12px;font-size:.86rem;line-height:1.55;display:flex;flex-direction:column;gap:3px;background:var(--surface);max-width:900px}
+.scope[data-kind="observed"]{border-left-color:var(--ok)}
+.scope .sh{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.scope p{margin:0}
+.scope p b{font-weight:600}
+/* keyboard focus on anything the kit or a page makes focusable (scrolling boxes, byte cells), and a global reduced-motion fallback */
+[tabindex]:focus-visible,summary:focus-visible,textarea:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}

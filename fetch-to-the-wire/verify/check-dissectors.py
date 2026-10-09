@@ -21,9 +21,11 @@ console.log(JSON.stringify({
  sh:{suite:pick(sh.fields,/^Chosen cipher suite$/)[0],version:ext(sh,'supported_versions'),share:ext(sh,'key_share'),records:sh.records.map(r=>r.type+':'+r.len)}
 }))""", HERE]).decode())
 fails = 0
+RESULTS = []
 def check(what, a, b):
     global fails
     ok = a == b
+    RESULTS.append({"what": what, "ok": ok, "ours": a if not ok else None, "scapy": b if not ok else None})
     fails += not ok
     print(("ok   " if ok else "FAIL ") + what + ("" if ok else f"\n     ours:  {a}\n     scapy: {b}"))
 GN = {0x11ec: "X25519MLKEM768 (post-quantum hybrid)", 0x1d: "x25519", 0x17: "secp256r1", 0x18: "secp384r1"}
@@ -58,5 +60,17 @@ ks = sx[TLS_Ext_KeyShare_SH].server_share
 check("ServerHello key share", ours["sh"]["share"], f"{gname(ks.group)}: {ks.kxlen}-byte share")
 check("NetLog says the same group", cap["ssl"]["key_exchange_group"], 0x11ec)
 check("NetLog says the same cipher", cap["ssl"]["cipher_suite"], shm.cipher)
+import scapy, datetime, platform
+_report = not os.environ.get("RK_NO_REPORT")  # quick runs do not overwrite the full results
+_root = os.path.dirname(HERE)
+if _report: os.makedirs(os.path.join(_root, "validation", "results"), exist_ok=True)
+_out = {"id": "packet-dissectors", "date": datetime.datetime.now(datetime.timezone.utc).isoformat(), "platform": platform.platform(),
+        "passed": not fails, "cases": len(RESULTS), "matched": len(RESULTS) - fails, "reference": "scapy " + scapy.__version__ + " (Python " + platform.python_version() + ")",
+        "checks": [("ok   " if r["ok"] else "FAIL ") + r["what"] for r in RESULTS], "failureCount": fails}
+if _report: json.dump(_out, open(os.path.join(_root, "validation", "results", "packet-dissectors.json"), "w"), indent=1)
+_ff = os.path.join(_root, "validation", "failures", "packet-dissectors.json")
+if _report and fails:
+    os.makedirs(os.path.dirname(_ff), exist_ok=True); json.dump({"id": "packet-dissectors", "failures": [r for r in RESULTS if not r["ok"]]}, open(_ff, "w"), indent=1, default=str)
+elif _report and os.path.exists(_ff): os.remove(_ff)
 print(("all checks passed" if not fails else f"{fails} check(s) failed"))
 sys.exit(1 if fails else 0)

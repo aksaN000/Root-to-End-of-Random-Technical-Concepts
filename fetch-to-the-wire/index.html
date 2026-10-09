@@ -7,26 +7,26 @@
 <meta name="description" content="One fetch(&#x27;/api/users&#x27;) traced through real Chromium: Blink, the network service, DNS, TCP, a post-quantum TLS 1.3 handshake, HTTP/1.1 and CORS, with real captured bytes, a NetLog replay and a CORS lab checked against Chrome.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
 <style>
 /* Layout: the shared source-trace grid. Signature element: one real request, replayed from Chrome's own NetLog; every stage below opens the real bytes of that same request. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
-  --s-js:#1b7a4b; --s-js-bg:#dff3e8; --s-dns:#0f7b74; --s-dns-bg:#dcf2ef; --s-tcp:#9a5a00; --s-tcp-bg:#fff0d4; --s-tls:#6d3fc4; --s-tls-bg:#ece5fb; --s-http:#2445d0; --s-http-bg:#e3e8fb; --s-cors:#b4232c; --s-cors-bg:#fbe3e4;
-  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --s-js:#1b7a4b; --s-js-bg:#dff3e8; --s-dns:#0b6b65; --s-dns-bg:#dcf2ef; --s-tcp:#9a5a00; --s-tcp-bg:#fff0d4; --s-tls:#6d3fc4; --s-tls-bg:#ece5fb; --s-http:#2445d0; --s-http-bg:#e3e8fb; --s-cors:#b4232c; --s-cors-bg:#fbe3e4;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --s-js:#5fd29a; --s-js-bg:#12301f; --s-dns:#4fd1c5; --s-dns-bg:#123430; --s-tcp:#f2b659; --s-tcp-bg:#3a2a10; --s-tls:#b79bff; --s-tls-bg:#2a2145; --s-http:#8ea5ff; --s-http-bg:#1d2645; --s-cors:#ff8a90; --s-cors-bg:#3a1517;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --s-js:#5fd29a; --s-js-bg:#12301f; --s-dns:#4fd1c5; --s-dns-bg:#123430; --s-tcp:#f2b659; --s-tcp-bg:#3a2a10; --s-tls:#b79bff; --s-tls-bg:#2a2145; --s-http:#8ea5ff; --s-http-bg:#1d2645; --s-cors:#ff8a90; --s-cors-bg:#3a1517;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -131,6 +131,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 .hexrow .hb:hover{outline:1px solid var(--accent)}
 .hb.f0{background:var(--s-http-bg)}.hb.f1{background:var(--s-dns-bg)}.hb.f2{background:var(--s-tcp-bg)}.hb.f3{background:var(--s-tls-bg)}
 .hb.hi{background:var(--accent)!important;color:var(--surface)}
+.hb.kc{outline:2px solid var(--ink);outline-offset:-1px}
 .fields{border:1px solid var(--rule);border-radius:8px;background:var(--bg);max-height:24em;overflow:auto;padding:4px}
 .fld{display:block;width:100%;text-align:left;border:0;background:transparent;border-radius:5px;padding:4px 8px;font-size:.8rem;line-height:1.4;color:var(--ink)}
 .fld .rng{font-family:var(--mono);font-size:.66rem;color:var(--muted);margin-right:6px}
@@ -265,6 +266,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="prose">
     <p>Chrome can record everything its network stack does into a <b>NetLog</b>: each event, its timestamp in milliseconds, and its parameters. Below is our request, replayed from that log. Times are measured from the moment the network service created the request. It all happened on one machine, so the network itself is nearly free; on the real internet, each arrow that crosses to the server costs a round trip.<a class="rd" data-r="cr-netlog"></a></p>
   </div>
+  <div class="scope" data-kind="observed"><p><b>What it is.</b> 24 events selected from Chrome 141's own NetLog for our request, with their real timestamps and parameters.</p><p><b>Checked against.</b> It is the real log; the full file is <code>data/netlog.json</code> and opens in the NetLog viewer.</p><p><b>Not covered.</b> The real internet: client and server were on one machine, so round trips cost almost nothing; the certificate was self-signed and Chrome ran with <code>--ignore-certificate-errors</code>; our server chose HTTP/1.1.</p></div>
   <div class="panel" id="rp">
     <div class="stages" id="rpStages"></div>
     <div class="clock" aria-hidden="true"><i id="rpClock"></i></div>
@@ -319,6 +321,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <figcaption><span class="path">net/dns/host_resolver_system_task.cc · SystemHostResolverCall()</span><span class="note">trimmed</span></figcaption>
     <pre data-code="c-gai"></pre>
   </figure>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> The bytes are real captures; the field names and values come from our dissector in <code>wire-model.js</code>.</p><p><b>Checked against.</b> scapy, an independent packet parser, on the same bytes: 18 checks covering DNS and TLS fields (<code>verify/check-dissectors.py</code>).</p><p><b>Not covered.</b> Fields that do not occur in these captures, most DNS record types, and decrypting the encrypted TLS records.</p></div>
   <div class="panel dissector" data-tabs="dnsq,dnsr" data-first="dnsq"></div>
 </section>
 
@@ -396,6 +399,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <p>For anything beyond a "simple" request, the browser first asks permission with an <code>OPTIONS</code> <b>preflight</b>. Our second fetch was a POST with <code>Content-Type: application/json</code>, which is not on the safelist, so the NetLog says <code>preflight_required_reason: disallowed_header</code>. The OPTIONS and its 204 reply are in the HTTP viewer above.<a class="rd" data-r="fetch-cors"></a></p>
     <p>The lab below implements the rules. It agrees with real Chrome 141 on all 2,880 combinations we ran (every method, header set and credentials mode against every server policy), including one place where <b>Chrome is more lenient than the spec</b>: <code>Access-Control-Allow-Headers: *</code> still lets <code>Authorization</code> through.</p>
   </div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our implementation of the Fetch standard's CORS rules as Chrome applies them: when a preflight is needed, and whether the response may be read.</p><p><b>Checked against.</b> Real Chrome 141 on 2,880 combinations of method, headers, credentials and server policy: whether a preflight was sent and whether <code>fetch()</code> succeeded (<code>verify/cors-matrix.js</code>). One switch shows where the spec is stricter than Chrome.</p><p><b>Not covered.</b> Preflight status codes other than 2xx, redirects, the preflight cache, Private Network Access, <code>Access-Control-Expose-Headers</code>, and Firefox or Safari behaviour.</p></div>
   <div class="panel" id="cl">
     <div class="corsgrid">
       <fieldset><legend>Our request</legend>
@@ -973,7 +977,7 @@ bool IsCorsSafelistedHeader(const std::string& name,
   };
   [].forEach.call(document.querySelectorAll(".dissector"),function(host){
     var tabs=host.getAttribute("data-tabs").split(",");
-    host.innerHTML='<div class="tabs">'+tabs.map(function(t){return '<button type="button" data-t="'+t+'">'+esc(SOURCES[t].label)+'</button>'}).join("")+'</div><p class="muted dnote" style="font-size:.82rem;margin:0"></p><div class="dis"><div class="hexbox" tabindex="0" aria-label="Bytes"></div><div class="fields" aria-label="Fields"></div></div><div class="disinfo" aria-live="polite">Click a field to light up its bytes, or click a byte to find its field.</div>';
+    host.innerHTML='<div class="tabs">'+tabs.map(function(t){return '<button type="button" data-t="'+t+'">'+esc(SOURCES[t].label)+'</button>'}).join("")+'</div><p class="muted dnote" style="font-size:.82rem;margin:0"></p><div class="dis"><div class="hexbox" tabindex="0" role="group" aria-label="Bytes. Use the arrow keys to move byte by byte; each byte shows its field."></div><div class="fields" aria-label="Fields"></div></div><div class="disinfo" aria-live="polite">Click a field to light up its bytes, or click a byte (or focus the bytes and use the arrow keys) to find its field.</div>';
     var hexEl=host.querySelector(".hexbox"),fEl=host.querySelector(".fields"),info=host.querySelector(".disinfo"),D=null,cells=[];
     function show(t){
       [].forEach.call(host.querySelectorAll(".tabs button"),function(b){b.classList.toggle("sel",b.getAttribute("data-t")===t)});
@@ -985,7 +989,13 @@ bool IsCorsSafelistedHeader(const std::string& name,
       fEl.innerHTML=D.fields.map(function(f,i){return '<button type="button" class="fld'+(f.group?" grp":"")+'" data-f="'+i+'" style="padding-left:'+(8+f.depth*14)+'px"><span class="rng">'+f.s+'–'+(f.e-1)+'</span><span class="lb">'+esc(f.label)+'</span>'+(f.value!==""?'<span class="vl">'+esc(f.value)+'</span>':"")+'</button>'}).join("");
       [].forEach.call(fEl.querySelectorAll(".fld"),function(btn){btn.onclick=function(){pick(+btn.getAttribute("data-f"),true)}});
       hexEl.onclick=function(ev){var x=ev.target.closest(".hb");if(!x)return;var k=+x.getAttribute("data-b");if(owner[k]!==undefined)pick(owner[k],false,true)};
-      info.textContent="Click a field to light up its bytes, or click a byte to find its field.";
+      /* keyboard: arrow keys walk the bytes (Up/Down = one row of 16), each byte lights up its field */
+      var kc=-1;hexEl.onkeydown=function(ev){var d={ArrowLeft:-1,ArrowRight:1,ArrowUp:-16,ArrowDown:16}[ev.key],n=b.length;
+        if(ev.key==="Home")kc=0;else if(ev.key==="End")kc=n-1;else if(d!==undefined)kc=kc<0?0:Math.max(0,Math.min(n-1,kc+d));else return;
+        ev.preventDefault();[].forEach.call(cells,function(c,k){c.classList.toggle("kc",k===kc)});
+        if(owner[kc]!==undefined)pick(owner[kc],false,true);info.insertAdjacentHTML("afterbegin","Byte "+kc+" = 0x"+("0"+b[kc].toString(16)).slice(-2)+". ");
+        var row=cells[kc].parentNode.parentNode;if(row.offsetTop<hexEl.scrollTop+hexEl.offsetTop||row.offsetTop>hexEl.scrollTop+hexEl.offsetTop+hexEl.clientHeight-20)hexEl.scrollTop=row.offsetTop-hexEl.offsetTop-20};
+      info.textContent="Click a field to light up its bytes, or click a byte (or focus the bytes and use the arrow keys) to find its field.";
     }
     function pick(i,scrollHex,scrollField){
       var f=D.fields[i];[].forEach.call(cells,function(c,k){c.classList.toggle("hi",k>=f.s&&k<f.e)});
@@ -1062,6 +1072,6 @@ bool IsCorsSafelistedHeader(const std::string& name,
     row("DNS + TCP + TLS",T1.domainLookupStart,T1.connectEnd,"st-dns")+row("preflight + wait",T1.connectEnd,T1.requestStart,"st-cors")+row("request → 1st byte",T1.requestStart,T1.responseStart,"st-http")+row("download",T1.responseStart,T1.responseEnd,"st-http");
 })();
 </script>
-<script src="../assets/root-kit.js?v=076d2a97"></script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
 </body>
 </html>

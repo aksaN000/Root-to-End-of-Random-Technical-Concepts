@@ -7,26 +7,26 @@
 <meta name="description" content="Type any grammar and watch an SLR parser get built: FIRST and FOLLOW, LR(0) item sets, the parsing table and a step-by-step parse with a growing tree, checked against the Dragon Book and real GNU Bison.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
 <style>
 /* Layout: the shared source-trace grid. Signature element: one grammar typed at the top drives every artifact below it, and the parse run lights up the matching state card and table cell as it goes. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
-  --sh:#0f7b74; --sh-soft:#dcf2ef; --re:#6d3fc4; --re-soft:#ece5fb;
-  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --sh:#0b6b65; --sh-soft:#dcf2ef; --re:#6d3fc4; --re-soft:#ece5fb;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --sh:#4fd1c5; --sh-soft:#123430; --re:#b79bff; --re-soft:#2a2145;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --sh:#4fd1c5; --sh-soft:#123430; --re:#b79bff; --re-soft:#2a2145;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -218,6 +218,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   </div>
 </section>
 
+<div class="scope" data-kind="model"><p><b>What it is.</b> Our SLR(1) parser generator and driver: FIRST and FOLLOW, LR(0) items, the ACTION and GOTO table, and the parse. It drives every frame below.</p><p><b>Checked against.</b> Every cell of Dragon Book Fig. 4.37 and every move of Fig. 4.38, the conflicts on the classic grammars, and GNU Bison 3.8.2's own conflict reports (<code>verify/check-dragon-book.js</code>).</p><p><b>Not covered.</b> LALR(1) and canonical LR(1) tables (the Bison section shows real LALR output), error recovery, precedence declarations, and grammars written without spaces between symbols.</p></div>
 <div class="lab" id="lab">
   <div class="stagehead">Grammar lab · drives every frame below</div>
   <div class="presets" id="presets"></div>
@@ -287,7 +288,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <p>We gave Bison the expression grammar and compiled the result with GCC. Bison builds <b>LALR(1)</b> tables rather than SLR. For this grammar they make the same parsing decisions, but Bison numbers states differently and adds one state for shifting the end-of-file token.<a class="rd" data-r="dragon-lalr,bison-algo"></a> The driver is the C function <code>yyparse</code>, and it is our Step button written with labels and <code>goto</code>.</p>
   </div>
   <div class="pair">
-    <figure class="src real">
+    <figure class="src real" data-kind="example">
       <figcaption><span class="path">expr.y</span><span class="note">the grammar we fed Bison</span></figcaption>
       <pre data-code="b-expr"></pre>
     </figure>
@@ -317,7 +318,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
       <figcaption><span class="path">real output · bison -Wcounterexamples ifelse.y</span><span class="note">GNU Bison 3.8.2</span></figcaption>
       <pre data-code="b-ifelse"></pre>
     </figure>
-    <figure class="src real">
+    <figure class="src real" data-kind="example">
       <figcaption><span class="path">ifelse2.y · with precedence declarations</span><span class="note">bison reports no warnings</span></figcaption>
       <pre data-code="b-ifelse2"></pre>
     </figure>
@@ -656,6 +657,6 @@ $                       (no warnings: ELSE has higher
   build();
 })();
 </script>
-<script src="../assets/root-kit.js?v=076d2a97"></script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
 </body>
 </html>

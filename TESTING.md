@@ -37,7 +37,7 @@ Requirements:
 ```bash
 git clone https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts.git
 cd Root-to-End-of-Random-Technical-Concepts
-npm install                          # installs Playwright (the only dependency)
+npm install                          # installs Playwright and axe-core (pinned versions)
 npx playwright install chromium      # downloads the browser Playwright drives
 pip install scapy
 npm test
@@ -63,7 +63,8 @@ Other commands:
 
 | Command | What it does |
 |---|---|
-| `npm run test:quick` | Same checks with fewer random cases |
+| `npm run test:quick` | Same checks with fewer random cases (does not overwrite the saved results) |
+| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html pages`) |
 | `npm run test:pages` | Only the page checks, on your local copy |
 | `npm run test:live` | The page checks against the published site |
 | `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
@@ -77,8 +78,16 @@ Other commands:
 | Event loop | `js-event-loop/loop-model.js` | Node running the same programs | `js-event-loop/verify/compare-loop-with-node.js` |
 | Packet dissectors | `fetch-to-the-wire/wire-model.js` | scapy parsing the same captured DNS and TLS bytes | `fetch-to-the-wire/verify/check-dissectors.py` |
 | CORS | `fetch-to-the-wire/wire-model.js` | Real Chromium: 2,880 combinations of request and server policy, recording whether a preflight was sent and whether `fetch()` succeeded | `fetch-to-the-wire/verify/cors-matrix.js` |
-| HTML parsing | `html-to-pixels/html-model.js` | Real Chrome's `DOMParser` on hand-picked and random HTML, compared tree by tree | `html-to-pixels/verify/compare-with-chrome.js [count] [seed]` |
-| Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes | `tools/check-pages.js [--live] [--browser=…]` |
+| HTML parsing | `html-to-pixels/html-model.js` | Real Chrome's `DOMParser` on hand-picked and random HTML (four seeded batches, duplicates removed), compared tree by tree | `html-to-pixels/verify/compare-with-chrome.js [count] [seed]` or `[count:seed …]` |
+| Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes, and axe-core (WCAG 2.2 A/AA) in light and dark mode | `tools/check-pages.js [--live] [--browser=…]` |
+
+### Results and failures
+
+A full `npm test` writes each check's latest numbers to `validation/results/<check>.json` and rebuilds [VALIDATION.md](VALIDATION.md) from them, so the report always shows the last real run. When a check fails, its failing inputs are saved in `validation/failures/<check>.json`; rerun that check with the same count and seed to reproduce them.
+
+### Continuous integration
+
+`.github/workflows/checks.yml` runs on every push, every pull request and every night: a fast job (V8, LR with Bison, event loop, scapy) and a browser job (CORS, HTML parser, pages). Versions are pinned (Node 22.22.0, Playwright 1.56.0, axe-core 4.13.0, scapy 2.8.0) and random checks use fixed seeds. If a job fails, `validation/` is attached to the run as an artifact.
 
 Random checks take a count and a seed, so a failure can be reproduced exactly, for example `node verify/compare-with-chrome.js 5000 123` inside `html-to-pixels/`.
 
@@ -101,6 +110,7 @@ A mismatch is not necessarily a bug in our code. When the CORS check disagreed w
 ## 5. What these checks do not cover
 
 - Browsers other than Chromium (help wanted; see the commands above).
+- Screen readers used by people. axe-core finds missing labels and low contrast, not whether a lab makes sense when heard.
 - Real phones and touch input; the 390 px check is a desktop browser made narrow.
 - Whether the explanations are clear. Only readers can test that. Please use the "Tell us" links.
 - Static source excerpts drift as upstream code changes; each page says when its excerpts were fetched.

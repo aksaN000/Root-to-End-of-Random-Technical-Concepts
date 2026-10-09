@@ -4,29 +4,29 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>From HTML Bytes to Pixels: Chrome&#x27;s Parser, DOM, Style, Layout and Paint | Root to End</title>
-<meta name="description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 7,183 inputs, and real traces showing what a color, width or transform change costs.">
+<meta name="description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 8,929 distinct inputs, and real traces showing what a color, width or transform change costs.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
 <style>
 /* Layout: the shared source-trace grid. Signature element: the parser lab, where one typed snippet is tokenized and built into a DOM step by step and then checked against this browser's own parser. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
-  --s-parse:#1b7a4b; --s-parse-bg:#dff3e8; --s-style:#0f7b74; --s-style-bg:#dcf2ef; --s-layout:#9a5a00; --s-layout-bg:#fff0d4; --s-paint:#6d3fc4; --s-paint-bg:#ece5fb; --s-comp:#2445d0; --s-comp-bg:#e3e8fb;
-  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --s-parse:#1b7a4b; --s-parse-bg:#dff3e8; --s-style:#0b6b65; --s-style-bg:#dcf2ef; --s-layout:#9a5a00; --s-layout-bg:#fff0d4; --s-paint:#6d3fc4; --s-paint-bg:#ece5fb; --s-comp:#2445d0; --s-comp-bg:#e3e8fb;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --s-parse:#5fd29a; --s-parse-bg:#12301f; --s-style:#4fd1c5; --s-style-bg:#123430; --s-layout:#f2b659; --s-layout-bg:#3a2a10; --s-paint:#b79bff; --s-paint-bg:#2a2145; --s-comp:#8ea5ff; --s-comp-bg:#1d2645;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
   --s-parse:#5fd29a; --s-parse-bg:#12301f; --s-style:#4fd1c5; --s-style-bg:#123430; --s-layout:#f2b659; --s-layout-bg:#3a2a10; --s-paint:#b79bff; --s-paint-bg:#2a2145; --s-comp:#8ea5ff; --s-comp-bg:#1d2645;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -132,7 +132,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 .pst b{display:block;font-family:var(--body);font-size:.82rem}
 .pst .n{display:block;font-family:var(--mono);font-size:1.05rem;font-weight:600;margin-top:2px}
 .pst.on{background:var(--cb);border-color:var(--c);color:var(--c)}
-.pst.off{opacity:.45;text-decoration:line-through}
+.pst.off{text-decoration:line-through;border-style:dashed;background:transparent!important}
 .evrows{border:1px solid var(--rule);border-radius:8px;max-height:18em;overflow:auto;background:var(--bg)}
 .evrows table td{font-family:var(--mono);font-size:.74rem;white-space:nowrap;padding:3px 8px}
 .evrows tr.st-style td:nth-child(3),.evrows tr.st-layout td:nth-child(3),.evrows tr.st-paint td:nth-child(3),.evrows tr.st-comp td:nth-child(3),.evrows tr.st-parse td:nth-child(3){color:var(--c);font-weight:600}
@@ -155,7 +155,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Root to End">
 <meta property="og:title" content="From HTML Bytes to Pixels: Chrome&#x27;s Parser, DOM, Style, Layout and Paint">
-<meta property="og:description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 7,183 inputs, and real traces showing what a color, width or transform change costs.">
+<meta property="og:description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 8,929 distinct inputs, and real traces showing what a color, width or transform change costs.">
 <meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/">
 <meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/html-to-pixels.png">
 <meta property="og:image:width" content="1200">
@@ -163,10 +163,10 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <meta property="og:image:alt" content="From HTML Bytes to Pixels: Chrome&#x27;s Parser, DOM, Style, Layout and Paint">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="From HTML Bytes to Pixels: Chrome&#x27;s Parser, DOM, Style, Layout and Paint">
-<meta name="twitter:description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 7,183 inputs, and real traces showing what a color, width or transform change costs.">
+<meta name="twitter:description" content="How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 8,929 distinct inputs, and real traces showing what a color, width or transform change costs.">
 <meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/html-to-pixels.png">
 <meta name="theme-color" content="#2445d0">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "From HTML Bytes to Pixels: Chrome's Parser, DOM, Style, Layout and Paint", "description": "How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 7,183 inputs, and real traces showing what a color, width or transform change costs.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "HTML parser, DOM, rendering pipeline, layout thrashing, reflow, repaint, compositing, Blink", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "From HTML Bytes to Pixels: Chrome's Parser, DOM, Style, Layout and Paint", "description": "How Chrome turns HTML bytes into a DOM and then pixels: a step-through HTML parser that matches Chrome on 8,929 distinct inputs, and real traces showing what a color, width or transform change costs.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "HTML parser, DOM, rendering pipeline, layout thrashing, reflow, repaint, compositing, Blink", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
 <!-- seo:end -->
 </head>
 <body>
@@ -191,7 +191,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <main style="min-width:0">
 <header class="hero">
   <a class="back" href="../">← Root to End</a>
-  <span class="eyebrow">Browser track · 2 of 3 · parser checked against Chrome 141 on 7,183 inputs</span>
+  <span class="eyebrow">Browser track · 2 of 3 · parser checked against Chrome 141 on 8,929 distinct inputs</span>
   <h1>From HTML bytes to pixels</h1>
   <p class="lede">The <a href="../fetch-to-the-wire/">previous page</a> ended with bytes arriving through a data pipe. When those bytes are an HTML document, they go into Blink's HTML parser, become a DOM tree, and then pass through style, layout, paint and compositing before anything reaches the screen. We step through the parser on any HTML we type, check every tree against this browser's own parser, and then read real Chrome traces that show exactly which stages a DOM change triggers.</p>
   <div class="journey" aria-label="Stages this page follows">
@@ -201,7 +201,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <nav class="mobile-toc" aria-label="Sections">
     <a href="#tokens">Tokens</a><a href="#lab">Parser lab</a><a href="#tree">DOM</a><a href="#lifecycle">Lifecycle</a><a href="#cost">Cost</a><a href="#forced">Forced layout</a><a href="#compose">Composite</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
   </nav>
-  <p class="muted" style="font-size:.86rem">How this was checked: the parser model on this page builds the same tree as Chrome 141's own parser on 7,183 inputs (61 hand-picked and 7,000 random tag soups). The pipeline numbers are real trace events from headless Chromium 141 loading and changing a small test page; the traces are in the folder's <code>data/</code> directory. Blink source excerpts are from upstream Chromium (October 2026), trimmed with <code>// …</code>.</p>
+  <p class="muted" style="font-size:.86rem">How this was checked: the parser model on this page builds the same tree as Chrome 141's own parser on 8,929 distinct inputs (61 hand-picked and 8,868 distinct random tag soups, from four seeded batches). The pipeline numbers are real trace events from headless Chromium 141 loading and changing a small test page; the traces are in the folder's <code>data/</code> directory. Blink source excerpts are from upstream Chromium (October 2026), trimmed with <code>// …</code>.</p>
 </header>
 
 <aside class="tldr" aria-labelledby="tl-h">
@@ -257,6 +257,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="lab" data-deeper="html-parsing-spec,html5lib-tests">
   <div class="sechead"><span class="eyebrow">Lab · the parser, step by step</span><h2>Type HTML, step through the parser, check it against this browser</h2></div>
   <div class="prose"><p>Each step processes one token. We see the tokenizer states it passed through, the insertion mode, the <b>stack of open elements</b>, the list of <b>active formatting elements</b>, the rule that fired, and the DOM so far in the html5lib tree format browsers use for their parser tests. The <b>Check</b> button parses the same text with this browser's own <code>DOMParser</code> and compares the trees.<a class="rd" data-r="html5lib-tests"></a></p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our tokenizer and tree builder for the HTML standard's head and body insertion modes, including implied tags, list items, reconstruction and the adoption agency algorithm.</p><p><b>Checked against.</b> Real Chrome's parser on 8,929 distinct inputs (61 hand-picked plus 9,000 random, of which 8,868 are distinct) with identical trees (<code>verify/compare-with-chrome.js</code>), and live: <b>Check against this browser</b> compares with the parser you are using right now.</p><p><b>Not covered.</b> Tables, forms, <code>select</code>, <code>template</code>, framesets, ruby, SVG and MathML, the full named-entity table, parse-error reporting, and scripts that run during parsing. The lab says so instead of guessing.</p></div>
   <div class="lab">
     <div class="presets" id="presets"></div>
     <textarea id="src" spellcheck="false" aria-label="HTML to parse"></textarea>
@@ -328,6 +329,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
 <section id="cost" data-deeper="compositor-only,layout-thrash">
   <div class="sechead"><span class="eyebrow">Lab · what a change costs</span><h2>Seven real traces: which stages each change ran</h2></div>
   <div class="prose"><p>We loaded a small test page in headless Chrome 141 and recorded a trace around each change below. Every number is a real trace event: the count of each stage and, for the main-thread stages, how long it took. The test page has a <code>.card</code> div and a <code>#mover</code> div with <code>will-change: transform</code>.</p></div>
+  <div class="scope" data-kind="observed"><p><b>What it is.</b> Real trace events from headless Chrome 141 on Linux for seven changes to one small test page.</p><p><b>Checked against.</b> They are the real traces (<code>data/trace-*.json</code>, which open in DevTools or Perfetto) and they reproduce: re-recording gives the same stage counts.</p><p><b>Not covered.</b> Timing on other machines: this ran headless with software rendering, so durations are only indicative; the stage counts are the point. Pages with real content take much longer per stage.</p></div>
   <div class="panel" id="cl">
     <div class="scen" id="scen"></div>
     <div class="codeline" id="code"></div>
@@ -822,6 +824,6 @@ void HTMLTreeBuilder::ProcessFakePEndTagIfPInButtonScope() {
   }
 })();
 </script>
-<script src="../assets/root-kit.js?v=076d2a97"></script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
 </body>
 </html>

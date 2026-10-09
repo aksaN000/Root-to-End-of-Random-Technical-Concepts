@@ -7,23 +7,23 @@
 <meta name="description" content="How fetch().then() really runs in Chrome: the renderer thread, the line that starts the event loop, the kernel wait and V8&#x27;s microtask queue, plus a playground that steps through our own async code and checks it against real V8.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/root-kit.css?v=4a4ec21a">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
 <style>
 /* Layout: a two-column source-trace. Left rail is a live call stack (root frame at the bottom, our JS at the top); right column walks the same frames from root to end. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
   --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
-  --c-com:#6b7686; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
   --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
-  --c-com:#7d8898; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
 *{box-sizing:border-box}
 html{scroll-behavior:smooth}
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
@@ -438,6 +438,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
   <div class="prose">
     <p>This is the simulator from before with one addition: the real C++ stack of <code>CrRendererMain</code> at each step, bottom frame first. Watch how our JS frames only ever appear on top of <code>DoWork</code>, and how an idle loop's stack ends in a kernel wait.</p>
   </div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> A step-through of one fixed program. The JS side follows the event-loop rules; the C++ stack column is assembled from the Chromium functions excerpted above.</p><p><b>Checked against.</b> Not run against Chrome. The output order is the standard one the playground below checks against real engines, but the C++ frames are a teaching reconstruction, not a captured stack.</p><p><b>Not covered.</b> Real task priorities, rendering steps, input events, and anything not in this one program.</p></div>
   <div class="sim" id="sim">
     <div class="ctl">
       <button id="sOk" class="sel" type="button">Server responds</button>
@@ -478,6 +479,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <p>The trace above follows one fixed program. Here we write our own. The playground runs a model of the event loop that follows the spec's promise jobs and the "one task, then every microtask" rule, and shows the queues at each step. It covers a subset of JavaScript: <code>console.log</code>, <code>setTimeout</code>, <code>queueMicrotask</code>, <code>Promise.resolve</code>, <code>new Promise</code>, <code>.then</code>, <code>.catch</code>, <code>async</code>/<code>await</code>, functions, arrow functions and variables. Rejections, <code>if</code> and loops are left out.<a class="rd" data-r="jake-tasks,mdn-microtasks"></a></p>
     <p>The model is not taken on trust. Every time the code changes, the page also runs it for real in a Web Worker, using the V8 in this browser, and compares the printed lines. A test suite in the folder checks the same thing against Node.</p>
   </div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> A small interpreter for a subset of JavaScript that follows the spec's promise jobs and the one-task-then-all-microtasks rule.</p><p><b>Checked against.</b> Node 22 on 18 programs (<code>verify/compare-loop-with-node.js</code>), and live: every program also runs in this browser's real engine, and the bar under the playground says whether the output matched.</p><p><b>Not covered.</b> Rejections, <code>if</code>, loops, template strings, <code>process.nextTick</code>, timer clamping, rendering, and real task priorities. The model reports these instead of guessing.</p></div>
   <div class="sim" id="pg" tabindex="-1">
     <div class="pgpresets" id="pgPresets" aria-label="Example programs"></div>
     <div class="pgtop">
@@ -528,7 +530,7 @@ ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;ma
     <p>With <code>npm run dev</code>, Vite serves an <code>index.html</code> containing <code>&lt;script type="module" src="/src/main.jsx"&gt;</code>. Module scripts are deferred, so after parsing finishes, one task on <code>CrRendererMain</code> executes <code>main.jsx</code>. Inside that task, <code>createRoot(...).render(&lt;App /&gt;)</code> runs. React then schedules its work, and effects run in later turns of the same loop.</p>
     <p>A typical data-loading component maps directly onto the trace:</p>
   </div>
-  <figure class="src">
+  <figure class="src" data-kind="example">
     <figcaption><span class="path">src/User.jsx</span><span class="note">example</span></figcaption>
     <pre data-code="c-react"></pre>
   </figure>
@@ -1352,6 +1354,6 @@ export default function User() {
   load(0);
 })();
 </script>
-<script src="../assets/root-kit.js?v=076d2a97"></script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
 </body>
 </html>

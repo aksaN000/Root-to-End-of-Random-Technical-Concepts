@@ -1,0 +1,25 @@
+{
+ "id": "lr-dragon",
+ "date": "2026-10-09T08:33:28.520Z",
+ "platform": "linux 6.18.44-fc-v80 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "passed": true,
+ "cases": 11,
+ "matched": 11,
+ "reference": "Dragon Book 2nd ed. Fig. 4.37 and 4.38; bison (GNU Bison) 3.8.2",
+ "checks": [
+  "ok   expression grammar has 12 LR(0) states (I0..I11)",
+  "ok   expression grammar has no SLR conflicts",
+  "ok   every ACTION and GOTO cell matches Fig. 4.37",
+  "ok   moves for id * id + id match Fig. 4.38",
+  "ok   FIRST(E) = { (, id }",
+  "ok   FOLLOW(T) = { $, ), *, + }",
+  "ok   dangling else: exactly one shift/reduce conflict, on e",
+  "ok   S -> L = R | R: one SLR shift/reduce conflict on =",
+  "ok   ε-grammar parses ( ( ) ) ( )",
+  "ok   bison (GNU Bison) 3.8.2: dangling else gives 1 shift/reduce conflict",
+  "ok   bison (GNU Bison) 3.8.2: S -> L = R | R has no conflicts (LALR handles it)"
+ ],
+ "failureCount": 0
+}
