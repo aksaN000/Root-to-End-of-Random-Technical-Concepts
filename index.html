@@ -11,15 +11,15 @@
 /* Layout: one narrow column; each simulation is a row that reads like a stack frame, root layer on the left, your code on the right. */
 :root{
   --bg:#f6f7f9; --surface:#ffffff; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
-  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
   --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0e1116; --surface:#151a21; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
-  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; color-scheme:dark}}
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0e1116; --surface:#151a21; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
-  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; color-scheme:dark}
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517; color-scheme:dark}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.65;padding-inline:20px;padding-block:0 64px}
 main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
@@ -28,9 +28,6 @@ header{padding-block:48px 0;display:flex;flex-direction:column;gap:16px}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(2.3rem,7vw,4rem);line-height:1.05;letter-spacing:-.02em;margin:0;text-wrap:balance}
 h1 span{color:var(--accent)}
 .lede{max-width:62ch;color:var(--muted);font-size:1.1rem;margin:0}
-.principles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin:0;padding:0;list-style:none}
-.principles li{border-top:2px solid var(--rule);padding-top:10px;font-size:.92rem;color:var(--muted)}
-.principles b{display:block;color:var(--ink);font-weight:600;font-size:.95rem}
 h2{font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 12px}
 .sim{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px 24px;align-items:center;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:20px 22px}
 .sim:hover{border-color:var(--accent)}
@@ -55,31 +52,61 @@ footer a{color:var(--accent)}
 .map .soon{border:1px dashed var(--rule);color:var(--muted);border-radius:8px;padding:6px 10px;display:flex;flex-direction:column;line-height:1.3}
 .map .soon small{font-size:.68rem}
 .maplede{font-size:.9rem;color:var(--muted);margin:0 0 12px;max-width:64ch}
-.demo{background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:18px 20px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px 24px}
-.demo h2{grid-column:1/-1;margin:0}
-.demo pre{margin:0;align-self:start;font-family:var(--mono);font-size:.84rem;line-height:1.6;background:var(--bg);border:1px solid var(--rule);border-radius:8px;padding:12px 14px;overflow-x:auto}
+.demo{background:var(--surface);border:1px solid var(--rule);border-radius:14px;padding:22px 24px;display:flex;flex-direction:column;gap:16px}
+.demo-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 16px}
+.demo-head h2{font-family:var(--display);font-size:1.45rem;font-weight:800;letter-spacing:-.01em;text-transform:none;color:var(--ink);margin:0}
+.kicker{font-family:var(--mono);font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.demo-body{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:20px 28px;align-items:center}
+.demo pre{margin:0;font-family:var(--mono);font-size:.9rem;line-height:1.75;background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:14px 16px;overflow-x:auto}
 .demo pre b{font-weight:500;color:var(--accent)}
-.demo .ask{margin:0 0 8px;font-size:.95rem}
-.demo .picks{display:flex;gap:8px;flex-wrap:wrap}
-.demo button{font:inherit;font-family:var(--mono);font-size:.9rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 14px;cursor:pointer}
-.demo button:hover{border-color:var(--accent)}
+.demo pre i{font-style:normal;color:var(--muted)}
+.slotrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.slotrow .lbl{font-family:var(--mono);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);width:8em;flex:none}
+.slots{display:flex;gap:6px}
+.slot{width:40px;height:40px;border-radius:9px;border:1.5px dashed var(--rule);display:grid;place-items:center;font-family:var(--mono);font-size:1rem;font-weight:600;color:var(--ink)}
+.slot.full{border-style:solid;border-color:var(--accent);background:var(--accent-soft);color:var(--accent)}
+.slot.ok{border-style:solid;border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
+.slot.no{border-style:solid;border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+.answer{display:flex;flex-direction:column;gap:12px}
+.picks{display:flex;gap:6px;flex-wrap:wrap}
+.demo button{font:inherit;font-size:.92rem;border-radius:9px;cursor:pointer}
+.picks button{width:40px;height:40px;font-family:var(--mono);font-weight:600;border:1px solid var(--rule);background:var(--bg);color:var(--ink)}
+.picks button:hover:not(:disabled){border-color:var(--accent);color:var(--accent)}
+.picks button:disabled{color:var(--muted);background:transparent;border-color:transparent;cursor:default;text-decoration:line-through}
+.actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+#run{border:1px solid var(--accent);background:var(--accent);color:var(--surface);padding:8px 16px;font-weight:600}
+#run:disabled{background:transparent;color:var(--muted);border-color:var(--rule);cursor:default;font-weight:500}
+#again{border:0;background:none;color:var(--accent);padding:8px 2px;text-decoration:underline;text-underline-offset:3px}
 .demo button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.demo button:disabled{opacity:1;color:var(--muted);border-style:dashed;cursor:default}
-.demo .seq{font-family:var(--mono);margin:10px 0 0;min-height:1.6em}
-.demo .out{margin:8px 0 0;font-size:.92rem}
-.demo .out a{color:var(--accent)}
-.demo .row{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
-.starts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:12px}
-.starts a{display:block;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:14px 16px}
+.hint{font-size:.88rem;color:var(--muted);margin:0}
+.reveal{border-top:1px solid var(--rule);padding-top:16px;display:flex;flex-direction:column;gap:12px}
+.reveal[hidden]{display:none}
+.why{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0;padding:0;list-style:none}
+.why li{border-radius:10px;padding:10px 12px;font-size:.88rem;color:var(--muted);background:var(--bg);border-left:3px solid var(--c)}
+.why b{display:block;color:var(--ink);font-size:.92rem}
+.why code{font-family:var(--mono);font-size:.85em}
+.k-sync{--c:var(--accent)}.k-micro{--c:var(--ok)}.k-task{--c:var(--trace)}
+.verdict{margin:0;font-size:.98rem}
+.verdict a{color:var(--accent)}
+.starts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.starts a{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px}
 .starts a:hover{border-color:var(--accent)}
 .starts a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-.starts b{display:block;font-size:1rem}
-.starts span{display:block;color:var(--muted);font-size:.88rem;margin-top:4px}
+.starts b{font-family:var(--display);font-size:1.12rem;font-weight:800;line-height:1.2}
+.starts span{color:var(--muted);font-size:.9rem;line-height:1.55}
 .starts code{font-family:var(--mono);font-size:.85em}
+.starts .path{margin-top:auto;padding-top:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.starts .path em{font-style:normal;border:1px solid var(--rule);border-radius:5px;padding:1px 7px;background:var(--bg);color:var(--ink)}
+.anatomy{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:0;margin:0;padding:0;list-style:none;counter-reset:a;border:1px solid var(--rule);border-radius:12px;overflow:hidden;background:var(--surface)}
+.anatomy li{counter-increment:a;padding:14px 14px 16px;font-size:.86rem;color:var(--muted);line-height:1.5;border-left:1px solid var(--rule)}
+.anatomy li:first-child{border-left:0}
+.anatomy li::before{content:counter(a);display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:var(--accent-soft);color:var(--accent);font-family:var(--mono);font-size:.75rem;font-weight:600;margin-bottom:8px}
+.anatomy b{display:block;color:var(--ink);font-size:.92rem;margin-bottom:2px}
+@media (max-width:760px){.starts{grid-template-columns:1fr}.why{grid-template-columns:1fr}.anatomy{grid-template-columns:1fr 1fr}.anatomy li{border-left:0;border-top:1px solid var(--rule)}.anatomy li:nth-child(-n+2){border-top:0}.anatomy li:nth-child(even){border-left:1px solid var(--rule)}.anatomy li:last-child{grid-column:1/-1}}
+@media (max-width:640px){.demo-body{grid-template-columns:1fr}}
 .need{font-size:.84rem;color:var(--muted);margin:8px 0 0}
 .verified{font-size:.9rem;color:var(--muted);margin:0}
 .verified a{color:var(--accent)}
-@media (max-width:640px){.demo{grid-template-columns:1fr}}
 @media (max-width:560px){.sim{grid-template-columns:1fr}}
 </style>
 <!-- seo:start -->
@@ -110,38 +137,47 @@ footer a{color:var(--accent)}
   </header>
 
   <section class="demo" aria-labelledby="demo-h">
-    <h2 id="demo-h">Try one first: in what order does this print?</h2>
-    <pre tabindex="0" role="region" aria-label="Four lines of JavaScript"><b>log</b>("A");
+    <div class="demo-head"><h2 id="demo-h">In what order does this print?</h2><span class="kicker">a 30-second puzzle</span></div>
+    <div class="demo-body">
+      <pre tabindex="0" role="region" aria-label="Four lines of JavaScript"><b>log</b>("A");
 setTimeout(() =&gt; <b>log</b>("B"), 0);
 Promise.resolve().then(() =&gt; <b>log</b>("C"));
 <b>log</b>("D");</pre>
-    <div>
-      <p class="ask">Click the letters in the order you think they appear.</p>
-      <div class="picks" id="picks"><button type="button">A</button><button type="button">B</button><button type="button">C</button><button type="button">D</button></div>
-      <p class="seq" id="seq" aria-live="polite">Your guess: </p>
-      <div class="row"><button type="button" id="run" disabled>Run it in this browser</button><button type="button" id="again">Start over</button></div>
-      <p class="out" id="out" aria-live="polite"></p>
+      <div class="answer">
+        <div class="slotrow"><span class="lbl">Our guess</span><div class="slots" id="guess" aria-live="polite"></div></div>
+        <div class="slotrow"><span class="lbl">Pick next</span><div class="picks" id="picks"><button type="button">A</button><button type="button">B</button><button type="button">C</button><button type="button">D</button></div></div>
+        <div class="actions"><button type="button" id="run" disabled>Run it in this browser</button><button type="button" id="again">Start over</button></div>
+      </div>
+    </div>
+    <div class="reveal" id="reveal" hidden>
+      <div class="slotrow"><span class="lbl">This browser</span><div class="slots" id="real"></div></div>
+      <p class="verdict" id="verdict" aria-live="polite"></p>
+      <ul class="why">
+        <li class="k-sync"><b>A, D: right now</b>Plain calls run in the current task, top to bottom.</li>
+        <li class="k-micro"><b>C: a microtask</b>Runs as soon as the current task ends, before anything else.</li>
+        <li class="k-task"><b>B: a new task</b><code>setTimeout</code> waits for a later turn of the event loop, even at 0 ms.</li>
+      </ul>
     </div>
   </section>
-
 
   <section aria-labelledby="start-h">
     <h2 id="start-h">Where to start</h2>
     <div class="starts">
-      <a href="js-event-loop/"><b>We are learning JavaScript</b><span>Start with the event loop: why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8. Then V8 and the Browser track.</span></a>
-      <a href="lr-parser/"><b>We are taking a compilers course</b><span>Start with LR parsing (grammar to SLR table to parse tree), then follow a real compiler in V8: scanner, parser, bytecode, JIT.</span></a>
-      <a href="fetch-to-the-wire/"><b>We want to know what the browser does</b><span>The Browser track: one <code>fetch()</code> down to the bytes on the wire, HTML bytes up to pixels, then a click back down to our listener.</span></a>
+      <a href="js-event-loop/"><b>Learning JavaScript</b><span>Why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8.</span><span class="path"><em>event loop</em>→<em>V8</em>→<em>Browser track</em></span></a>
+      <a href="lr-parser/"><b>Taking a compilers course</b><span>Build an SLR table from any grammar, then follow a real compiler through V8.</span><span class="path"><em>LR parsing</em>→<em>V8 pipeline</em></span></a>
+      <a href="fetch-to-the-wire/"><b>Curious how browsers work</b><span>A request goes out, the response becomes pixels, and a click comes back to our code.</span><span class="path"><em>fetch()</em>→<em>pixels</em>→<em>click</em></span></a>
     </div>
   </section>
 
-  <section aria-label="How the pages work">
-    <ul class="principles">
-      <li><b>Trace from the root</b>Kernel, compiler or protocol first; my own code last.</li>
-      <li><b>Show the real code</b>Excerpts from the actual source, trimmed and linked.</li>
-      <li><b>Make it steppable</b>Every simulation can be walked one step at a time.</li>
-      <li><b>Fast or deep</b>A 60-second version on top; the full trace from the source below.</li>
-      <li><b>Read deeper, then test</b>Reading markers in the text, predict-first quizzes, and exam-style questions with model answers.</li>
-    </ul>
+  <section aria-labelledby="anat-h">
+    <h2 id="anat-h">Every page has the same shape</h2>
+    <ol class="anatomy">
+      <li><b>60-second version</b>The core rule and one diagram, for the night before the exam.</li>
+      <li><b>Frames from the root</b>Real source, kernel or engine first, our code last.</li>
+      <li><b>A lab</b>Step it, type into it, and check it against the real system.</li>
+      <li><b>Real output</b>Bytes, traces and logs captured from the real tool.</li>
+      <li><b>Practice</b>Predict-first quizzes, exam questions and a reading list.</li>
+    </ol>
   </section>
 
   <section>
@@ -258,22 +294,24 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Found a mistake? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml">Report it</a>, or <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml">suggest a topic</a>. Want to check our claims? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/TESTING.md">Here is how to test everything</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>
 </main>
 <script>
-/* The demo runs the real code in this browser and prints what the engine actually did, so the answer is observed, not typed. */
+/* The demo runs the real code in this browser and shows what the engine actually did, so the answer is observed, not typed. */
 (function(){
-  var guess=[],picks=document.querySelectorAll("#picks button"),seq=document.getElementById("seq"),run=document.getElementById("run"),out=document.getElementById("out");
-  function draw(){seq.textContent="Your guess: "+guess.join(" ");run.disabled=guess.length<4}
-  [].forEach.call(picks,function(b){b.onclick=function(){guess.push(b.textContent);b.disabled=true;draw();if(guess.length===4)run.focus()}});
-  document.getElementById("again").onclick=function(){guess=[];[].forEach.call(picks,function(b){b.disabled=false});out.textContent="";draw();picks[0].focus()};
+  var guess=[],picks=[].slice.call(document.querySelectorAll("#picks button")),run=document.getElementById("run");
+  function slots(el,vals,cls){el.innerHTML=[0,1,2,3].map(function(i){var v=vals[i];return '<span class="slot'+(v?" "+(cls?cls[i]:"full"):"")+'">'+(v||"")+'</span>'}).join("")}
+  function draw(){slots(document.getElementById("guess"),guess);run.disabled=guess.length<4}
+  picks.forEach(function(b){b.onclick=function(){if(guess.length>=4)return;guess.push(b.textContent);b.disabled=true;draw();if(guess.length===4)run.focus();else{var n=picks.filter(function(x){return !x.disabled})[0];if(n)n.focus()}}});
+  document.getElementById("again").onclick=function(){guess=[];picks.forEach(function(b){b.disabled=false});document.getElementById("reveal").hidden=true;draw();picks[0].focus()};
   run.onclick=function(){
     var got=[];function log(x){got.push(x)}
     log("A");setTimeout(function(){log("B")},0);Promise.resolve().then(function(){log("C")});log("D");
     setTimeout(function(){setTimeout(function(){
-      var ok=got.join(" ")===guess.join(" ");
-      out.innerHTML="This browser printed: <b>"+got.join(" ")+"</b>. "+(ok?"We called it. ":"Not what we guessed. ")+
-        "A and D run first because they are in the current task; C is a microtask, which runs as soon as that task ends; B is a new task, which waits for the next turn of the event loop. "+
-        '<a href="js-event-loop/#playground">Trace it into Chrome and V8 →</a>';
+      var ok=got.join("")===guess.join("");
+      slots(document.getElementById("real"),got,got.map(function(x,i){return x===guess[i]?"ok":"no"}));
+      document.getElementById("verdict").innerHTML=(ok?"<b>Right.</b> ":"<b>Not quite.</b> ")+"This browser printed "+got.join(" ")+'. <a href="js-event-loop/#playground">Trace why, into Chrome and V8 →</a>';
+      document.getElementById("reveal").hidden=false;
     },0)},0);
   };
+  draw();
 })();
 </script>
 </body>
