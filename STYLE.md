@@ -39,6 +39,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 - **When the real system is the reader's browser, let the page check itself live.** Example: the parser lab's "Check against this browser" button parses the same text with the browser's own `DOMParser` and compares trees, so every reader re-runs the verification on their own machine.
 - **Cross-check a model against a number the real system reports.** Example: the tokenizer model's 46 tokens for the traced page against Chrome's own `parsed_tokens: 46`.
 - **Check input models with real input.** When the answer depends on how an event arrived, script-made events are not enough: the dispatch check clicks with Playwright's mouse, which enters Chrome at the browser process, and the lab asks the reader to click the target for real. A shared driver (`dispatch-real.js`) runs a program on a real DOM for both the verifier and the in-page check, so they test the same thing.
+- **When the real system is a library, compare its internals, not just its answers.** The autograd check compares the graph PyTorch records, the order its engine runs the nodes (pre-hooks on every node) and the gradients, so a model that got the right numbers by a different route would fail. Set float tolerances from what can legitimately differ (here the last bit of a product, scaled by the largest gradient in the graph) and say so on the page.
 - **Draw a lab's live copy exactly as the verifier does.** The hit-test lab and its check use one `toHTML()`, labels included, and anything decorative is kept out of the answer (labels have `pointer-events: none`; colours are `rgba` backgrounds, because `opacity` would create stacking contexts).
 
 ## Reading material
@@ -55,7 +56,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Tracks
 
-Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Browser track: `fetch()` → HTML to pixels → a click to our listener). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
+Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Browser track: `fetch()` → HTML to pixels → a click to our listener; the ML track: autograd → a transformer). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
 
 ## Visual system
 
@@ -86,6 +87,8 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 3. Commit as `aksaN000 <aksangoni.alif@gmail.com>`, with no co-author or tool attribution lines, push, and check the live URL.
 
 ## Changelog
+
+- **2026-10-10**: ML track page 1 (`autograd`), checked against real PyTorch. New rule: compare a library's internals, not just its answers. The landing page has an ML track and a fourth starting point.
 
 - **2026-10-09**: Browser track page 3 (`click-to-listener`), completing the track. New rules: check input models with real input, and draw a lab's live copy exactly as its verifier does. The SEO and preview-image generators now live in `tools/` (`seo.py`, `make-og.js`).
 

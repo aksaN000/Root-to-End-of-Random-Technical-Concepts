@@ -16,7 +16,8 @@ To rerun everything: `npm test` (setup in [TESTING.md](TESTING.md)). When a chec
 | [HTML parser model](#html-parser-model) | Chrome 141.0.7390.37 DOMParser | 8,929 | ✅ 8,929 / 8,929 match | 2026-10-09 |
 | [Event dispatch model](#event-dispatch-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 1,609 | ✅ 1,609 / 1,609 match | 2026-10-09 |
 | [Hit-test model](#hit-test-model) | Chromium 141.0.7390.37 document.elementFromPoint | 40,320 | ✅ 40,320 / 40,320 match | 2026-10-09 |
-| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 16 | ✅ 16 / 16 match | 2026-10-09 |
+| [Autograd engine](#autograd-engine) | PyTorch 2.14.1+cpu (CPU, Python 3.13.16) | 2,001 | ✅ 2,001 / 2,001 match | 2026-10-09 |
+| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 18 | ✅ 18 / 18 match | 2026-10-09 |
 
 ## V8 bytecode model
 
@@ -143,6 +144,17 @@ ok   NetLog says the same cipher
 - **Random batches:** 250 with seed 7, 250 with seed 2026, 250 with seed 99, 250 with seed 4242, plus 8 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd click-to-listener && node verify/compare-hit-test.js`
 
+## Autograd engine
+
+- **Our code:** `autograd/autograd-model.js`: PyTorch's backward node types and formulas, sequence numbers, `compute_dependencies`, a ready queue that reproduces `std::priority_queue`, input buffers and `AccumulateGrad`, for scalar float64 programs (page: [autograd](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/autograd/))
+- **Reference:** PyTorch 2.14.1+cpu (CPU, Python 3.13.16)
+- **Method:** The lab's presets and random Python programs (leaves, `+ - * / **`, unary minus, constants, and tanh, exp, log, sin, cos, sigmoid, relu) run in the model and in real PyTorch. The graph is compared by walking `grad_fn.next_functions`; the execution order is recorded with a pre-hook on every node.
+- **What "match" means:** The same graph (every node's name and next edges), the same order of sequence numbers, the same execution order, and the same leaf gradients: nan and inf exactly, other values within 1e-12 times the largest gradient that flowed through the graph.
+- **Not covered:** Tensors with more than one element and broadcasting, in-place operations, `no_grad`, hooks, `create_graph`, and GPU streams.
+- **Latest run:** 2026-10-09 on Linux-6.18.44-fc-v80-x86_64-with-glibc2.39, Node 22.22.0. Passed: 2,001 of 2,001. 11370 backward nodes compared; 295 programs with nan or inf gradients.
+- **Random batches:** 500 with seed 7, 500 with seed 2026, 500 with seed 99, 500 with seed 4242, plus 8 hand-picked cases. The same seeds always generate the same inputs.
+- **Command:** `cd autograd && python3 verify/compare-with-pytorch.py`
+
 ## Pages in a real browser
 
 - **Our code:** Every page of the site
@@ -150,7 +162,7 @@ ok   NetLog says the same cipher
 - **Method:** Each page is loaded in real Chromium at 1300 px and 390 px wide. The check fails on script errors, failed requests, sideways scrolling, missing components, quizzes or exam answers that do not respond, stale asset hashes, and accessibility violations found by axe-core in light and dark mode.
 - **What "match" means:** Zero problems on every page at both widths.
 - **Not covered:** Real phones with touch input, screen-reader testing by people, and whether the explanations are clear.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 16 of 16. 8 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
+- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 18 of 18. 9 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
 
 <details><summary>Per page</summary>
 
@@ -158,6 +170,8 @@ ok   NetLog says the same cipher
 |---|---|---|---|
 | home | 1300 px | 0 | 0 |
 | home | 390 px | 0 | 0 |
+| autograd | 1300 px | 0 | 0 |
+| autograd | 390 px | 0 | 0 |
 | click-to-listener | 1300 px | 0 | 0 |
 | click-to-listener | 390 px | 0 | 0 |
 | fetch-to-the-wire | 1300 px | 0 | 0 |

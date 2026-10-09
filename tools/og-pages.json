@@ -89,5 +89,17 @@
    "dispatch",
    "our listener"
   ]
+ },
+ {
+  "slug": "autograd",
+  "h": "From the chain rule to loss.backward()",
+  "sub": "PyTorch's autograd engine, from the chain rule to .grad",
+  "chain": [
+   "chain rule",
+   "grad_fn graph",
+   "engine",
+   "AccumulateGrad",
+   ".grad"
+  ]
  }
 ]

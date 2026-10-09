@@ -1,7 +1,7 @@
 // Runs every verification in the repo and prints one summary.
 //   npm test                     (or: node tools/run-all-checks.js)
 //   node tools/run-all-checks.js --quick     fewer random cases, faster
-//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit pages)
+//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit autograd pages)
 // Checks that need something missing (Python + scapy, Playwright's Chromium, Node 22 for the
 // exact V8 bytecode) are reported as SKIP with the reason, not as failures.
 const { spawnSync } = require("child_process"), path = require("path");
@@ -10,6 +10,8 @@ const node = process.execPath, nodeMajor = +process.versions.node.split(".")[0];
 let hasPlaywright = true; try { require.resolve("playwright"); } catch (e) { try { require.resolve("/opt/npm-tools/node_modules/playwright"); } catch (e2) { hasPlaywright = false; } }
 function py() { for (const c of ["python3", "python"]) { const r = spawnSync(c, ["-c", "import scapy, cryptography"], { encoding: "utf8" }); if (r.status === 0) return c; } return null; }
 const PY = py();
+function pyTorch() { for (const c of ["python3", "python"]) { const r = spawnSync(c, ["-c", "import torch"], { encoding: "utf8" }); if (r.status === 0) return c; } return null; }
+const PYT = pyTorch();
 const CHECKS = [
   { id: "v8", name: "V8 bytecode model vs this Node's V8", dir: "v8-pipeline", cmd: [node, "verify/compare-with-node.js", quick ? "100" : "300"], need: nodeMajor === 22 ? null : "needs Node 22 (V8 12.4); bytecode differs between V8 versions. This is Node " + process.versions.node },
   { id: "lr", name: "LR engine vs Dragon Book tables (and Bison if installed)", dir: "lr-parser", cmd: [node, "verify/check-dragon-book.js"] },
@@ -19,6 +21,7 @@ const CHECKS = [
   { id: "html", name: "HTML parser model vs real Chrome", dir: "html-to-pixels", cmd: [node, "verify/compare-with-chrome.js"].concat(quick ? ["300:7"] : ["1000:7", "3000:2026", "3000:99", "2000:4242"]), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "dispatch", name: "Event-dispatch model vs real Chromium (real clicks and script dispatches)", dir: "click-to-listener", cmd: [node, "verify/compare-dispatch.js"].concat(quick ? ["60:7"] : []), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "hit", name: "Hit-test model vs Chromium's elementFromPoint", dir: "click-to-listener", cmd: [node, "verify/compare-hit-test.js"].concat(quick ? ["50:7"] : []), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
+  { id: "autograd", name: "Autograd engine vs real PyTorch (graph, order, gradients)", dir: "autograd", cmd: [PYT || "python3", "verify/compare-with-pytorch.py"].concat(quick ? ["100", "7"] : []), need: PYT ? null : "needs Python 3 with PyTorch (pip install torch --index-url https://download.pytorch.org/whl/cpu)" },
   { id: "pages", name: "Every page loads cleanly (desktop and phone width)", dir: ".", cmd: [node, "tools/check-pages.js"], need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" }
 ];
 const onlyArg = process.argv.find(a => a.startsWith("--only="));

@@ -30,6 +30,9 @@ PAGES=[
  ("click-to-listener/index.html","click-to-listener/","click-to-listener","From a Click to Our Listener: Input, Hit Testing and Event Dispatch in Chrome | Root to End",
   "One mouse click traced from the USB report and the kernel through Chrome's browser process, compositor and main thread, hit testing and DOM event dispatch to our listener, with models checked against Chrome.",
   "From a click to our listener","Input, hit testing and event dispatch, traced through Linux and Chrome",["kernel","browser","hit test","dispatch","our listener"],["DOM events","event bubbling","event capturing","hit testing","z-index","stacking context","microtasks","input pipeline","Chrome"]),
+ ("autograd/index.html","autograd/","autograd","From the Chain Rule to loss.backward(): How PyTorch Autograd Works | Root to End",
+  "How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine's dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.",
+  "From the chain rule to loss.backward()","PyTorch's autograd engine, from the chain rule to .grad",["chain rule","grad_fn graph","engine","AccumulateGrad",".grad"],["autograd","backpropagation","PyTorch","automatic differentiation","reverse mode","computational graph","gradient"]),
 ]
 def head(path,url,slug,title,desc,kw):
     u=BASE+url; img=BASE+"assets/og/"+slug+".png"

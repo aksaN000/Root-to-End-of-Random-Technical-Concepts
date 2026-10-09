@@ -88,7 +88,7 @@ footer a{color:var(--accent)}
 .k-sync{--c:var(--accent)}.k-micro{--c:var(--ok)}.k-task{--c:var(--trace)}
 .verdict{margin:0;font-size:.98rem}
 .verdict a{color:var(--accent)}
-.starts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.starts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .starts a{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px}
 .starts a:hover{border-color:var(--accent)}
 .starts a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
@@ -165,6 +165,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
     <div class="starts">
       <a href="js-event-loop/"><b>Learning JavaScript</b><span>Why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8.</span><span class="path"><em>event loop</em>→<em>V8</em>→<em>Browser track</em></span></a>
       <a href="lr-parser/"><b>Taking a compilers course</b><span>Build an SLR table from any grammar, then follow a real compiler through V8.</span><span class="path"><em>LR parsing</em>→<em>V8 pipeline</em></span></a>
+      <a href="autograd/"><b>Learning machine learning</b><span>What <code>loss.backward()</code> actually does, from the chain rule to PyTorch's C++ engine.</span><span class="path"><em>autograd</em>→<em>transformer</em></span></a>
       <a href="fetch-to-the-wire/"><b>Curious how browsers work</b><span>A request goes out, the response becomes pixels, and a click comes back to our code.</span><span class="path"><em>fetch()</em>→<em>pixels</em>→<em>click</em></span></a>
     </div>
   </section>
@@ -182,7 +183,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
 
   <section>
     <h2>Simulations</h2>
-    <p class="verified" style="margin-bottom:12px">Every simulator is our own model, labelled as such on its page and checked against the real system: V8, GNU Bison, Node, scapy and Chromium. <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/VALIDATION.md">What was checked, how, and what is not covered</a>. Reading times count the prose only; the labs take as long as we like.</p>
+    <p class="verified" style="margin-bottom:12px">Every simulator is our own model, labelled as such on its page and checked against the real system: V8, GNU Bison, Node, scapy, Chromium and PyTorch. <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/VALIDATION.md">What was checked, how, and what is not covered</a>. Reading times count the prose only; the labs take as long as we like.</p>
     <a class="sim" href="js-event-loop/">
       <div style="min-width:0">
         <h3>From the power button to <code>.then()</code></h3>
@@ -267,6 +268,18 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="autograd/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>From the chain rule to <code>loss.backward()</code></h3>
+        <p>How PyTorch computes every gradient: the graph of backward Nodes recorded during the forward pass, the engine's dependency counts and ready queue, and the AccumulateGrad node that writes <code>.grad</code>. Step through any small program; the engine matches real PyTorch on 2,001 programs, node for node and in the same order.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>chain rule</span><i>→</i><span>grad_fn graph</span><i>→</i><span>Engine::execute</span><i>→</i><span>AccumulateGrad</span><i>→</i><span class="you">loss.backward()</span>
+        </div>
+        <div class="meta"><span class="tag">ML track 1/2</span><span class="tag">PyTorch</span><span class="tag">autograd</span><span class="tag">backpropagation</span><span class="tag">About 15 min</span></div>
+        <p class="need">Needs: derivatives and the chain rule; a little Python.</p>
+      </div>
+      <span class="go">Open →</span>
+    </a>
   </section>
 
   <section>
@@ -276,6 +289,15 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       <a href="fetch-to-the-wire/">1 · fetch() → the wire → our promise<small>live</small></a><i>→</i>
       <a href="html-to-pixels/">2 · HTML bytes → DOM → pixels<small>live</small></a><i>→</i>
       <a href="click-to-listener/">3 · a click → hit test → our listener<small>live</small></a>
+    </nav>
+  </section>
+
+  <section>
+    <h2>ML track</h2>
+    <p class="maplede">From a single number to a sentence: how a model learns, then how it produces text. It starts from the chain rule and ends inside a transformer.</p>
+    <nav class="map" aria-label="ML track">
+      <a href="autograd/">1 · chain rule → graph → loss.backward()<small>live</small></a><i>→</i>
+      <span class="soon">2 · one token through a transformer<small>next</small></span>
     </nav>
   </section>
 

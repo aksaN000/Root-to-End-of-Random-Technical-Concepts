@@ -33,6 +33,7 @@ Requirements:
 
 - [Git](https://git-scm.com/) and [Node.js 22](https://nodejs.org/). The V8 bytecode check needs Node 22 exactly, because bytecode differs between V8 versions; with another version that one check is skipped.
 - Python 3 with scapy for the packet dissector check: `pip install scapy cryptography` (scapy needs cryptography to read TLS)
+- PyTorch (CPU build) for the autograd check: `pip install torch --index-url https://download.pytorch.org/whl/cpu`
 - Optional: [GNU Bison](https://www.gnu.org/software/bison/) for two extra LR checks.
 
 ```bash
@@ -41,6 +42,7 @@ cd Root-to-End-of-Random-Technical-Concepts
 npm install                          # installs Playwright and axe-core (pinned versions)
 npx playwright install chromium      # downloads the browser Playwright drives
 pip install scapy cryptography
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 npm test
 ```
 
@@ -57,9 +59,10 @@ PASS CORS model vs real Chromium (2,880 cases)
 PASS HTML parser model vs real Chrome
 PASS Event-dispatch model vs real Chromium (real clicks and script dispatches)
 PASS Hit-test model vs Chromium's elementFromPoint
+PASS Autograd engine vs real PyTorch (graph, order, gradients)
 PASS Every page loads cleanly (desktop and phone width)
 
-9 passed, 0 failed, 0 skipped
+10 passed, 0 failed, 0 skipped
 ```
 
 Other commands:
@@ -67,7 +70,7 @@ Other commands:
 | Command | What it does |
 |---|---|
 | `npm run test:quick` | Same checks with fewer random cases (does not overwrite the saved results) |
-| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit pages`) |
+| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit autograd pages`) |
 | `npm run test:pages` | Only the page checks, on your local copy |
 | `npm run test:live` | The page checks against the published site |
 | `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
@@ -84,6 +87,7 @@ Other commands:
 | HTML parsing | `html-to-pixels/html-model.js` | Real Chrome's `DOMParser` on hand-picked and random HTML (four seeded batches, duplicates removed), compared tree by tree | `html-to-pixels/verify/compare-with-chrome.js [count] [seed]` or `[count:seed …]` |
 | Event dispatch | `click-to-listener/dispatch-model.js` | Real Chromium with real listeners on the lab presets and 1,600 seeded random programs; half are clicked for real through the browser's input path, half dispatched from script. Listener order, phases, microtask placement and `defaultPrevented` | `click-to-listener/verify/compare-dispatch.js [count] [seed]` |
 | Hit testing | `click-to-listener/hit-model.js` | `document.elementFromPoint` at 40 points in each of 1,008 scenes | `click-to-listener/verify/compare-hit-test.js [count] [seed]` |
+| Autograd | `autograd/autograd-model.js` | Real PyTorch on the lab presets and 2,000 seeded random programs: the graph from `grad_fn.next_functions`, the order of sequence numbers, the execution order from pre-hooks on every node, and float64 gradients | `autograd/verify/compare-with-pytorch.py [count] [seed]` |
 | Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes, and axe-core (WCAG 2.2 A/AA) in light and dark mode | `tools/check-pages.js [--live] [--browser=…]` |
 
 ### Results and failures
@@ -92,7 +96,7 @@ A full `npm test` writes each check's latest numbers to `validation/results/<che
 
 ### Continuous integration
 
-`.github/workflows/checks.yml` runs on every push, every pull request and every night: a fast job (V8, LR with Bison, event loop, scapy) and a browser job (CORS, HTML parser, pages). Versions are pinned (Node 22.22.0, Playwright 1.56.0, axe-core 4.13.0, scapy 2.8.0 with cryptography 50.0.1) and random checks use fixed seeds. If a job fails, `validation/` is attached to the run as an artifact.
+`.github/workflows/checks.yml` runs on every push, every pull request and every night: a fast job (V8, LR with Bison, event loop, scapy, autograd against PyTorch) and a browser job (CORS, HTML parser, event dispatch, hit testing, pages). Versions are pinned (Node 22.22.0, Playwright 1.56.0, axe-core 4.13.0, scapy 2.8.0 with cryptography 50.0.1, PyTorch 2.14.1 CPU) and random checks use fixed seeds. If a job fails, `validation/` is attached to the run as an artifact.
 
 Random checks take a count and a seed, so a failure can be reproduced exactly, for example `node verify/compare-with-chrome.js 5000 123` inside `html-to-pixels/`.
 

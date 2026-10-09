@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From the Chain Rule to loss.backward(): How PyTorch Autograd Works | Root to End</title>
+<meta name="description" content="How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine&#x27;s dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
+<style>
+
+/* Layout: the shared source-trace grid. Signature element: the backward lab, a live graph that lights up node by node as the engine pops its ready queue. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --s-k:#9a5a00; --s-k-bg:#fff0d4; --s-b:#6d3fc4; --s-b-bg:#ece5fb; --s-c:#0b6b65; --s-c-bg:#dcf2ef; --s-m:#2445d0; --s-m-bg:#e3e8fb; --s-j:#1b7a4b; --s-j-bg:#dff3e8;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.7rem);font-weight:800;letter-spacing:-.02em}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+.journey{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.76rem}
+.journey a{text-decoration:none;border:1px solid var(--c);border-radius:6px;padding:3px 9px;color:var(--c);background:var(--cb)}
+.journey i{font-style:normal;color:var(--muted)}
+.st-k{--c:var(--s-k);--cb:var(--s-k-bg)}.st-b{--c:var(--s-b);--cb:var(--s-b-bg)}.st-c{--c:var(--s-c);--cb:var(--s-c-bg)}.st-m{--c:var(--s-m);--cb:var(--s-m-bg)}.st-j{--c:var(--s-j);--cb:var(--s-j-bg)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button,select,textarea,input{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill:empty{display:none}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.bytes{font-family:var(--mono);font-size:.8rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:6px}
+.bytes div{border:1px solid var(--rule);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.bytes b{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.bytes .hot{border-color:var(--s-k);background:var(--s-k-bg)}
+
+/* labs */
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:4px 9px}
+.lab textarea{width:100%;min-height:7.5em;font-family:var(--mono);font-size:.88rem;line-height:1.55;resize:vertical;background:var(--code)}
+.labgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.labgrid{grid-template-columns:1fr}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-width:0;background:var(--bg)}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.err{font-size:.88rem;color:var(--bad);min-height:1.2em}
+.chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.chip{font-family:var(--mono);font-size:.76rem;padding:2px 8px;border-radius:5px;background:var(--code);border:1px solid transparent}
+.chip.acc{background:var(--s-j-bg);color:var(--s-j)}
+.chip.next{border-color:var(--accent);color:var(--accent)}
+.empty{font-size:.78rem;color:var(--muted)}
+.graphwrap{overflow:auto;border:1px solid var(--rule);border-radius:10px;background:var(--bg)}
+.graphwrap svg{display:block;margin:0 auto}
+.g-node rect{fill:var(--surface);stroke:var(--rule);stroke-width:1.5}
+.g-node text{fill:var(--ink);font-family:var(--mono);font-size:12px}
+.g-node text.sub{fill:var(--muted);font-size:10.5px}
+.g-node.acc rect{fill:var(--s-j-bg);stroke:var(--s-j)}
+.g-node.done rect{stroke:var(--muted);stroke-dasharray:4 3}
+.g-node.done text{fill:var(--muted)}
+.g-node.queued rect{stroke:var(--accent);stroke-width:2}
+.g-node.cur rect{fill:var(--accent);stroke:var(--accent)}
+.g-node.cur text{fill:var(--surface)}
+.g-edge{stroke:var(--rule);stroke-width:1.5;fill:none}
+.g-edge.sent{stroke:var(--s-b);stroke-width:2}
+.g-lab{font-family:var(--mono);font-size:10.5px;fill:var(--s-b)}
+.g-lab-bg{fill:var(--bg)}
+.stepbox{font-size:.9rem;display:flex;flex-direction:column;gap:6px}
+.stepbox .f{font-family:var(--mono);font-size:.8rem;background:var(--code);border-radius:6px;padding:4px 8px;overflow-x:auto;white-space:nowrap}
+.outs{margin:0;padding-left:1.1em;font-size:.84rem;display:flex;flex-direction:column;gap:2px}
+.outs li b{font-family:var(--mono);font-weight:500}
+.fwd td,.fwd th{font-family:var(--mono);font-size:.78rem;padding:3px 8px}
+.gradcell{color:var(--s-b);font-weight:600}
+.verdict{font-size:.95rem;padding:10px 14px;border-radius:10px;background:var(--code)}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.evrows{border:1px solid var(--rule);border-radius:8px;max-height:24em;overflow:auto;background:var(--bg)}
+.evrows table td{font-family:var(--mono);font-size:.76rem;padding:3px 8px;vertical-align:top}
+.evrows tr.k-fwd td:nth-child(2){color:var(--s-m)}.evrows tr.k-bwd td:nth-child(2){color:var(--s-b);font-weight:600}.evrows tr.k-math td:nth-child(2){color:var(--muted)}
+.math{font-family:var(--mono);font-size:.86rem;background:var(--code);border-radius:8px;padding:10px 14px;line-height:1.8;overflow-x:auto;white-space:pre}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/autograd/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="From the Chain Rule to loss.backward(): How PyTorch Autograd Works">
+<meta property="og:description" content="How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine&#x27;s dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/autograd/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/autograd.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="From the Chain Rule to loss.backward(): How PyTorch Autograd Works">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="From the Chain Rule to loss.backward(): How PyTorch Autograd Works">
+<meta name="twitter:description" content="How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine&#x27;s dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/autograd.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "From the Chain Rule to loss.backward(): How PyTorch Autograd Works", "description": "How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine's dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/autograd/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "autograd, backpropagation, PyTorch, automatic differentiation, reverse mode, computational graph, gradient", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Autograd</span><span>top = our code</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#chain"><b>The chain rule</b>local derivatives, multiplied</a></li>
+    <li><a href="#record"><b>Recording the graph</b>a Node per operation</a></li>
+    <li><a href="#leaves"><b>Leaves</b>AccumulateGrad and .grad</a></li>
+    <li><a href="#engine"><b>The engine</b>dependencies and a ready queue</a></li>
+    <li><a href="#lab"><b>Backward lab</b>step through any program</a></li>
+    <li><a href="#saved"><b>Saved tensors</b>why backward twice fails</a></li>
+    <li><a href="#ours"><b>loss.backward()</b>from Python into C++</a></li>
+    <li><a href="#real"><b>Real output</b>hooks and the profiler</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes, tools, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
+  </ol>
+  <div class="base">— bottom: d(f∘g) = f′(g) · g′</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">ML track · 1 of 2 · checked against PyTorch 2.14.1 on 2,001 programs</span>
+  <h1>From the chain rule to <code style="font-size:.8em">loss.backward()</code></h1>
+  <p class="lede">Every neural network is trained with one call: <code>loss.backward()</code>. We follow it from the chain rule, through the graph PyTorch records while our forward pass runs, into the C++ engine that counts dependencies, picks nodes from a priority queue and multiplies local derivatives, down to the line that adds the result into <code>.grad</code>. The lab runs the same algorithm on any small program we type and matches real PyTorch node for node.</p>
+  <div class="journey" aria-label="Layers this page follows">
+    <a class="st-k" href="#chain">chain rule</a><i>→</i><a class="st-m" href="#record">graph of Nodes</a><i>→</i><a class="st-c" href="#engine">engine</a><i>→</i><a class="st-b" href="#engine">derivative formulas</a><i>→</i><a class="st-j" href="#leaves">.grad</a><i>→</i><a class="st-j" href="#ours">our training loop</a>
+  </div>
+  <p style="font-size:.9rem;margin:0">ML track: <b>1 · From the chain rule to loss.backward()</b> · next: 2 · One token through a transformer (planned)</p>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#chain">Chain rule</a><a href="#record">Graph</a><a href="#leaves">Leaves</a><a href="#engine">Engine</a><a href="#lab">Lab</a><a href="#saved">Saved tensors</a><a href="#ours">backward()</a><a href="#real">Real output</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">How this was checked: on 2,001 distinct programs, the model builds the same graph as PyTorch 2.14.1 (every node's name and edges), creates the nodes in the same order, runs them in the same order (recorded with a hook on every node), and gives the same float64 gradients. The captures are real PyTorch output, in the folder's <code>data/</code> directory with the script that made them. PyTorch excerpts are from tag v2.14.1, trimmed with <code>// …</code>.</p>
+</header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol>
+    <li><span>While the forward pass runs, every operation on a tensor that requires grad creates a backward <b>Node</b> (<code>MulBackward0</code>, <code>TanhBackward0</code>, …) that keeps what its derivative needs and points at the nodes of its inputs. A leaf such as a weight ends in an <code>AccumulateGrad</code> node. The graph is recorded as the program runs.</span></li>
+    <li><span><code>backward()</code> first counts, for each node, how many edges point at it. Then it runs nodes from a <b>priority queue</b>: the node with the highest <b>sequence number</b> (the most recent operation) first, and <code>AccumulateGrad</code> before everything, because its number is the largest possible.</span></li>
+    <li><span>Each node is the <b>chain rule</b> for one operation: it multiplies the gradient coming in by its local derivative, from a table called <code>derivatives.yaml</code>. When a value was used twice, both gradients are <b>added</b> in the node's input buffer before it runs.</span></li>
+    <li><span><code>AccumulateGrad</code> does <code>grad += new_grad</code>, so gradients pile up across calls unless we call <code>zero_grad()</code>. And the values saved for the formulas are freed after one pass, which is why a second <code>backward()</code> on the same graph raises an error.</span></li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 360 236" width="360" height="236" style="max-width:100%;height:auto" font-family="monospace" role="img" aria-label="The backward graph of tanh(w*x+b): TanhBackward0 then AddBackward0, which sends gradients to MulBackward0 and to b's AccumulateGrad; MulBackward0 sends gradients to w and x"><title>The backward graph of y = tanh(w * x + b)</title>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="tl-head-m" fill="#8a94a3" d="M0 0L10 5L0 10z"/></marker></defs>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="120" y="6" width="120" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="180" y="25" text-anchor="middle">TanhBackward0</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="120" y="66" width="120" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="180" y="85" text-anchor="middle">AddBackward0</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="40" y="126" width="120" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="100" y="145" text-anchor="middle">MulBackward0</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="210" y="126" width="120" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="270" y="145" text-anchor="middle">AccumulateGrad b</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="4" y="190" width="120" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="64" y="209" text-anchor="middle">AccumulateGrad w</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="136" y="190" width="120" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="196" y="209" text-anchor="middle">AccumulateGrad x</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M180 36 V62" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="186" y="54">× (1 − y²)</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M160 96 L112 122" marker-end="url(#ah)"/><path class="tl-a hot" fill="none" stroke="#8a94a3" d="M200 96 L250 122" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="236" y="110">× 1</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="96" y="110">× 1</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M88 156 L70 186" marker-end="url(#ah)"/><path class="tl-a hot" fill="none" stroke="#8a94a3" d="M116 156 L180 186" marker-end="url(#ah)"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="40" y="176">× x</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="164" y="168">× w</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="300" y="200" text-anchor="middle">runs first</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="300" y="213" text-anchor="middle">when ready</text>
+    </svg>
+    <figcaption>Gradients flow down; each arrow multiplies by a local derivative</figcaption>
+  </figure>
+  <div class="tl-more">The <a href="#lab">backward lab</a> steps through this for any program we type, showing the ready queue, the dependency counts and every gradient sent. The <a href="#real">real output</a> shows PyTorch doing the same.</div>
+</aside>
+
+<section id="chain" data-deeper="baydin-ad,dlbook-backprop,cs231n-backprop">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>The chain rule, run backwards</h2></div>
+  <div class="prose">
+    <p>A program is a chain of small operations whose derivatives we know. For <code>y = tanh(w·x + b)</code>, write <code>u = w·x</code> and <code>v = u + b</code>. The chain rule says the derivative of the output with respect to anything is the product of the local derivatives along the way, summed over every path that connects them.<a class="rd" data-r="dlbook-backprop"></a></p>
+  </div>
+  <div class="math" role="img" aria-label="Chain rule for y = tanh(w x + b)">∂y/∂v = 1 − tanh²(v)               (TanhBackward0)
+∂y/∂u = ∂y/∂v · 1     ∂y/∂b = ∂y/∂v · 1     (AddBackward0)
+∂y/∂w = ∂y/∂u · x     ∂y/∂x = ∂y/∂u · w     (MulBackward0)</div>
+  <div class="prose">
+    <p>We can evaluate these products in two directions. <b>Forward mode</b> starts at one input and carries its derivative forward; it needs one pass per input. <b>Reverse mode</b> starts at the output with <code>∂y/∂y = 1</code> and carries the gradient backwards; one pass gives the derivative with respect to <b>every</b> input. A loss is one number and a model has millions of weights, so training uses reverse mode. That is what "backpropagation" is.<a class="rd" data-r="baydin-ad"></a></p>
+    <p>This is neither symbolic differentiation (no formula for the whole derivative is ever built) nor numerical differentiation (no small steps <code>h</code>). Each local derivative is exact, and the engine only multiplies and adds numbers. A variable used twice gets the <b>sum</b> of the gradients from both uses: that is the "summed over every path" part.<a class="rd" data-r="cs231n-backprop"></a></p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">tools/autograd/derivatives.yaml</span><span class="note">trimmed: the table of local derivatives</span></figcaption>
+    <pre data-code="c-yaml"></pre>
+  </figure>
+  <p class="callout">PyTorch's code generator reads <code>derivatives.yaml</code> and writes a C++ class for each entry: <code>mul.Tensor</code> becomes <code>MulBackward0</code>, <code>tanh</code> becomes <code>TanhBackward0</code>. The <code>self:</code> and <code>other:</code> lines are the formulas each class runs during backward.</p>
+</section>
+
+<section id="record" data-deeper="pt-graph-blog,pytorch-paper,pt-autograd-notes">
+  <div class="sechead"><span class="eyebrow">Frame 1 · recording</span><h2>Every operation leaves a Node behind</h2></div>
+  <div class="prose">
+    <p>PyTorch does not compile our model. It runs our Python line by line ("define by run"), and each operation on a tensor with <code>requires_grad=True</code> does two things: computes its result, and creates a backward <code>Node</code>. The node is stored in the result's <code>grad_fn</code>. It keeps whatever its formula will need (for <code>mul</code>, both inputs; for <code>tanh</code>, its own result) and a list of <b>next edges</b>, one per input, pointing at the node that produced that input.<a class="rd" data-r="pt-graph-blog,pytorch-paper"></a></p>
+    <p>Every node also gets a <b>sequence number</b> from a counter that goes up by one per node created on this thread. It is how the engine will later decide which node to run first, and how the profiler links a forward operation to its backward node.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/node.h · struct Node</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-node"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">data/capture.json · walking grad_fn.next_functions</span><span class="note">real PyTorch 2.14.1</span></figcaption>
+      <pre id="graphlines"></pre>
+    </figure>
+  </div>
+  <p class="callout">Python operators have details of their own, and the model keeps them because PyTorch does. <code>2 / x</code> is not a division node: <code>Tensor.__rtruediv__</code> computes <code>x.reciprocal() * 2</code>, so the graph has <code>ReciprocalBackward0</code> and <code>MulBackward0</code>. <code>2 - x</code> is <code>RsubBackward1</code>, and <code>2 ** x</code> is <code>PowBackward2</code>. A constant gets no edge at all: <code>next_functions</code> shows <code>None</code> in its place.</p>
+</section>
+
+<section id="leaves" data-deeper="pt-autograd-notes,micrograd">
+  <div class="sechead"><span class="eyebrow">Frame 2 · leaves</span><h2>AccumulateGrad: the node that writes <code>.grad</code></h2></div>
+  <div class="prose">
+    <p>A tensor we created ourselves with <code>requires_grad=True</code>, such as a weight, has no <code>grad_fn</code>; it is a <b>leaf</b>. The edge that points at it leads to an <code>AccumulateGrad</code> node, which has no outputs. When it runs, it adds the gradient it received into the leaf's <code>.grad</code>.<a class="rd" data-r="pt-autograd-notes"></a></p>
+    <p>Two lines of its source explain two everyday facts. Its constructor sets its sequence number to <code>UINT64_MAX</code>, so it runs as soon as it is ready and its gradient is written early. And the existing gradient is updated with <code>variable_grad += new_grad</code>: gradients <b>accumulate</b> across <code>backward()</code> calls. That is why every training loop calls <code>optimizer.zero_grad()</code>.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/functions/accumulate_grad.cpp · AccumulateGrad()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-accseq"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/functions/accumulate_grad.h · accumulateGrad()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-acc"></pre>
+    </figure>
+  </div>
+  <figure class="src real">
+    <figcaption><span class="path">data/capture.json · three backward() calls, no zero_grad()</span><span class="note">real PyTorch 2.14.1</span></figcaption>
+    <pre id="acclog"></pre>
+  </figure>
+</section>
+
+<section id="engine" data-deeper="pt-engine-blog,micrograd">
+  <div class="sechead"><span class="eyebrow">Frame 3 · the engine</span><h2>Count dependencies, then pop the highest sequence number</h2></div>
+  <div class="prose">
+    <p><code>Engine::execute</code> starts with <code>compute_dependencies</code>: a walk over the graph from the root that counts, for each node, how many edges point at it. A node may only run when all of its incoming gradients have arrived, so this count is how many arrivals it waits for.<a class="rd" data-r="pt-engine-blog"></a></p>
+    <p>Then the root goes on a <b>ready queue</b>, a priority queue ordered by <code>CompareNodeTaskTime</code>: the task whose node has the higher sequence number runs first. The worker pops a task and calls <code>evaluate_function</code>, which runs the node's formula and, for each output, decrements the next node's dependency count and adds the gradient into that node's <b>input buffer</b>. When a count reaches zero, the node is pushed on the queue with its finished buffer. When the queue is empty, backward is done.</p>
+    <p>Why the highest sequence number? A node made later in the forward pass depends on nodes made earlier, so running later nodes first tends to finish gradients before they are needed. The dependency counts make it correct either way; the priority decides which ready node goes first. Karpathy's micrograd does the same job with an explicit topological sort.<a class="rd" data-r="micrograd"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/engine.cpp · compute_dependencies()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-deps"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/engine.h · ReadyQueue::CompareNodeTaskTime</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-queue"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">torch/csrc/autograd/engine.cpp · evaluate_function()</span><span class="note">trimmed to the dependency bookkeeping</span></figcaption>
+    <pre data-code="c-eval"></pre>
+  </figure>
+</section>
+
+<section id="lab" data-deeper="karpathy-micrograd,pt-engine-blog">
+  <div class="sechead"><span class="eyebrow">Lab · backward, step by step</span><h2>Type a program, then watch the engine run it</h2></div>
+  <div class="prose"><p>Write Python as we would with PyTorch. The first lines that assign a number are leaves (<code>torch.tensor(…, requires_grad=True)</code>); after that, any expression with <code>+ - * / **</code> and <code>tanh exp log sin cos sigmoid relu</code>. The last line is the output, and we call <code>backward()</code> on it. Each step pops one node from the ready queue.</p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our autograd engine for scalar float64 programs: PyTorch's node types and formulas, sequence numbers, <code>compute_dependencies</code>, a ready queue that reproduces <code>std::priority_queue</code> exactly, input buffers, and <code>AccumulateGrad</code>.</p><p><b>Checked against.</b> PyTorch 2.14.1 on 2,001 distinct programs (8 presets and 1,993 random, from four seeded batches): the same graph and node names, the same creation order, the same execution order recorded by hooks on every node, and the same gradients, including nan and inf (<code>verify/compare-with-pytorch.py</code>). Live: <b>Check with finite differences</b> compares every gradient with a numerical estimate in your browser.</p><p><b>Not covered.</b> Tensors with more than one element and broadcasting, in-place operations, <code>no_grad</code>, hooks, <code>create_graph</code> (higher derivatives), and GPU streams. In these programs two ready nodes never had equal priority in a way that mattered, so the exact heap order is modelled but never decided a result.</p></div>
+  <div class="lab">
+    <div class="presets" id="presets"></div>
+    <textarea id="src" spellcheck="false" aria-label="Program"></textarea>
+    <div class="err" id="err" role="status"></div>
+    <div class="ctl">
+      <button type="button" id="bPrev">← Back</button>
+      <button type="button" id="bNext" class="go">Next node →</button>
+      <button type="button" id="bPlay">▶ Play</button>
+      <button type="button" id="bEnd">Run to the end</button>
+      <span class="pill" id="bCtr"></span>
+    </div>
+    <div class="graphwrap" id="gwrap"><svg id="graph" role="img" aria-label="Backward graph"></svg></div>
+    <div class="labgrid">
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="box"><h5>This step</h5><div class="stepbox" id="step"></div></div>
+        <div class="box"><h5>Ready queue after this step (runs left to right)</h5><div class="chips" id="queue"></div></div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+        <div class="box"><h5>Forward pass</h5><div class="tbl" style="border:0"><table class="fwd"><thead><tr><th>name</th><th>value</th><th>grad_fn</th></tr></thead><tbody id="fwd"></tbody></table></div></div>
+        <div class="box"><h5>Leaf .grad</h5><div class="tbl" style="border:0"><table class="fwd"><thead><tr><th>leaf</th><th>value</th><th>.grad</th></tr></thead><tbody id="grads"></tbody></table></div></div>
+      </div>
+    </div>
+    <div class="ctl">
+      <button type="button" id="bAgain">Call backward() again, no zero_grad()</button>
+      <button type="button" id="bZero">zero_grad()</button>
+      <button type="button" id="bFd">Check with finite differences</button>
+      <span class="pill" id="fdRes"></span>
+    </div>
+  </div>
+  <p class="callout">The check against PyTorch caught two things in our first version. <code>torch.relu</code> passes nan through (relu of nan is nan, and its backward then passes the gradient on), while ours returned 0. And where two gradients cancel, as in <code>a / a</code>, PyTorch's CPU kernels and JavaScript can disagree in the last bit of a product or quotient, which is all that is left after the cancellation. So the comparison allows a difference of 10<sup>−12</sup> times the largest gradient that flowed through the graph, not of the tiny final result.</p>
+</section>
+
+<section id="saved" data-deeper="pt-autograd-notes">
+  <div class="sechead"><span class="eyebrow">Frame 4 · saved tensors</span><h2>Why a second backward() on the same graph fails</h2></div>
+  <div class="prose">
+    <p>A node keeps the values its formula needs: <code>MulBackward0</code> keeps both inputs, <code>TanhBackward0</code> keeps its result. Those are <b>saved tensors</b>, and for a real model they are most of the memory a training step uses. So unless we ask for <code>retain_graph=True</code>, the engine frees them as soon as each node has run: <code>evaluate_function</code> calls <code>release_variables()</code> right after the formula.<a class="rd" data-r="pt-autograd-notes"></a></p>
+    <p>The graph's structure survives, but its numbers are gone. Calling <code>backward()</code> on the same output a second time reaches a node whose saved values were freed, and PyTorch stops with the error below. (The lab's "backward() again" button does what a training loop does instead: a new forward pass, which records a new graph.)</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">torch/csrc/autograd/engine.cpp · evaluate_function()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-release"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">data/capture.json · loss.backward(); loss.backward()</span><span class="note">real PyTorch 2.14.1 error</span></figcaption>
+      <pre id="twice" style="white-space:pre-wrap;padding:10px 14px"></pre>
+    </figure>
+  </div>
+</section>
+
+<section id="ours" data-deeper="pt-autograd-notes,pytorch-paper">
+  <div class="sechead"><span class="eyebrow">Frame 5 · our code</span><h2><code>loss.backward()</code>, from Python into the C++ engine</h2></div>
+  <div class="prose">
+    <p><code>Tensor.backward</code> calls <code>torch.autograd.backward</code>. Because a loss is one number, it may skip the gradient argument: <code>_make_grads</code> creates <code>torch.ones_like(out)</code>, which is the <code>∂loss/∂loss = 1</code> the chain starts from. For any other shape it raises "grad can be implicitly created only for scalar outputs". Then <code>_engine_run_backward</code> calls <code>Variable._execution_engine.run_backward</code>, the C++ <code>Engine::execute</code> above, with <code>accumulate_grad=True</code> (that is what makes it write <code>.grad</code>; <code>torch.autograd.grad</code> passes <code>False</code> and returns the gradients instead).</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">torch/autograd/__init__.py · _make_grads() and backward()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-py"></pre>
+    </figure>
+    <figure class="src" data-kind="example">
+      <figcaption><span class="path">a training step</span><span class="note">where each line lands</span></figcaption>
+      <pre data-code="c-loop"></pre>
+    </figure>
+  </div>
+</section>
+
+<section id="real" data-deeper="pt-engine-blog">
+  <div class="sechead"><span class="eyebrow">Real output</span><h2>PyTorch's own record of the backward pass</h2></div>
+  <div class="prose"><p>Two views from real PyTorch 2.14.1. On the left, a pre-hook on every node of our mixed example recorded the order the engine ran them, with each node's sequence number and the gradient it received; the lab's preset "Our mixed example" gives the same order. On the right, the profiler recorded the neuron: forward operations carry the same sequence numbers as the backward nodes they created, and inside <code>MulBackward0</code> we can see the two multiplications of its formula.</p></div>
+  <div class="scope" data-kind="observed"><p><b>What it is.</b> Output of <code>data/capture.py</code> with PyTorch 2.14.1 on CPU in float64.</p><p><b>Checked against.</b> It is the real system; the same hooks are what <code>verify/compare-with-pytorch.py</code> uses on every program.</p><p><b>Not covered.</b> Timing, which depends on the machine (the profiler times are shown only to give the order), and GPU execution, where backward also involves CUDA streams.</p></div>
+  <div class="cols">
+    <div class="panel"><div class="stagehead">Execution order, from hooks</div><div class="evrows"><table><thead><tr><th>#</th><th>node</th><th>seq</th><th>grad in</th></tr></thead><tbody id="orderRows"></tbody></table></div><p class="muted" style="font-size:.82rem;margin:0" id="orderNote"></p></div>
+    <div class="panel"><div class="stagehead">torch.profiler, the neuron</div><div class="evrows"><table><thead><tr><th>µs</th><th>event</th><th>seq</th></tr></thead><tbody id="profRows"></tbody></table></div></div>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 6 · practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"<code>x = 3.0</code>, <code>out = x * x</code>. What is <code>x.grad</code> after <code>out.backward()</code>, and how does it get there?","options":["3: MulBackward0 sends only one gradient","6: MulBackward0 sends 3 along each edge, and both edges reach x's AccumulateGrad, where the input buffer adds them","9: the output value","6: PyTorch recognises x * x as x ** 2"],"answer":1,"explain":"MulBackward0 has two next edges, both to the same AccumulateGrad, so its dependency count is 2. The first gradient waits in the input buffer; the second is added to it, and then the node runs once with 6. Try the preset \"x * x\"."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Why does every AccumulateGrad node run as soon as it becomes ready?","options":["Leaves are always processed last in topological order","Its sequence number is UINT64_MAX, the highest possible priority in the ready queue","The engine runs it on a separate thread","It has no inputs"],"answer":1,"explain":"AccumulateGrad's constructor passes sequence_nr = UINT64_MAX, and the ready queue pops the highest sequence number first."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"A training loop forgets <code>optimizer.zero_grad()</code>. What happens to <code>w.grad</code> on step 3 if every step's true gradient is g?","options":["It is g","It is 3g, because AccumulateGrad does grad += new_grad","It raises an error","It is g / 3"],"answer":1,"explain":"Our capture shows exactly this: -1.75, -3.5, -5.25. Each backward() adds into the existing .grad."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"What does <code>2 / x</code> add to the graph when x requires grad?","options":["DivBackward0","ReciprocalBackward0 and then MulBackward0","RdivBackward0","Nothing: constants are folded"],"answer":1,"explain":"Tensor.__rtruediv__ computes x.reciprocal() * 2, so two nodes are created. The preset \"Constants: 2/x and 2-x\" shows both."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"In the mixed example, which runs first: DivBackward0 (sequence 5) or MulBackward0 (sequence 3), when both are ready?","options":["MulBackward0, because it is closer to the leaves","DivBackward0, because the ready queue pops the higher sequence number","Whichever was pushed first","They run in parallel"],"answer":1,"explain":"CompareNodeTaskTime orders tasks by sequence_nr, highest first. The real hook log shows DivBackward0 at step 3 and MulBackward0 at step 5."}</script></div>
+  </div>
+  <h3>See it on our own machine</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>The recorded graph</td><td><code>out.grad_fn</code>, then <code>.next_functions</code> repeatedly. <code>grad_fn._sequence_nr()</code> gives the sequence number.</td></tr>
+      <tr><td>The order backward runs</td><td><code>node.register_prehook(lambda g: print(node.name()))</code> on every node, then <code>out.backward()</code>. This is what our checker does.</td></tr>
+      <tr><td>Saved tensors</td><td><code>out.grad_fn._saved_self</code> and <code>_saved_other</code> on a <code>MulBackward0</code>; after <code>backward()</code> they raise an error, because they were freed.</td></tr>
+      <tr><td>The engine in a profile</td><td><code>torch.profiler.profile()</code> around forward and backward; the events named <code>autograd::engine::evaluate_function: …</code> are the nodes.</td></tr>
+      <tr><td>A gradient check</td><td><code>torch.autograd.gradcheck(f, inputs)</code> compares autograd with finite differences, like the lab's button, in float64.</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>In the lab, write a program in which one leaf is used three times. Predict its dependency count and the number of times its AccumulateGrad runs, then step through it.</li>
+    <li>Use the preset "ReLU at zero". What gradient does relu give at exactly 0, and which line of <code>derivatives.yaml</code> decides it?</li>
+    <li>Write micrograd's <code>Value</code> class for <code>+</code> and <code>*</code> with a topological sort, and check it against the lab on "A variable used twice".</li>
+    <li>Add <code>retain_graph=True</code> to the first call in the "backward twice" capture and run it. What is <code>w.grad</code> after both calls, and why?</li>
+    <li>For <code>out = x ** y</code> with <code>x = 0</code> and <code>y = 2</code>, predict both gradients from <code>pow_backward_exponent</code>, then check them in the lab.</li>
+  </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a machine learning or numerical methods exam. Write our answer first, then open the model answer and mark ourselves honestly. Numbers and orders in the answers were produced by the lab's engine and match PyTorch.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Calculate">
+      <div class="q">For <code>y = tanh(w·x + b)</code> with <code>x = 0.5</code>, <code>w = −1.5</code>, <code>b = 0.25</code>, compute <code>∂y/∂w</code>, <code>∂y/∂x</code> and <code>∂y/∂b</code> by reverse mode, showing the gradient on each edge.</div>
+      <div class="a">
+        <p>Forward: <code>u = w·x = −0.75</code>, <code>v = u + b = −0.5</code>, <code>y = tanh(−0.5) = −0.462117</code>.</p>
+        <p>Backward: start with 1. TanhBackward0 sends <code>1 · (1 − y²) = 0.786448</code>. AddBackward0 sends 0.786448 to both MulBackward0 and b. MulBackward0 sends <code>0.786448 · x = 0.393224</code> to w and <code>0.786448 · w = −1.179672</code> to x.</p>
+        <p>So <code>∂y/∂w = 0.393224</code>, <code>∂y/∂x = −1.179672</code>, <code>∂y/∂b = 0.786448</code> (the lab's "A neuron" preset; PyTorch agrees to all printed digits).</p>
+        <p class="rub">Marking: 1 for the forward values, 1 for tanh's local derivative, 1 for the add node, 1 for each of the three gradients.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Trace">
+      <div class="q">For <code>out = x * y + x</code> with <code>x = 3</code>, <code>y = 2</code>, give the dependency count of every node after <code>compute_dependencies</code>, and the order in which PyTorch's engine runs the nodes.</div>
+      <div class="a">
+        <p>Nodes: AddBackward0 (sequence 1, the root), MulBackward0 (sequence 0), AccumulateGrad(x), AccumulateGrad(y). Dependencies: MulBackward0 1 (from Add); AccumulateGrad(x) 2 (from Add and from Mul); AccumulateGrad(y) 1 (from Mul).</p>
+        <p>Order: AddBackward0 runs first. It sends 1 to MulBackward0 (count 1 → 0, pushed) and 1 to x (count 2 → 1, buffered). MulBackward0 runs, sends 2 to x (count → 0, buffer 1 + 2 = 3, pushed) and 3 to y (pushed). The two AccumulateGrad tasks both have sequence UINT64_MAX; x was pushed first and pops first. So: AddBackward0, MulBackward0, AccumulateGrad(x), AccumulateGrad(y), with <code>x.grad = 3</code>, <code>y.grad = 3</code>.</p>
+        <p class="rub">Marking: 2 for the counts, 2 for the order with reasons, 1 for the buffer sum.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compare">
+      <div class="q">Compare forward-mode and reverse-mode automatic differentiation for a function from n inputs to one output. Which does neural network training use, and what does reverse mode cost in memory?</div>
+      <div class="a">
+        <p>Forward mode carries one directional derivative forward with each evaluation, so all n partial derivatives need n passes (or n-wide dual numbers). Reverse mode runs the program once, then one backward pass from the single output gives all n partial derivatives, at a small constant multiple of the forward cost. Training has one scalar loss and millions of parameters, so it uses reverse mode. The price is memory: every intermediate value a local derivative needs must be kept from the forward pass until backward reaches it (PyTorch's saved tensors), which is why activation memory dominates training and why techniques such as checkpointing trade recomputation for memory.</p>
+        <p class="rub">Marking: 1 per mode's cost, 1 for the choice with reason, 1 for the memory cost.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Explain">
+      <div class="q">A student calls <code>loss.backward()</code> twice on the same loss and gets "Trying to backward through the graph a second time". Explain the cause using the engine's code, give two fixes, and say what <code>w.grad</code> holds after the fixed version.</div>
+      <div class="a">
+        <p>After a node's formula runs, <code>evaluate_function</code> calls <code>fn.release_variables()</code> unless <code>keep_graph</code> (retain_graph) is set, so the saved tensors of every node are freed during the first backward. The second call reaches a node whose saved values are gone and raises the error. Fix 1: <code>loss.backward(retain_graph=True)</code> on the first call. Fix 2 (the normal one): recompute the loss with a new forward pass, which records a new graph. In both cases AccumulateGrad adds the second gradient to the first, so <code>w.grad</code> is twice the single-step gradient unless <code>w.grad</code> is zeroed between the calls.</p>
+        <p class="rub">Marking: 2 for release_variables and saved tensors, 1 per fix, 1 for the accumulated value.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Short note">
+      <div class="q">Write a short note on why PyTorch's backward pass needs no explicit topological sort.</div>
+      <div class="a">
+        <p><code>compute_dependencies</code> counts incoming edges for every node reachable from the root. During backward, each output decrements the count of the node it feeds, and a node is pushed on the ready queue only when its count reaches zero, that is, when every gradient it will receive has arrived and been summed in its input buffer. This is Kahn's algorithm for topological order, done lazily while the gradients flow. The ready queue's priority (highest sequence number first, AccumulateGrad first of all) only chooses among nodes that are already safe to run.</p>
+        <p class="rub">Marking: 1 for the counting, 1 for "pushed at zero", 1 for naming it a topological order (Kahn), 1 for the role of the priority.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for the survey and papers the code rests on.</p>
+  <div id="reading-list"></div>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files and data</h2></div>
+  <ul class="src-list">
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/tools/autograd/derivatives.yaml">tools/autograd/derivatives.yaml</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/node.h">torch/csrc/autograd/node.h</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/functions/accumulate_grad.cpp">torch/csrc/autograd/functions/accumulate_grad.cpp</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/functions/accumulate_grad.h">torch/csrc/autograd/functions/accumulate_grad.h</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/engine.cpp">torch/csrc/autograd/engine.cpp</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/engine.h">torch/csrc/autograd/engine.h</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/csrc/autograd/FunctionsManual.cpp">torch/csrc/autograd/FunctionsManual.cpp</a></li>
+    <li><a href="https://github.com/pytorch/pytorch/blob/v2.14.1/torch/autograd/__init__.py">torch/autograd/__init__.py</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/autograd/data">Our capture script and its output (data/)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">PyTorch code is used under its BSD-style license, quoted for study.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-yaml">- name: add.Tensor(Tensor self, Tensor other, *, Scalar alpha=1) -> Tensor
+  self: handle_r_to_c(self.scalar_type(), grad)
+  other: handle_r_to_c(other.scalar_type(), maybe_multiply(grad, alpha.conj()))
+  # …
+- name: mul.Tensor(Tensor self, Tensor other) -> Tensor
+» self: mul_tensor_backward(grad, other, self.scalar_type())
+» other: mul_tensor_backward(grad, self, other.scalar_type())
+  # …
+- name: tanh(Tensor self) -> Tensor
+» self: tanh_backward(grad, result)
+  # …
+- name: relu(Tensor self) -> Tensor
+  self: threshold_backward(grad, result, 0)
+  # …
+- name: pow.Tensor_Scalar(Tensor self, Scalar exponent) -> Tensor
+  self: pow_backward(grad, self, exponent)</script>
+
+<script type="text/plain" id="c-node">struct TORCH_API Node : c10::intrusive_ptr_target {
+ public:
+  /// Construct a new `Node` with the given `next_edges`
+  explicit Node(uint64_t sequence_nr, edge_list&& next_edges = edge_list())
+»     : sequence_nr_(sequence_nr), next_edges_(std::move(next_edges)) {
+    // …
+  }
+
+  explicit Node(edge_list&& next_edges = edge_list())
+      : Node(
+»           /*sequence_nr=*/at::sequence_number::get_and_increment(),
+            std::move(next_edges)) {}
+  // …
+  /// 1) Helps determine the node's execution priority in the engine.
+  ///    All else being equal, nodes with higher priority numbers are executed
+  ///    first. Thus, nodes corresponding to ops executed later are the first to
+  ///    be executed in the backward pass. One caveat is that we prioritize
+  ///    AccumulateGrad nodes by explicitly setting its sequence_nr to be
+  ///    UINT64_MAX.
+  // …
+  uint64_t sequence_nr_;
+  // …
+» edge_list next_edges_;</script>
+
+<script type="text/plain" id="c-accseq">// AccumulateGrad sets sequence_nr to the max value so it's always called
+// ASAP during backwards.
+AccumulateGrad::AccumulateGrad(Variable variable_)
+»   : Node(/*sequence_nr=*/UINT64_MAX), variable(std::move(variable_)) {
+  add_input_metadata(variable);
+}</script>
+
+<script type="text/plain" id="c-acc">  static void accumulateGrad(
+      const Variable& variable,
+      at::Tensor& variable_grad,
+      const at::Tensor& new_grad,
+      size_t num_expected_refs,
+      const T& update_grad) {
+»   if (!variable_grad.defined()) {
+      // … Case 1: no grad yet: steal or clone new_grad
+»       update_grad(new_grad.detach());
+      // …
+    } else if (!GradMode::is_enabled()) {
+      // Case 2: Param has existing grad and grad mode is not enabled
+      // …
+      } else {
+        // Case 2.3: In-place addition
+»       variable_grad += new_grad;
+        CHECK_RESULT(variable_grad, variable);
+      // …</script>
+
+<script type="text/plain" id="c-deps">auto Engine::compute_dependencies(
+    Node* root,
+    GraphTask& task,
+    uint64_t min_topo_nr) -> void {
+  // Computes the number of dependencies for each function which requires grad
+» std::vector<Node*> queue{root};
+  // …
+  auto& dependencies = task.dependencies_;
+  while (!queue.empty()) {
+    auto fn = queue.back();
+    queue.pop_back();
+    // …
+    for (const auto& edge : fn->next_edges()) {
+      if (auto next_ptr = edge.function.get()) {
+»       dependencies[next_ptr] += 1;
+        const bool was_inserted = task.nodes_in_graph_.insert(next_ptr).second;
+        if (was_inserted)
+          queue.push_back(next_ptr);
+      }
+    }
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-queue">  struct CompareNodeTaskTime {
+    bool operator()(NodeTask const& t1, NodeTask const& t2) {
+      // NOLINTNEXTLINE(bugprone-branch-clone)
+      if (t2.isShutdownTask_) {
+        return true;
+      } else if (!t1.fn_ || t1.isShutdownTask_) {
+        return false;
+      } else if (!t2.fn_) {
+        return true;
+      } else if (t1.getReentrantDepth() == t2.getReentrantDepth()) {
+»       return t1.fn_->sequence_nr() < t2.fn_->sequence_nr();
+      } else {
+        return t1.getReentrantDepth() < t2.getReentrantDepth();
+      }
+    }
+  };</script>
+
+<script type="text/plain" id="c-eval">» auto outputs = call_function(graph_task, func, inputs);
+  // …
+  for (const auto i : c10::irange(num_outputs)) {
+    auto& output = outputs[i];
+    const auto& next = fn.next_edge(i);
+
+    if (!next.is_valid())
+      continue;
+
+    // Check if the next function is ready to be computed
+    bool is_ready = false;
+    auto& dependencies = graph_task->dependencies_;
+    auto it = dependencies.find(next.function.get());
+    // …
+»   } else if (--it->second == 0) {
+      dependencies.erase(it);
+      is_ready = true;
+    }
+    // …
+      // The function already has a buffer
+      auto& input_buffer = not_ready_it->second;
+
+»     input_buffer.add(
+          next.input_nr,
+          std::move(output),
+          // …
+      if (is_ready) {
+        auto queue = ready_queue(cpu_ready_queue, next.function->device());
+»       queue->push(
+            NodeTask(graph_task, next.function, std::move(input_buffer)));
+        not_ready.erase(not_ready_it);
+      }</script>
+
+<script type="text/plain" id="c-release">  auto outputs = call_function(graph_task, func, inputs);
+
+  auto& fn = *func;
+» if (!graph_task->keep_graph_) {
+»   fn.release_variables();
+  }</script>
+
+<script type="text/plain" id="c-py">        elif grad is None:
+            if isinstance(out, graph.GradientEdge) or out.requires_grad:
+                # …
+                    out_numel_is_1 = out.numel() == 1
+                if not out_numel_is_1:
+                    raise RuntimeError(
+»                       "grad can be implicitly created only for scalar outputs"
+                    )
+                # …
+                    new_grads.append(
+»                       torch.ones_like(out, memory_format=torch.preserve_format)
+                    )
+# … in backward():
+»   _engine_run_backward(
+        tensors,
+        grad_tensors_,
+        retain_graph,
+        create_graph,
+        inputs_tuple,
+        allow_unreachable=True,
+»       accumulate_grad=True,
+    )</script>
+
+<script type="text/plain" id="c-loop">for x, target in data:
+    optimizer.zero_grad()      # .grad = None, so AccumulateGrad starts fresh
+    pred = model(x)            # forward: one Node per operation, saved tensors kept
+    loss = loss_fn(pred, target)
+»   loss.backward()            # Engine::execute: dependencies, ready queue, formulas
+    optimizer.step()           # reads .grad, which AccumulateGrad wrote
+    # the graph and its saved tensors were freed during backward()</script>
+
+<script src="../assets/reading.js?v=431f6360"></script>
+<script src="autograd-model.js?v=4cc41824"></script>
+<script src="capture-data.js?v=96c3e561"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$|#.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)')|\b(if|else|return|const|bool|int|void|struct|static|for|while|auto|case|break|continue|true|false|in|not|or|and|elif|raise|def|explicit|template|typename)\b|\b([A-Za-z_]\w*)(?=\()|\b(0x[0-9a-fA-F]+|\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+  var M=window.AutogradModel,F=M&&M.fmt;
+
+  /* ---------- real captures ---------- */
+  if(window.AUTOGRAD_CAPTURE){
+    var C=AUTOGRAD_CAPTURE;
+    $("graphlines").textContent=">>> "+C.graph.code+"\n>>> # y.grad_fn and its next_functions, recursively\n"+C.graph.lines.join("\n");
+    $("acclog").textContent=C.accumulate.code+"\n\n"+C.accumulate.grads.map(function(g,i){return "after backward() "+(i+1)+":  w.grad = "+g}).join("\n")+"\n\nw.grad = None; one more step:  w.grad = "+C.accumulate.after_reset;
+    $("twice").textContent="RuntimeError: "+C.twice;
+    $("orderRows").innerHTML=C.order.steps.map(function(s,i){return '<tr class="k-bwd"><td>'+(i+1)+'</td><td>'+esc(s.node)+'</td><td>'+esc(String(s.seq))+'</td><td>'+F(s.grad_in)+'</td></tr>'}).join("");
+    $("orderNote").textContent=C.order.code+". Sequence numbers are relative to the program's first node. Final grads: x = "+F(C.order.grads.x)+", y = "+F(C.order.grads.y)+", z = "+F(C.order.grads.z)+".";
+    $("profRows").innerHTML=C.profiler.map(function(p){var k=p.kind==="backward node"?"k-bwd":p.kind==="forward op"?"k-fwd":"k-math";return '<tr class="'+k+'"><td>'+p.start_us.toFixed(0)+'</td><td>'+esc(p.name.replace("autograd::engine::evaluate_function: ","backward: ").replace("torch::autograd::",""))+(p.kind==="math inside a backward formula"?" (formula math)":"")+'</td><td>'+(p.seq<0?"":p.seq)+'</td></tr>'}).join("");
+  }
+
+  /* ---------- the lab ---------- */
+  if(!M)return;
+  var R=null,si=-1,timer=null,existing=null;
+  function layout(r){
+    // level = longest path from the root, so every edge points down
+    var lv={},order=[];lv[r.root]=0;
+    var changed=true,guard=0;
+    while(changed&&guard++<200){changed=false;r.nodes.forEach(function(n){if(lv[n.id]===undefined)return;n.edges.forEach(function(e){if(e!==null&&(lv[e]===undefined||lv[e]<lv[n.id]+1)){lv[e]=lv[n.id]+1;changed=true}})})}
+    (function dfs(id){if(order.indexOf(id)>=0)return;order.push(id);r.nodes[id].edges.forEach(function(e){if(e!==null)dfs(e)})})(r.root);
+    var rows=[];order.forEach(function(id){var l=lv[id];(rows[l]=rows[l]||[]).push(id)});
+    // order each row by the average position of its parents (fewer crossing edges)
+    var at={};rows.forEach(function(ids,l){if(l>0){var bc={};ids.forEach(function(id,k){var ps=[];r.nodes.forEach(function(n){if(n.edges.indexOf(id)>=0&&at[n.id]!==undefined)ps.push(at[n.id])});bc[id]=ps.length?ps.reduce(function(a,b){return a+b},0)/ps.length:k});ids.sort(function(a,b){return bc[a]-bc[b]})}ids.forEach(function(id,k){at[id]=(k+0.5)/ids.length})});
+    var W=172,H=46,GX=18,GY=40,maxN=Math.max.apply(null,rows.map(function(x){return x.length})),width=Math.max(360,maxN*(W+GX)+GX),pos={};
+    rows.forEach(function(ids,l){var tw=ids.length*(W+GX)-GX,x0=(width-tw)/2;ids.forEach(function(id,i){pos[id]={x:x0+i*(W+GX),y:14+l*(H+GY)}})});
+    return {pos:pos,W:W,H:H,width:width,height:14+rows.length*(H+GY)-GY+14};
+  }
+  var L=null;
+  function draw(){
+    var svg=$("graph"),r=R,done={},cur=si>=0?r.steps[si].node:null,queued={},sent={};
+    for(var k=0;k<=si;k++){done[r.steps[k].node]=true;r.steps[k].outs.forEach(function(o){sent[r.steps[k].node+">"+o.to]=o.grad})}
+    if(si>=0)r.steps[si].queueAfter.forEach(function(id){queued[id]=true});else queued[r.root]=true;
+    var h='<defs><marker id="ga" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#8a94a3"/></marker></defs>';
+    r.nodes.forEach(function(n){if(!L.pos[n.id])return;var a=L.pos[n.id];n.edges.forEach(function(e,i){if(e===null)return;var b=L.pos[e];var x1=a.x+L.W/2+(n.edges.length>1?(i?14:-14):0),y1=a.y+L.H,x2=b.x+L.W/2,y2=b.y;var key=n.id+">"+e,s=sent[key]!==undefined;
+      h+='<path class="g-edge'+(s?" sent":"")+'" d="M'+x1+" "+y1+" C"+x1+" "+(y1+22)+" "+x2+" "+(y2-22)+" "+x2+" "+(y2-2)+'" marker-end="url(#ga)"/>';
+      if(s){var mx=(x1+x2)/2,my=(y1+y2)/2,t=F(sent[key]);h+='<rect class="g-lab-bg" x="'+(mx-t.length*3.3-4)+'" y="'+(my-8)+'" width="'+(t.length*6.6+8)+'" height="15" rx="3"/><text class="g-lab" x="'+mx+'" y="'+(my+3)+'" text-anchor="middle">'+esc(t)+'</text>'}
+    })});
+    r.nodes.forEach(function(n){var a=L.pos[n.id];if(!a)return;var cls="g-node"+(n.name==="AccumulateGrad"?" acc":"")+(n.id===cur?" cur":done[n.id]?" done":queued[n.id]?" queued":"");
+      var title=n.name==="AccumulateGrad"?"AccumulateGrad ("+n.leaf+")":n.name,sub=n.name==="AccumulateGrad"?"seq UINT64_MAX":"seq "+n.seq+(n.label?" · "+n.label:"")+(r.deps[n.id]?" · deps "+r.deps[n.id]:"");
+      h+='<g class="'+cls+'"><rect x="'+a.x+'" y="'+a.y+'" width="'+L.W+'" height="'+L.H+'" rx="8"/><text x="'+(a.x+L.W/2)+'" y="'+(a.y+19)+'" text-anchor="middle">'+esc(title)+'</text><text class="sub" x="'+(a.x+L.W/2)+'" y="'+(a.y+35)+'" text-anchor="middle">'+esc(sub)+'</text></g>'});
+    svg.setAttribute("viewBox","0 0 "+L.width+" "+L.height);svg.setAttribute("width",L.width);svg.setAttribute("height",L.height);svg.innerHTML=h;
+  }
+  function nodeName(id){var n=R.nodes[id];return n.name==="AccumulateGrad"?"AccumulateGrad ("+n.leaf+")":n.name}
+  function show(){
+    var n=R.steps.length;$("bCtr").textContent=(si+1)+" / "+n+" nodes";
+    draw();
+    if(si<0){$("step").innerHTML='<p style="margin:0">Forward pass done: the graph is recorded. <code>compute_dependencies</code> counted the edges into each node (shown as <b>deps</b>), and the root, <b>'+esc(nodeName(R.root))+'</b>, is on the ready queue with gradient 1.</p>'}
+    else{var s=R.steps[si],nd=R.nodes[s.node],h='<p style="margin:0">Pop <b>'+esc(nodeName(s.node))+'</b> ('+(nd.name==="AccumulateGrad"?"seq UINT64_MAX":"seq "+nd.seq)+'), incoming gradient <b>'+F(s.gradIn)+'</b>.</p>';
+      if(s.acc){h+='<div class="f">'+esc(s.acc.leaf)+".grad "+(s.acc.before===undefined?"= "+F(s.acc.after)+"   (no .grad yet: it is set)":"+= "+F(s.gradIn)+"   →   "+F(s.acc.before)+" + "+F(s.gradIn)+" = "+F(s.acc.after))+'</div>'}
+      else{h+='<div class="f">'+esc(nd.name)+": "+esc(M.FORMULA[nd.info.op])+'</div><ol class="outs">'+s.outs.map(function(o){return '<li>to <b>'+esc(nodeName(o.to))+'</b>: '+F(o.grad)+(o.buffer!==o.grad?", buffer now "+F(o.buffer):"")+" · deps left "+o.depsLeft+(o.pushed?" → <b>pushed</b>":" → waits")+'</li>'}).join("")+(nd.edges.some(function(e){return e===null})?'<li class="muted">the constant input gets no gradient (its edge is None)</li>':"")+'</ol>'}
+      $("step").innerHTML=h}
+    var q=si<0?[R.root]:R.steps[si].queueAfter.slice();
+    q.sort(function(a,b){var sa=R.nodes[a].seq,sb=R.nodes[b].seq;return sb-sa});
+    $("queue").innerHTML=q.length?q.map(function(id,i){var nd=R.nodes[id];return '<span class="chip'+(nd.name==="AccumulateGrad"?" acc":"")+(i===0?" next":"")+'">'+esc(nodeName(id))+" · "+(nd.name==="AccumulateGrad"?"MAX":nd.seq)+'</span>'}).join(""):'<span class="empty">empty: backward is finished</span>';
+    var grads={};Object.keys(existing||{}).forEach(function(k){grads[k]=existing[k]});for(var k=0;k<=si;k++)if(R.steps[k].acc)grads[R.steps[k].acc.leaf]=R.steps[k].acc.after;
+    $("grads").innerHTML=R.prog.leaves.map(function(l){return '<tr><td>'+esc(l.name)+'</td><td>'+F(l.value)+'</td><td class="gradcell">'+(grads[l.name]===undefined?"None":F(grads[l.name]))+'</td></tr>'}).join("");
+  }
+  function build(keep){
+    stop();$("fdRes").textContent="";$("fdRes").className="pill";
+    if(!keep)existing=null;
+    try{R=M.run($("src").value,existing||undefined);$("err").textContent=""}catch(e){$("err").textContent=e.message;return}
+    L=layout(R);si=-1;
+    $("fwd").innerHTML=R.prog.stmts.map(function(s){var v=R.env[s.name];return '<tr><td>'+esc(s.name)+'</td><td>'+F(v.value)+'</td><td>'+(v.fn?esc(v.fn.name)+" (seq "+v.fn.seq+")":v.leaf?"leaf "+esc(v.leaf):"constant")+'</td></tr>'}).join("");
+    show();
+  }
+  function stop(){if(timer){clearInterval(timer);timer=null;$("bPlay").textContent="▶ Play"}}
+  $("bNext").onclick=function(){stop();if(R&&si<R.steps.length-1){si++;show()}};
+  $("bPrev").onclick=function(){stop();if(R&&si>-1){si--;show()}};
+  $("bEnd").onclick=function(){stop();if(R){si=R.steps.length-1;show()}};
+  $("bPlay").onclick=function(){if(timer){stop();return}if(!R)return;if(si>=R.steps.length-1)si=-1;$("bPlay").textContent="❚❚ Pause";timer=setInterval(function(){if(si>=R.steps.length-1){stop();return}si++;show()},900)};
+  $("bAgain").onclick=function(){if(!R)return;existing=R.grads;build(true);si=R.steps.length-1;show()};
+  $("bZero").onclick=function(){existing=null;build()};
+  $("bFd").onclick=function(){
+    if(!R)return;var p=$("fdRes"),worst=0,bad=[],skipped=0;
+    var prog=M.parse($("src").value),base=M.run(prog).grads;
+    prog.leaves.forEach(function(l){
+      var v=l.value,h=1e-6*Math.max(1,Math.abs(v));
+      function f(x){var P=M.parse($("src").value);P.leaves.forEach(function(q){if(q.name===l.name)q.value=x});return M.forward(P).value}
+      var num=(f(v+h)-f(v-h))/(2*h),ad=base[l.name]===undefined?0:base[l.name];
+      if(!isFinite(num)||!isFinite(ad)){skipped++;return}
+      var rel=Math.abs(num-ad)/Math.max(1,Math.abs(num),Math.abs(ad));worst=Math.max(worst,rel);if(rel>1e-5)bad.push(l.name+": autograd "+F(ad)+", numeric "+F(num));
+    });
+    p.className="pill "+(bad.length?"bad":"ok");
+    p.textContent=bad.length?"differs: "+bad.join("; ")+" (a kink such as relu at 0 can do this)":"✓ every gradient within "+worst.toExponential(1)+" of (f(x+h) − f(x−h)) / 2h"+(skipped?" ("+skipped+" not finite, skipped)":"");
+  };
+  var P=M.PRESETS;$("presets").innerHTML=P.map(function(p,i){return '<button type="button" data-i="'+i+'">'+esc(p[0])+'</button>'}).join("");
+  [].forEach.call($("presets").children,function(b){b.onclick=function(){$("src").value=P[+b.getAttribute("data-i")][1];[].forEach.call($("presets").children,function(x){x.classList.toggle("sel",x===b)});build()}});
+  var deb=null;$("src").addEventListener("input",function(){[].forEach.call($("presets").children,function(x){x.classList.remove("sel")});clearTimeout(deb);deb=setTimeout(build,350)});
+  $("src").value=P[0][1];$("presets").children[0].classList.add("sel");build();
+})();
+</script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
+</body>
+</html>

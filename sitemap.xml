@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/threads-vs-event-loop/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/v8-pipeline/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/fetch-to-the-wire/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/lr-parser/</loc><lastmod>2026-10-09</lastmod></url>
-  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/</loc><lastmod>2026-10-09</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/threads-vs-event-loop/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/v8-pipeline/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/fetch-to-the-wire/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/lr-parser/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/</loc><lastmod>2026-10-10</lastmod></url>
+  <url><loc>https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/autograd/</loc><lastmod>2026-10-10</lastmod></url>
 </urlset>
