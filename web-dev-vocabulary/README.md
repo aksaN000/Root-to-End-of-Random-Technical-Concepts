@@ -1,6 +1,6 @@
 # From the engine to the plugin
 
-The vocabulary of a React + Vite + Tailwind project, each word put where it lives and traced to the code behind it, plus how to remember it all.
+Web dev track, page 1 of 4. The vocabulary of a React + Vite + Tailwind project, each word put where it lives and traced to the code behind it, plus how to remember it all.
 
 ## What it covers
 

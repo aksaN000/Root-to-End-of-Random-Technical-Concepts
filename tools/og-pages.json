@@ -105,7 +105,7 @@
  {
   "slug": "web-dev-vocabulary",
   "h": "From the engine to the plugin",
-  "sub": "Web dev vocabulary, traced from the node binary to a Tailwind class",
+  "sub": "Web dev track 1/4: from the node binary to a Tailwind class",
   "chain": [
    "node",
    "npm \u00b7 npx",

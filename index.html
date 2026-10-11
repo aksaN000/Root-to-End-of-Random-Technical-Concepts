@@ -167,7 +167,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       <a href="js-event-loop/"><b>Learning JavaScript</b><span>Why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8.</span><span class="path"><em>event loop</em>→<em>V8</em>→<em>Browser track</em></span></a>
       <a href="lr-parser/"><b>Taking a compilers course</b><span>Build an SLR table from any grammar, then follow a real compiler through V8.</span><span class="path"><em>LR parsing</em>→<em>V8 pipeline</em></span></a>
       <a href="autograd/"><b>Learning machine learning</b><span>What <code>loss.backward()</code> actually does, from the chain rule to PyTorch's C++ engine.</span><span class="path"><em>autograd</em>→<em>transformer</em></span></a>
-      <a href="web-dev-vocabulary/"><b>Starting web development</b><span>Node, npm, npx, Vite, plugins and Tailwind classes, each traced to its code, with a trainer to make them stick.</span><span class="path"><em>tools</em>→<em>event loop</em>→<em>Browser track</em></span></a>
+      <a href="web-dev-vocabulary/"><b>Starting web development</b><span>Node, npm, npx, Vite, plugins and Tailwind classes, each traced to its code, with a trainer to make them stick.</span><span class="path"><em>Web dev track</em>→<em>event loop</em>→<em>Browser track</em></span></a>
       <a href="fetch-to-the-wire/"><b>Curious how browsers work</b><span>A request goes out, the response becomes pixels, and a click comes back to our code.</span><span class="path"><em>fetch()</em>→<em>pixels</em>→<em>click</em></span></a>
     </div>
   </section>
@@ -289,11 +289,22 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
         <div class="chain" aria-label="Layers traced">
           <span>main()</span><i>→</i><span>Node · browser</span><i>→</i><span>npm · npx</span><i>→</i><span>Vite plugins</span><i>→</i><span>Tailwind</span><i>→</i><span class="you">our components</span>
         </div>
-        <div class="meta"><span class="tag">Web development</span><span class="tag">npm</span><span class="tag">Vite</span><span class="tag">Tailwind CSS</span><span class="tag">learning</span><span class="tag">About 25 min</span></div>
-        <p class="need">Needs: nothing beyond basic JavaScript. A good first page before the event-loop page and the Browser track.</p>
+        <div class="meta"><span class="tag">Web dev track 1/4</span><span class="tag">npm</span><span class="tag">Vite</span><span class="tag">Tailwind CSS</span><span class="tag">learning</span><span class="tag">About 25 min</span></div>
+        <p class="need">Needs: nothing beyond basic JavaScript. Opens the Web dev track; a good first page before the event-loop page and the Browser track.</p>
       </div>
       <span class="go">Open →</span>
     </a>
+  </section>
+
+  <section>
+    <h2>Web dev track</h2>
+    <p class="maplede">From the tools on our machine to a running React and Next.js app: what npm, Vite and Tailwind do before the browser sees our code, then how React turns components into DOM and keeps it up to date, then how Next.js serves a page. It is the path of a first React project, and it hands over to the Browser track for what the browser does next.</p>
+    <nav class="map" aria-label="Web dev track">
+      <a href="web-dev-vocabulary/">1 · node → npm → Vite → Tailwind<small>live</small></a><i>→</i>
+      <span class="soon">2 · JSX → fibers → the DOM<small>next</small></span><i>→</i>
+      <span class="soon">3 · setState → reconcile → commit<small>planned</small></span><i>→</i>
+      <span class="soon">4 · a URL → a Next.js page<small>planned</small></span>
+    </nav>
   </section>
 
   <section>
@@ -325,7 +336,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       <a href="threads-vs-event-loop/">thread → schedule() → CPU<small>threads-vs-event-loop</small></a>
     </nav>
     <p class="maplede" style="margin-top:12px">And sideways, out of the machine: <a href="fetch-to-the-wire/">fetch-to-the-wire</a> follows the network request that the event-loop page's wake chain starts from.</p>
-    <p class="maplede" style="margin-top:8px">And one step before all of it: <a href="web-dev-vocabulary/">web-dev-vocabulary</a> shows the tools on our own machine (Node, npm, Vite and its plugins) that prepare the code these pages follow.</p>
+    <p class="maplede" style="margin-top:8px">And one step before all of it: the <a href="web-dev-vocabulary/">Web dev track</a> starts with the tools on our own machine (Node, npm, Vite and its plugins) that prepare the code these pages follow.</p>
   </section>
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Found a mistake? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml">Report it</a>, or <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml">suggest a topic</a>. Want to check our claims? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/TESTING.md">Here is how to test everything</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>

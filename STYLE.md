@@ -59,7 +59,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Tracks
 
-Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Browser track: `fetch()` → HTML to pixels → a click to our listener; the ML track: autograd → a transformer). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
+Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Web dev track: the tools → JSX to the DOM → setState to the screen → a Next.js page; the Browser track: `fetch()` → HTML to pixels → a click to our listener; the ML track: autograd → a transformer). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
 
 ## Visual system
 
@@ -91,7 +91,7 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 
 ## Changelog
 
-- **2026-10-12**: Web dev vocabulary page (`web-dev-vocabulary`), with a command model checked against npm's own code and a Tailwind model checked against the real compiler. New rules: run a command-line tool's own code in its check, extract copied tables with a script that fails on drift, and a remembering section with a recall trainer for vocabulary-heavy pages. The landing page has a fifth starting point.
+- **2026-10-12**: Web dev track, page 1 of 4 (`web-dev-vocabulary`), with a command model checked against npm's own code and a Tailwind model checked against the real compiler. New rules: run a command-line tool's own code in its check, extract copied tables with a script that fails on drift, and a remembering section with a recall trainer for vocabulary-heavy pages. The landing page has a Web dev track and a fifth starting point.
 
 - **2026-10-10**: ML track page 1 (`autograd`), checked against real PyTorch. New rule: compare a library's internals, not just its answers. The landing page has an ML track and a fourth starting point.
 
