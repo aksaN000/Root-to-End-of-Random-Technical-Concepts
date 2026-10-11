@@ -1,0 +1,14 @@
+{
+ "id": "commands",
+ "date": "2026-10-11T22:09:25.318Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "npm 10.9.4 on Node v22.22.0: bash for word splitting, bin/npx-cli.js, nopt's parse with npm's option definitions, lib/utils/cmd-list.js deref(), and npm-package-arg",
+ "cases": 4793,
+ "matched": 4793,
+ "passed": true,
+ "seed": 2026,
+ "detail": "2977 distinct command lines (11 lab presets, the rest seeded random) checked word by word, option by option and command by command; 1816 package specs (71 hand-picked, the rest from the lines) checked for type, name, scope and fetch spec, or the same error",
+ "failureCount": 0
+}

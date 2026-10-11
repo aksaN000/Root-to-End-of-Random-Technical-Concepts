@@ -101,5 +101,17 @@
    "AccumulateGrad",
    ".grad"
   ]
+ },
+ {
+  "slug": "web-dev-vocabulary",
+  "h": "From the engine to the plugin",
+  "sub": "Web dev vocabulary, traced from the node binary to a Tailwind class",
+  "chain": [
+   "node",
+   "npm \u00b7 npx",
+   "Vite + plugins",
+   "Tailwind",
+   "our components"
+  ]
  }
 ]

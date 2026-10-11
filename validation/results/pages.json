@@ -1,14 +1,14 @@
 {
  "id": "pages",
- "date": "2026-10-09T18:47:51.997Z",
- "platform": "linux 6.18.44-fc-v80 x64",
+ "date": "2026-10-11T22:11:38.459Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
  "node": "22.22.0",
  "v8": "12.4.254.21-node.33",
  "reference": "Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0",
- "cases": 18,
- "matched": 18,
+ "cases": 20,
+ "matched": 20,
  "passed": true,
- "detail": "9 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa",
+ "detail": "10 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa",
  "pages": [
   {
    "page": "home",
@@ -114,6 +114,18 @@
   },
   {
    "page": "v8-pipeline",
+   "width": 390,
+   "problems": 0,
+   "a11y": 0
+  },
+  {
+   "page": "web-dev-vocabulary",
+   "width": 1300,
+   "problems": 0,
+   "a11y": 0
+  },
+  {
+   "page": "web-dev-vocabulary",
    "width": 390,
    "problems": 0,
    "a11y": 0

@@ -1,12 +1,14 @@
 // Runs every verification in the repo and prints one summary.
 //   npm test                     (or: node tools/run-all-checks.js)
 //   node tools/run-all-checks.js --quick     fewer random cases, faster
-//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit autograd pages)
+//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit autograd commands tailwind pages)
 // Checks that need something missing (Python + scapy, Playwright's Chromium, Node 22 for the
 // exact V8 bytecode) are reported as SKIP with the reason, not as failures.
 const { spawnSync } = require("child_process"), path = require("path");
 const ROOT = path.resolve(__dirname, ".."), quick = process.argv.includes("--quick");
 const node = process.execPath, nodeMajor = +process.versions.node.split(".")[0];
+let hasTailwind = true; try { require.resolve("tailwindcss", { paths: [path.resolve(__dirname, "..")] }); } catch (e) { hasTailwind = false; }
+const hasBash = spawnSync("bash", ["-c", "true"]).status === 0;
 let hasPlaywright = true; try { require.resolve("playwright"); } catch (e) { try { require.resolve("/opt/npm-tools/node_modules/playwright"); } catch (e2) { hasPlaywright = false; } }
 function py() { for (const c of ["python3", "python"]) { const r = spawnSync(c, ["-c", "import scapy, cryptography"], { encoding: "utf8" }); if (r.status === 0) return c; } return null; }
 const PY = py();
@@ -22,6 +24,8 @@ const CHECKS = [
   { id: "dispatch", name: "Event-dispatch model vs real Chromium (real clicks and script dispatches)", dir: "click-to-listener", cmd: [node, "verify/compare-dispatch.js"].concat(quick ? ["60:7"] : []), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "hit", name: "Hit-test model vs Chromium's elementFromPoint", dir: "click-to-listener", cmd: [node, "verify/compare-hit-test.js"].concat(quick ? ["50:7"] : []), need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "autograd", name: "Autograd engine vs real PyTorch (graph, order, gradients)", dir: "autograd", cmd: [PYT || "python3", "verify/compare-with-pytorch.py"].concat(quick ? ["100", "7"] : []), need: PYT ? null : "needs Python 3 with PyTorch (pip install torch --index-url https://download.pytorch.org/whl/cpu)" },
+  { id: "commands", name: "Command model vs real npm (bash, npx, nopt, cmd-list, npm-package-arg)", dir: "web-dev-vocabulary", cmd: [node, "verify/compare-commands.js"].concat(quick ? ["400", "7"] : []), need: hasBash ? null : "needs bash to compare word splitting (use WSL or Git Bash on Windows)" },
+  { id: "tailwind", name: "Tailwind class model vs the real Tailwind compiler", dir: "web-dev-vocabulary", cmd: [node, "verify/compare-tailwind.js"].concat(quick ? ["400", "7"] : []), need: hasTailwind ? null : "needs the tailwindcss package (npm install)" },
   { id: "pages", name: "Every page loads cleanly (desktop and phone width)", dir: ".", cmd: [node, "tools/check-pages.js"], need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" }
 ];
 const onlyArg = process.argv.find(a => a.startsWith("--only="));

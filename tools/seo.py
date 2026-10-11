@@ -33,6 +33,9 @@ PAGES=[
  ("autograd/index.html","autograd/","autograd","From the Chain Rule to loss.backward(): How PyTorch Autograd Works | Root to End",
   "How loss.backward() works in PyTorch: the graph of Nodes recorded during the forward pass, the engine's dependency counts and ready queue, and AccumulateGrad, with a lab that matches real PyTorch node for node.",
   "From the chain rule to loss.backward()","PyTorch's autograd engine, from the chain rule to .grad",["chain rule","grad_fn graph","engine","AccumulateGrad",".grad"],["autograd","backpropagation","PyTorch","automatic differentiation","reverse mode","computational graph","gradient"]),
+ ("web-dev-vocabulary/index.html","web-dev-vocabulary/","web-dev-vocabulary","Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind | Root to End",
+  "Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.",
+  "From the engine to the plugin","Web dev vocabulary, traced from the node binary to a Tailwind class",["node","npm · npx","Vite + plugins","Tailwind","our components"],["npm","npx","Node.js","Vite","Tailwind CSS","package.json","semver","plugins","spaced repetition","web development"]),
 ]
 def head(path,url,slug,title,desc,kw):
     u=BASE+url; img=BASE+"assets/og/"+slug+".png"

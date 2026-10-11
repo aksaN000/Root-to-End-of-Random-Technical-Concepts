@@ -6,12 +6,13 @@ Every page makes claims about real systems: what V8 emits, what Chrome parses, h
 
 Open the site: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/
 
-Three pages check themselves against **your** browser while you use them:
+Four pages check themselves against **your** browser while you use them:
 
 | Page | What to do | What it proves |
 |---|---|---|
 | [Event loop](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/js-event-loop/#playground) | Write any code in the playground (or pick an example) and wait a second | The bar under the playground runs the same code in a Web Worker with your browser's real JavaScript engine and says whether the output matches the model |
 | [HTML to pixels](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/html-to-pixels/#lab) | Type any HTML in the parser lab and press **Check against this browser** | Your browser's own HTML parser builds the tree, and the page compares it with the model's tree |
+| [Web dev vocabulary](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/#twlab) | Type any Tailwind classes in the class lab and press **Check in this browser** | Your browser computes every declaration the model wrote, and tests each `@media` condition with `matchMedia` |
 | [Click to listener](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/click-to-listener/#hitlab) | Click the hit-test stage; in the dispatch lab press **Check in this browser** and, for a "by user" program, click the dashed box | Your browser's `elementFromPoint` and your browser's real event dispatch, compared with the models |
 
 Try to break them. Odd inputs are the most useful: misnested tags, unusual entities, chains of `await`.
@@ -60,9 +61,11 @@ PASS HTML parser model vs real Chrome
 PASS Event-dispatch model vs real Chromium (real clicks and script dispatches)
 PASS Hit-test model vs Chromium's elementFromPoint
 PASS Autograd engine vs real PyTorch (graph, order, gradients)
+PASS Command model vs real npm (bash, npx, nopt, cmd-list, npm-package-arg)
+PASS Tailwind class model vs the real Tailwind compiler
 PASS Every page loads cleanly (desktop and phone width)
 
-10 passed, 0 failed, 0 skipped
+12 passed, 0 failed, 0 skipped
 ```
 
 Other commands:
@@ -70,7 +73,7 @@ Other commands:
 | Command | What it does |
 |---|---|
 | `npm run test:quick` | Same checks with fewer random cases (does not overwrite the saved results) |
-| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit autograd pages`) |
+| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit autograd commands tailwind pages`) |
 | `npm run test:pages` | Only the page checks, on your local copy |
 | `npm run test:live` | The page checks against the published site |
 | `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
@@ -88,6 +91,8 @@ Other commands:
 | Event dispatch | `click-to-listener/dispatch-model.js` | Real Chromium with real listeners on the lab presets and 1,600 seeded random programs; half are clicked for real through the browser's input path, half dispatched from script. Listener order, phases, microtask placement and `defaultPrevented` | `click-to-listener/verify/compare-dispatch.js [count] [seed]` |
 | Hit testing | `click-to-listener/hit-model.js` | `document.elementFromPoint` at 40 points in each of 1,008 scenes | `click-to-listener/verify/compare-hit-test.js [count] [seed]` |
 | Autograd | `autograd/autograd-model.js` | Real PyTorch on the lab presets and 2,000 seeded random programs: the graph from `grad_fn.next_functions`, the order of sequence numbers, the execution order from pre-hooks on every node, and float64 gradients | `autograd/verify/compare-with-pytorch.py [count] [seed]` |
+| npm commands | `web-dev-vocabulary/command-model.js` | npm 10.9.4's own code, from the npm that ships with Node: bash splits each line, then `bin/npx-cli.js` (run with its last line stubbed), nopt's parse with npm's option definitions, `cmd-list.js` `deref()` and npm-package-arg, on the lab presets, hand-picked specs and seeded random command lines; the copied tables in `npm-tables.js` are compared too | `web-dev-vocabulary/verify/compare-commands.js [count] [seed]` |
+| Tailwind classes | `web-dev-vocabulary/tailwind-model.js` | The pinned `tailwindcss` package's compiler, a fresh one per class: the same selector, `@media` wrappers, declarations and `:root` theme variables, or both writing nothing; the copied theme in `tailwind-theme.js` is compared too | `web-dev-vocabulary/verify/compare-tailwind.js [count] [seed]` |
 | Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes, and axe-core (WCAG 2.2 A/AA) in light and dark mode | `tools/check-pages.js [--live] [--browser=…]` |
 
 ### Results and failures
@@ -106,6 +111,7 @@ Captured data lives in each page's `data/` folder, together with the script that
 
 - **HTML to pixels traces**: `cd html-to-pixels/data && node trace.js`. This loads `page.html` in headless Chromium, applies the seven changes, and writes `trace-*.json`. It overwrites the committed traces; timings will differ slightly, but the stage counts (for example 20 Layout events versus 1) should not. Open a trace in DevTools → Performance → Load profile, or in [Perfetto](https://ui.perfetto.dev/).
 - **fetch() capture**: needs Linux and root, because it runs a DNS server on port 53 and a TLS server on port 443. Start `node servers.js` in `fetch-to-the-wire/data/`, point `/etc/resolv.conf` at `127.0.0.1`, run `node run.js`, then restore `/etc/resolv.conf`. It writes a new `netlog.json` (open it in the [NetLog viewer](https://netlog-viewer.appspot.com/)) and `capture.json` with the raw bytes. Key exchange and GREASE values are random per connection, so bytes will differ; structure and sizes should match.
+- **Web dev vocabulary**: `cd web-dev-vocabulary/data && node capture.js && node make-page-data.js`. This creates a fresh Vite + React + TypeScript project in a temporary folder (it needs network access to the npm registry), runs the assignment's commands, starts the dev server to record what the browser receives, and writes `capture.json`. Paths are rewritten to `/home/you/dev-stack`. Versions of React, Vite and their dependencies will move on; the structure should not.
 - **Bison outputs on the LR page** came from GNU Bison 3.8.2; `bison -v -Wcounterexamples` on the grammars shown reproduces them.
 
 ## 4. If something fails

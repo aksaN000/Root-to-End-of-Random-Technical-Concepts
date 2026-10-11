@@ -1,7 +1,7 @@
 {
  "id": "v8-bytecode",
- "date": "2026-10-09T18:42:25.039Z",
- "platform": "linux 6.18.44-fc-v80 x64",
+ "date": "2026-10-11T22:04:50.924Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
  "node": "22.22.0",
  "v8": "12.4.254.21-node.33",
  "passed": true,

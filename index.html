@@ -91,6 +91,7 @@ footer a{color:var(--accent)}
 .starts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .starts a{display:flex;flex-direction:column;gap:6px;text-decoration:none;color:inherit;background:var(--surface);border:1px solid var(--rule);border-radius:12px;padding:16px 18px}
 .starts a:hover{border-color:var(--accent)}
+.starts a:last-child:nth-child(odd){grid-column:1/-1}
 .starts a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .starts b{font-family:var(--display);font-size:1.12rem;font-weight:800;line-height:1.2}
 .starts span{color:var(--muted);font-size:.9rem;line-height:1.55}
@@ -166,6 +167,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       <a href="js-event-loop/"><b>Learning JavaScript</b><span>Why <code>.then()</code> runs before <code>setTimeout</code>, traced into Chrome and V8.</span><span class="path"><em>event loop</em>→<em>V8</em>→<em>Browser track</em></span></a>
       <a href="lr-parser/"><b>Taking a compilers course</b><span>Build an SLR table from any grammar, then follow a real compiler through V8.</span><span class="path"><em>LR parsing</em>→<em>V8 pipeline</em></span></a>
       <a href="autograd/"><b>Learning machine learning</b><span>What <code>loss.backward()</code> actually does, from the chain rule to PyTorch's C++ engine.</span><span class="path"><em>autograd</em>→<em>transformer</em></span></a>
+      <a href="web-dev-vocabulary/"><b>Starting web development</b><span>Node, npm, npx, Vite, plugins and Tailwind classes, each traced to its code, with a trainer to make them stick.</span><span class="path"><em>tools</em>→<em>event loop</em>→<em>Browser track</em></span></a>
       <a href="fetch-to-the-wire/"><b>Curious how browsers work</b><span>A request goes out, the response becomes pixels, and a click comes back to our code.</span><span class="path"><em>fetch()</em>→<em>pixels</em>→<em>click</em></span></a>
     </div>
   </section>
@@ -183,7 +185,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
 
   <section>
     <h2>Simulations</h2>
-    <p class="verified" style="margin-bottom:12px">Every simulator is our own model, labelled as such on its page and checked against the real system: V8, GNU Bison, Node, scapy, Chromium and PyTorch. <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/VALIDATION.md">What was checked, how, and what is not covered</a>. Reading times count the prose only; the labs take as long as we like.</p>
+    <p class="verified" style="margin-bottom:12px">Every simulator is our own model, labelled as such on its page and checked against the real system: V8, GNU Bison, Node, scapy, Chromium, PyTorch, npm and Tailwind CSS. <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/VALIDATION.md">What was checked, how, and what is not covered</a>. Reading times count the prose only; the labs take as long as we like.</p>
     <a class="sim" href="js-event-loop/">
       <div style="min-width:0">
         <h3>From the power button to <code>.then()</code></h3>
@@ -280,6 +282,18 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       </div>
       <span class="go">Open →</span>
     </a>
+    <a class="sim" href="web-dev-vocabulary/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>From the engine to the plugin</h3>
+        <p>The words a React project throws at us at once, put where they live: the <code>node</code> binary, runtimes, packages, the registry and scopes, how npm and npx read a command line, Vite's transform hook and its plugins, and the CSS behind a Tailwind class. A command lab matches npm 10 on 4,793 cases and a class lab matches Tailwind CSS 4 on 2,183 classes. It ends with what memory research says about keeping all of it, and a spaced recall trainer.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>main()</span><i>→</i><span>Node · browser</span><i>→</i><span>npm · npx</span><i>→</i><span>Vite plugins</span><i>→</i><span>Tailwind</span><i>→</i><span class="you">our components</span>
+        </div>
+        <div class="meta"><span class="tag">Web development</span><span class="tag">npm</span><span class="tag">Vite</span><span class="tag">Tailwind CSS</span><span class="tag">learning</span><span class="tag">About 25 min</span></div>
+        <p class="need">Needs: nothing beyond basic JavaScript. A good first page before the event-loop page and the Browser track.</p>
+      </div>
+      <span class="go">Open →</span>
+    </a>
   </section>
 
   <section>
@@ -311,6 +325,7 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
       <a href="threads-vs-event-loop/">thread → schedule() → CPU<small>threads-vs-event-loop</small></a>
     </nav>
     <p class="maplede" style="margin-top:12px">And sideways, out of the machine: <a href="fetch-to-the-wire/">fetch-to-the-wire</a> follows the network request that the event-loop page's wake chain starts from.</p>
+    <p class="maplede" style="margin-top:8px">And one step before all of it: <a href="web-dev-vocabulary/">web-dev-vocabulary</a> shows the tools on our own machine (Node, npm, Vite and its plugins) that prepare the code these pages follow.</p>
   </section>
 
   <footer>Source and notes on <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts">GitHub</a>. Found a mistake? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml">Report it</a>, or <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml">suggest a topic</a>. Want to check our claims? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/blob/main/TESTING.md">Here is how to test everything</a>. Code excerpts belong to their original projects and are used under their licenses.</footer>

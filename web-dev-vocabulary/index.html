@@ -1,0 +1,1419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind | Root to End</title>
+<meta name="description" content="Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
+<style>
+
+
+/* Layout: the shared source-trace grid. Signature elements: the command reader, which colours every word by the role npm gives it, and the recall trainer. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --s-k:#9a5a00; --s-k-bg:#fff0d4; --s-b:#6d3fc4; --s-b-bg:#ece5fb; --s-c:#0b6b65; --s-c-bg:#dcf2ef; --s-m:#2445d0; --s-m-bg:#e3e8fb; --s-j:#1b7a4b; --s-j-bg:#dff3e8;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.7rem);font-weight:800;letter-spacing:-.02em}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+.journey{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.76rem}
+.journey a{text-decoration:none;border:1px solid var(--c);border-radius:6px;padding:3px 9px;color:var(--c);background:var(--cb)}
+.journey i{font-style:normal;color:var(--muted)}
+.st-k{--c:var(--s-k);--cb:var(--s-k-bg)}.st-b{--c:var(--s-b);--cb:var(--s-b-bg)}.st-c{--c:var(--s-c);--cb:var(--s-c-bg)}.st-m{--c:var(--s-m);--cb:var(--s-m-bg)}.st-j{--c:var(--s-j);--cb:var(--s-j-bg)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button,select,textarea,input{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill:empty{display:none}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.bytes{font-family:var(--mono);font-size:.8rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:6px}
+.bytes div{border:1px solid var(--rule);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.bytes b{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.bytes .hot{border-color:var(--s-k);background:var(--s-k-bg)}
+
+
+/* labs */
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:4px 9px}
+.labgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.labgrid{grid-template-columns:1fr}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-width:0;background:var(--bg)}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.err{font-size:.88rem;color:var(--bad);min-height:1.2em}
+.err:empty{min-height:0}
+.srl{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.cmdin{width:100%;font-family:var(--mono);font-size:.95rem;padding:9px 12px;background:var(--code)}
+.chips{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.chip{font-family:var(--mono);font-size:.8rem;padding:2px 8px;border-radius:5px;background:var(--code);border:1px solid var(--rule);overflow-wrap:anywhere}
+.r-prog{background:var(--s-k-bg);color:var(--s-k);border-color:var(--s-k)}
+.r-cmd{background:var(--s-m-bg);color:var(--s-m);border-color:var(--s-m)}
+.r-arg{background:var(--s-j-bg);color:var(--s-j);border-color:var(--s-j)}
+.r-opt{background:var(--s-b-bg);color:var(--s-b);border-color:var(--s-b)}
+.r-end{background:var(--bad-bg);color:var(--bad);border-color:var(--bad)}
+.r-pass{background:var(--bg);color:var(--ink);border-style:dashed;border-color:var(--muted)}
+.legend{font-size:.78rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.legend .chip{font-size:.72rem}
+.empty{font-size:.8rem;color:var(--muted)}
+.stepbox{font-size:.88rem;display:flex;flex-direction:column;gap:6px;min-width:0}
+.stepbox .f{font-family:var(--mono);font-size:.8rem;background:var(--code);border-radius:6px;padding:4px 8px;overflow-wrap:anywhere}
+.stepbox .big{font-weight:600}
+.stepbox code{overflow-wrap:anywhere}
+.warn{border-left:3px solid var(--trace);padding-left:8px}
+.specs{display:flex;flex-direction:column;gap:8px}
+.spec{display:flex;flex-direction:column;gap:3px;font-size:.88rem}
+.spec.bad b{color:var(--bad);font-family:var(--mono)}
+.specword{font-family:var(--mono);font-size:.92rem;display:flex;flex-wrap:wrap}
+.specword i{font-style:normal;padding:1px 4px;border-bottom:3px solid}
+.s-scope{border-color:var(--s-k);color:var(--s-k)}.s-name{border-color:var(--s-m);color:var(--s-m)}.s-ver{border-color:var(--s-b);color:var(--s-b)}
+pre.tall{max-height:32em;overflow:auto}
+figure.src pre:not([data-code]){padding:10px 14px;white-space:pre}
+.twout{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:10px}
+.twc{border:1px solid var(--rule);border-radius:8px;background:var(--bg);padding:8px 10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.twc.bad{border-color:var(--bad)}
+.twh{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:baseline;font-size:.84rem}
+.twh code{font-weight:600}
+.twc.bad .twh span{color:var(--bad)}
+.twcss{margin:0;font-family:var(--mono);font-size:.78rem;line-height:1.5;background:var(--code);border-radius:6px;padding:6px 8px;overflow-x:auto;white-space:pre}
+.twn,.twlive{font-size:.82rem;line-height:1.5}
+.twlive{border-top:1px dashed var(--rule);padding-top:5px}
+.twn code,.twlive code{overflow-wrap:anywhere}
+ol.journeylist{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:9px;max-width:76ch}
+ol.journeylist code{overflow-wrap:anywhere}
+.graphwrap{overflow:auto;border:1px solid var(--rule);border-radius:10px;background:var(--bg)}
+.graphwrap svg{display:block;width:100%;height:auto;min-width:420px}
+#fcSvg .ax{stroke:var(--rule)}
+#fcSvg .fc-none{stroke:var(--muted)}
+#fcSvg .fc-rev{stroke:var(--accent)}
+#fcSvg .fc-dot{fill:var(--accent)}
+input[type=range]{padding:0;accent-color:var(--accent)}
+.boxes{display:flex;flex-wrap:wrap;gap:6px}
+.bx{display:inline-flex;flex-direction:column;align-items:center;font-family:var(--mono);font-size:.68rem;color:var(--muted);border:1px solid var(--rule);border-radius:6px;padding:2px 8px;min-width:3.6em;background:var(--bg)}
+.bx b{font-size:.95rem;color:var(--ink)}
+.card{border:1px solid var(--rule);border-radius:10px;background:var(--bg);padding:14px;display:flex;flex-direction:column;gap:10px;min-height:9em}
+.card .ch{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.card .cq{font-size:1.08rem;font-weight:600}
+.card .ca{font-size:.95rem;border-left:3px solid var(--accent);padding-left:10px}
+.card .ca.okc{border-color:var(--ok)}.card .ca.badc{border-color:var(--bad)}
+.card .done{color:var(--muted)}
+.vnum{font-variant-numeric:tabular-nums}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+</style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind">
+<meta property="og:description" content="Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/web-dev-vocabulary.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind">
+<meta name="twitter:description" content="Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/web-dev-vocabulary.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind", "description": "Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "npm, npx, Node.js, Vite, Tailwind CSS, package.json, semver, plugins, spaced repetition, web development", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Web dev words</span><span>top = our code</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#root"><b>A program on our machine</b>node is a C++ binary</a></li>
+    <li><a href="#runtimes"><b>Engines and runtimes</b>two places JS runs</a></li>
+    <li><a href="#packages"><b>Packages and the registry</b>code we didn't write</a></li>
+    <li><a href="#commands"><b>Commands</b>how npm reads a line</a></li>
+    <li><a href="#cmdlab"><b>Command lab</b>type any npm command</a></li>
+    <li><a href="#tools"><b>Tools</b>Vite serves, transforms, builds</a></li>
+    <li><a href="#extend"><b>API, callback, hook, plugin</b>who calls whom</a></li>
+    <li><a href="#tailwind"><b>Tailwind</b>a class becomes CSS</a></li>
+    <li><a href="#twlab"><b>Class lab</b>type any class</a></li>
+    <li><a href="#journey"><b>Our dev-stack project</b>the whole trip</a></li>
+    <li><a href="#remember"><b>Remembering it</b>what the research says</a></li>
+    <li><a href="#trainer"><b>Recall trainer</b>spaced, self-checking</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes, commands, exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>6 questions, model answers</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
+  </ol>
+  <div class="base">— bottom: main(argc, argv)</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Web development foundations · checked against npm 10.9.4 and Tailwind CSS 4.3.3</span>
+  <h1>From the engine to the plugin</h1>
+  <p class="lede">Node, npm, npx, package, registry, scope, library, framework, dev server, bundler, API, callback, hook, plugin, utility class. Starting a React project means meeting all of these words at once. We put each one where it lives, from the <code>node</code> binary up to the Tailwind class on our button, and show the real code behind it. Two labs read commands and class names exactly the way npm and Tailwind do. The last part covers how to keep all of it in our heads: what memory research says, and a trainer that uses it. This page picks up below the <a href="../v8-pipeline/">V8 page</a> and the <a href="../js-event-loop/">event-loop page</a>, which explain how the engine runs our code once it gets there.</p>
+  <div class="journey" aria-label="Layers this page follows">
+    <a class="st-k" href="#root">node binary</a><i>→</i><a class="st-m" href="#runtimes">runtime</a><i>→</i><a class="st-c" href="#packages">packages</a><i>→</i><a class="st-c" href="#commands">npm · npx</a><i>→</i><a class="st-b" href="#tools">Vite + plugins</a><i>→</i><a class="st-b" href="#tailwind">Tailwind classes</a><i>→</i><a class="st-j" href="#journey">our components</a>
+  </div>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#root">Root</a><a href="#runtimes">Runtimes</a><a href="#packages">Packages</a><a href="#commands">Commands</a><a href="#cmdlab">Command lab</a><a href="#tools">Tools</a><a href="#extend">Plugins</a><a href="#tailwind">Tailwind</a><a href="#twlab">Class lab</a><a href="#journey">Our project</a><a href="#remember">Remembering</a><a href="#trainer">Trainer</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">How this was checked: the command model gives the same answer as npm 10.9.4's own code on <span class="vnum" data-v="commands">4,793</span> cases, comparing word splitting with bash, then npx's rewrite, the option parser, the command name and every package spec. The class model writes exactly the CSS that Tailwind CSS 4.3.3 writes for <span class="vnum" data-v="tailwind">2,183</span> classes. The real output was captured from a fresh Vite + React + TypeScript project (Node 22.22.0, npm 10.9.4, Vite 8.3.4, Chromium 141) by the script in this folder's <code>data/</code>. The source excerpts are from node v22.22.0, npm v10.9.4, npm-package-arg v12.0.2, Vite v8.3.4, Tailwind CSS v4.3.3 and React v19.3.0, trimmed with <code>// …</code>.</p>
+</header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol>
+    <li><span>JavaScript runs in two places. An <b>engine</b> (V8) executes the language. A <b>runtime</b> is an engine plus the abilities of where it runs: the <b>browser</b> adds the DOM, and <b>Node</b> adds files and the network. Our <b>tools</b> run in Node on our machine. Our <b>app</b> runs in the user's browser.</span></li>
+    <li><span>A <b>package</b> is a folder of code with a <code>package.json</code>, downloaded from the <b>registry</b> by <b>npm</b>. In <code>@tailwindcss/vite@4.3.3</code>, the <code>@</code> at the front starts a <b>scope</b> (the owner), and the <code>@</code> after the name starts a version. We call a <b>library</b>; a <b>framework</b> calls us.</span></li>
+    <li><span>Every command is <b>program, command, arguments, options</b>, separated by spaces. <code>npx X</code> is <code>npm exec -- X</code>, and <code>npm create vite</code> runs the package <code>create-vite</code>. A lone <code>--</code> means "the rest is not for npm". <code>npm run dev</code> finds <code>vite</code> because npm puts <code>node_modules/.bin</code> first on PATH.</span></li>
+    <li><span>Vite is a <b>dev server</b> and a <b>build tool</b>. For each file the browser asks for, it calls every <b>plugin</b>'s <code>transform</code> <b>hook</b>, a <b>callback</b> it calls at a fixed moment. React's plugin compiles JSX there, and Tailwind's writes the CSS for the class names it found. A class such as <code>px-4</code> is one CSS rule: <code>padding-inline: calc(var(--spacing) * 4)</code>, which is 16px.</span></li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 360 250" width="360" height="250" style="max-width:100%;height:auto" font-family="monospace" role="img" aria-label="Two columns on top of the operating system and the node binary. Left column, our machine: Node runs npm, Vite and its plugins. Right column, the browser: V8 and Blink run React and our components. Vite serves transformed files from left to right over localhost.">
+      <title>Where every word lives</title>
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="tl-head-m hot" fill="#8a94a3" d="M0 0L10 5L0 10z"/></marker></defs>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="4" y="214" width="352" height="30" rx="7"/><text class="tl-t" fill="#8a94a3" font-size="11" x="180" y="233" text-anchor="middle">operating system · CPU</text>
+      <rect class="tl-box warm" fill="none" stroke="#8a94a3" x="4" y="176" width="168" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="88" y="195" text-anchor="middle">Node = V8 + libuv</text>
+      <rect class="tl-box warm" fill="none" stroke="#8a94a3" x="188" y="176" width="168" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="272" y="195" text-anchor="middle">Browser = V8 + Blink</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="4" y="136" width="168" height="30" rx="7"/><text class="tl-t" fill="#8a94a3" font-size="11" x="88" y="155" text-anchor="middle">npm · npx · tsc</text>
+      <rect class="tl-box hot" fill="none" stroke="#8a94a3" x="4" y="96" width="168" height="30" rx="7"/><text class="tl-t" fill="#8a94a3" font-size="11" x="88" y="115" text-anchor="middle">Vite (dev server)</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="4" y="56" width="168" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="10" x="88" y="75" text-anchor="middle">react() · tailwindcss()</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="188" y="136" width="168" height="30" rx="7"/><text class="tl-t" fill="#8a94a3" font-size="11" x="272" y="155" text-anchor="middle">DOM · CSS</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="188" y="96" width="168" height="30" rx="7"/><text class="tl-t" fill="#8a94a3" font-size="11" x="272" y="115" text-anchor="middle">React · react-dom</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="188" y="56" width="168" height="30" rx="7"/><text class="tl-t b" fill="#8a94a3" font-size="11" x="272" y="75" text-anchor="middle">our components</text>
+      <path class="tl-a hot" fill="none" stroke="#8a94a3" d="M172 111 H184" marker-end="url(#ah)"/>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="88" y="22" text-anchor="middle">our machine</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="88" y="36" text-anchor="middle">prepares the code</text>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="272" y="22" text-anchor="middle">the user's browser</text><text class="tl-t s" fill="#8a94a3" font-size="10" x="272" y="36" text-anchor="middle">runs the code</text>
+    </svg>
+    <figcaption>Each box runs on the one below it; Vite hands files across over localhost</figcaption>
+  </figure>
+  <div class="tl-more">The <a href="#cmdlab">command lab</a> reads any npm or npx line the way npm does. The <a href="#twlab">class lab</a> shows the CSS for any Tailwind class and checks it in this browser. The <a href="#trainer">recall trainer</a> schedules the reviews that make it stick.</div>
+</aside>
+
+<section id="root" data-deeper="node-intro,ostep-api">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>A program is a file the operating system runs</h2></div>
+  <div class="prose">
+    <p>When we type <code>node hello.js</code>, the shell asks the operating system to start the program file <code>node</code>, passing the words <code>node</code> and <code>hello.js</code> as its arguments (<code>argv</code>). That file is ordinary compiled C++, like any program built with gcc. Its <code>main</code> function is three lines, and it calls <code>node::Start</code>.<a class="rd" data-r="ostep-api"></a></p>
+    <p><code>Start</code> does three jobs. It initializes V8, Google's JavaScript engine, the same one inside Chrome. It creates an environment with Node's own objects: <code>process</code>, <code>require</code> and the file and network modules. Then it runs our script and <b>spins the event loop</b> (libuv's loop), which keeps the process alive while timers, files or sockets are pending. So "Node" is a C++ program that embeds V8 and adds system abilities. It is not a compiler and not a language.<a class="rd" data-r="node-intro"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">node/src/node_main.cc · main()</span><span class="note">the UNIX branch, verbatim</span></figcaption>
+      <pre data-code="c-main"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">node/src/node.cc · StartInternal() and node_main_instance.cc · Run()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-start"></pre>
+    </figure>
+  </div>
+  <p class="callout"><b>The one thing to remember:</b> every tool on this page (<code>npm</code>, <code>npx</code>, <code>vite</code>, <code>tsc</code>) is a JavaScript program, and <code>node</code> is the program that runs it. When we type <code>npm</code>, the operating system starts <code>node</code> with npm's script, <code>npm-cli.js</code>.</p>
+</section>
+
+<section id="runtimes" data-deeper="node-vs-browser,v8-ignition,mdn-dom">
+  <div class="sechead"><span class="eyebrow">Frame 1 · engines and runtimes</span><h2>The same engine in two different houses</h2></div>
+  <div class="prose">
+    <p>An <b>engine</b> executes one language: it parses the text, compiles it to bytecode, interprets it and compiles hot code to machine code (just-in-time, or JIT). The <a href="../v8-pipeline/">V8 page</a> follows one expression through those steps. A <b>runtime</b> is an engine plus everything the place it runs in adds, such as the global objects, the APIs and an event loop. The language is the same in both, but the objects available to it differ.<a class="rd" data-r="node-vs-browser"></a></p>
+    <p>We asked both runtimes the same question, <code>typeof window, typeof document, typeof process, typeof require</code>, and recorded what each one answered.</p>
+  </div>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">data/capture.json · Node 22.22.0</span><span class="note">real output</span></figcaption>
+      <pre id="capNode"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">data/capture.json · Chromium 141 (Playwright)</span><span class="note">real output</span></figcaption>
+      <pre id="capBrowser"></pre>
+    </figure>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Word</th><th>Plain meaning</th><th>In our project</th></tr></thead>
+    <tbody>
+      <tr><td>source code</td><td>The text we write</td><td><code>App.tsx</code>, <code>Navbar.tsx</code></td></tr>
+      <tr><td>compiler</td><td>Translates a whole program into another form before it runs (gcc: C to machine code)</td><td>Not used directly</td></tr>
+      <tr><td>transpiler</td><td>A compiler whose output is source code again (TSX to JavaScript)</td><td>Inside Vite's React plugin</td></tr>
+      <tr><td>interpreter</td><td>Executes code step by step, with no output file</td><td>V8's Ignition</td></tr>
+      <tr><td>JIT compiler</td><td>Turns the busiest code into machine code while the program runs</td><td>V8's Maglev and TurboFan</td></tr>
+      <tr><td>engine</td><td>Executes a language: V8 (Chrome, Edge, Node), SpiderMonkey (Firefox), JavaScriptCore (Safari)</td><td>V8 runs React in Chrome</td></tr>
+      <tr><td>runtime</td><td>Engine + the APIs and event loop of one environment</td><td>The browser runs our app; Node runs our tools</td></tr>
+      <tr><td>DOM</td><td>The live tree of objects the browser builds from HTML; the screen is drawn from it (<a href="../html-to-pixels/">HTML to pixels</a>)</td><td>What React creates and updates</td></tr>
+      <tr><td>TypeScript</td><td>JavaScript plus types, checked on our machine and then deleted, so the browser only ever sees JavaScript</td><td><code>.ts</code> and <code>.tsx</code> files</td></tr>
+      <tr><td>JSX / TSX</td><td>HTML-like syntax inside JavaScript, compiled into function calls that return plain objects</td><td><code>&lt;Navbar /&gt;</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>The one thing to remember:</b> one engine, two runtimes. The browser has <code>document</code> but no <code>require</code>, and Node has <code>require</code> but no <code>document</code>. Our React code needs <code>document</code>, so only the browser can run it. Node runs the tools that prepare that code.</p>
+</section>
+
+<section id="packages" data-deeper="mdn-modules,npm-scope,npm-spec,fowler-ioc">
+  <div class="sechead"><span class="eyebrow">Frame 2 · code we didn't write</span><h2>Modules, packages, the registry and scopes</h2></div>
+  <div class="prose">
+    <p>A <b>module</b> is one file that shares things with other files through <code>export</code> and <code>import</code>. <code>Navbar.tsx</code> ends with <code>export default Navbar</code>, and <code>App.tsx</code> gets it back with <code>import Navbar from './components/Navbar'</code>.<a class="rd" data-r="mdn-modules"></a> A <b>package</b> is a folder of modules with a <code>package.json</code> label, published so anyone can install it. Our own project is a package too.</p>
+    <p>The <b>registry</b> is the server that stores every published package, and npm's is <code>registry.npmjs.org</code>. It works like an app store for code: authors publish to it, and <code>npm install</code> downloads from it. A package name is unique across the whole registry and belongs to whoever published it first, which causes two problems. Good short names run out, and anyone can take a name that sounds official. A <b>scope</b> solves both. It is a prefix such as <code>@tailwindcss/</code> owned by one account or organisation, and only that owner can publish under it. Scopes work like folders: <code>@tailwindcss/vite</code> and <code>@sentry/vite</code> are two different packages, both called <code>vite</code>.<a class="rd" data-r="npm-scope"></a></p>
+    <p>Here is the real conversation with the registry during our <code>npm install</code>. Each line is one HTTP request asking the registry about a package, and the answer lists every version with its download address. The scoped name <code>@types/node</code> goes out as <code>@types%2fnode</code>: the slash is URL-encoded, so the server sees one name and not a folder path. That is the line <code>this.escapedName = name.replace('/', '%2f')</code> in npm-package-arg.</p>
+  </div>
+  <figure class="src real">
+    <figcaption><span class="path">npm install --loglevel http (in ~/dev-stack)</span><span class="note">real output, first 8 requests</span></figcaption>
+    <pre id="capInstall"></pre>
+  </figure>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">npm view react dist-tags</span><span class="note">real output: tags are names for versions</span></figcaption>
+      <pre id="capTags"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">npm-package-arg/lib/npa.js · setName() and fromRegistry()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-npa"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p>The two <code>@</code> signs mean different things. An <code>@</code> at the <b>start</b> begins a scope, and an <code>@</code> <b>after the name</b> begins what we want: an exact <b>version</b> (<code>4.3.3</code>), a <b>range</b> (<code>^4.3.0</code> means 4.3.0 or newer but below 5), or a <b>tag</b> (<code>latest</code>, a name the registry points at a version, shown above). With nothing after the name, npm uses the range <code>*</code>, any version, and picks the newest.<a class="rd" data-r="npm-spec,npm-semver"></a></p>
+    <h3>Library or framework: who is in charge</h3>
+    <p>The difference is who calls whom. We call a <b>library</b>: our code decides when to use it, and it does one job and hands control back. <code>toast("Added!")</code> from react-toastify is a library call. A <b>framework</b> calls us. It runs the program and calls our code when it needs to, much like a form whose questions and order are already decided, where we only fill in the blanks. In Next.js we write <code>app/about/page.tsx</code>, export a function and never call it ourselves. Next.js creates the <code>/about</code> address and calls our function when someone visits. This is called <b>inversion of control</b>, also known as the Hollywood principle: "don't call us, we'll call you".<a class="rd" data-r="fowler-ioc"></a></p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Library</th><th>Framework</th></tr></thead>
+    <tbody>
+      <tr><td>Who calls whom</td><td>We call it</td><td>It calls us</td></tr>
+      <tr><td>How much it decides</td><td>One job (show a notification)</td><td>The shape of the app: files, web addresses, build, server</td></tr>
+      <tr><td>If we remove it</td><td>We replace a few calls</td><td>We rewrite the app</td></tr>
+      <tr><td>Examples</td><td>react-toastify, React</td><td>Next.js, Angular</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>Where React fits:</b> in between. We call it (<code>createRoot(…).render(&lt;App /&gt;)</code>), and then it calls our components. It calls itself a library because it handles only the UI and leaves routing, data loading and building to us. Next.js makes those decisions for us, and that is what makes it a framework.</p>
+</section>
+
+<section id="commands" data-deeper="mdn-cli,npm-exec,npm-init,npm-run">
+  <div class="sechead"><span class="eyebrow">Frame 3 · commands</span><h2>How npm reads a command line</h2></div>
+  <div class="prose">
+    <p>Every command has the same grammar: <b>program</b> (which tool), <b>command</b> (what to do), <b>arguments</b> (what to do it to), and <b>options</b> (settings that start with a dash: one dash and a letter like <code>-D</code>, or two dashes and a word like <code>--save-dev</code>). Spaces separate the parts. The <b>shell</b> (bash, PowerShell) splits the line into words and starts the program; the program never sees the spaces.<a class="rd" data-r="mdn-cli"></a> After that, npm runs four small steps of its own code. We follow each one.</p>
+    <ol class="ex">
+      <li><b>npx is npm exec.</b> The <code>npx</code> program is a tiny script: it inserts <code>exec</code> as the first word and puts <code>--</code> in front of the first word that is not an option. So <code>npx tsc --noEmit</code> becomes <code>npm exec -- tsc --noEmit</code>, and <code>--noEmit</code> goes to <code>tsc</code>, not to npm.<a class="rd" data-r="npm-exec"></a></li>
+      <li><b>Options are sorted out by nopt.</b> nopt walks the words and looks each option up in npm's definitions. <code>-D</code> is a shorthand for <code>--save-dev</code>, and <code>-gD</code> means <code>-g -D</code> because every letter is a one-letter shorthand. An option npm does not know, such as <code>--template</code>, becomes a true/false npm setting, and the word after it is left as an ordinary argument. A lone <code>--</code> stops option parsing, and everything after it is kept as it is.</li>
+      <li><b>The first plain word becomes a command.</b> <code>cmd-list.js</code> holds the 67 commands and the aliases: <code>i</code> is <code>install</code>, <code>run</code> is <code>run-script</code>, and <code>create</code> is <code>init</code>. It also accepts any unambiguous abbreviation (<code>insta</code>) and a few common typos (<code>isntall</code>).</li>
+      <li><b>Each package argument is read by npm-package-arg</b> into a name, a scope and a version, range or tag, as in Frame 2.</li>
+    </ol>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">npm/bin/npx-cli.js</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-npx"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">npm/lib/utils/cmd-list.js · aliases</span><span class="note">trimmed: 9 of 56</span></figcaption>
+      <pre data-code="c-cmdlist"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p><b>Why <code>npm create vite@latest dev-stack -- --template react-ts</code> needs the <code>--</code>.</b> <code>create</code> is <code>init</code>, and <code>npm init vite@latest</code> turns the name into <code>create-vite@latest</code> and runs it with <code>npm exec</code>. The real output in Frame 6 shows this: npm prints <code>&gt; create-vite dev-stack --template react-ts</code>. Without the <code>--</code>, nopt reads <code>--template</code> as an unknown npm setting (<code>template = true</code>), so <code>react-ts</code> becomes a stray argument and create-vite never sees <code>--template</code>. The command lab shows both versions.<a class="rd" data-r="npm-init"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">npm/lib/commands/init.js · execCreate()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-init"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">nopt/lib/nopt-lib.js · parse()</span><span class="note">trimmed: the -- rule and unknown options</span></figcaption>
+      <pre data-code="c-nopt"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p><b>Why <code>npm run dev</code> finds <code>vite</code></b> when typing <code>vite</code> in the terminal says "command not found". Every package that provides a command declares a <code>bin</code>, and npm links it into <code>node_modules/.bin</code>. Before running a script, npm's run-script library puts that folder at the front of <code>PATH</code>, the list of folders the operating system searches for programs. It adds <code>node_modules/.bin</code> for the project folder and for every folder above it. We added a script that prints the first entries of <code>PATH</code> and ran it.<a class="rd" data-r="npm-run"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">@npmcli/run-script/lib/set-path.js</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-setpath"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">npm run where · and the links in node_modules/.bin</span><span class="note">real output</span></figcaption>
+      <pre id="capPath"></pre>
+    </figure>
+  </div>
+  <p class="callout"><b>The one thing to remember:</b> <code>npm run dev</code>, <code>npx vite</code> and <code>node node_modules/vite/bin/vite.js</code> all start the same program. They differ only in how the word <code>vite</code> gets turned into a file. And npm always works on the <code>package.json</code> in the folder the terminal is in.</p>
+</section>
+
+<section id="cmdlab" data-deeper="npm-spec,npm-exec">
+  <div class="sechead"><span class="eyebrow">Lab · the command reader</span><h2>Type a command, see what npm will do with it</h2></div>
+  <div class="prose"><p>Type an npm, npx, node or git command, or pick a preset. Each word is coloured by its role, and every package spec is broken into scope, name and version. Try removing a space, or the <code>--</code>, and watch what changes.</p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our model of npm 10's reading path: shell word splitting, npx's rewrite to <code>npm exec</code>, nopt's option parsing with npm's real option table, <code>cmd-list.js</code>'s aliases and abbreviations, and npm-package-arg's spec types (version, range, tag, alias, git, remote, file, directory) with npm's name rules.</p><p><b>Checked against.</b> npm 10.9.4 itself on <span class="vnum" data-v="commands">4,793</span> cases: <span class="vnum" data-v="commands-lines">2,977</span> distinct command lines (the presets and seeded random lines), each compared word by word with bash, then npx's real <code>bin/npx-cli.js</code>, nopt's parse with npm's definitions, and npm's own <code>deref()</code>; and every package spec compared with npm-package-arg for type, name, scope and fetch spec, or the same error (<code>verify/compare-commands.js</code>).</p><p><b>Not covered.</b> What happens next: network requests, the dependency tree and <code>package-lock.json</code>. Also nopt's later type cleaning (it turns a path option into an absolute path, for example), shell features beyond quotes (variables, globs, pipes: the lab refuses them), the hosted-git URL forms beyond common GitHub, GitLab and Bitbucket ones, and <code>node</code> and <code>git</code> lines, which the lab only labels.</p></div>
+  <div class="lab">
+    <div class="presets" id="cmdPresets"></div>
+    <label class="srl" for="cmdIn">Command line</label>
+    <input id="cmdIn" class="cmdin" spellcheck="false" autocomplete="off" autocapitalize="off">
+    <div class="err" id="cmdErr" role="status"></div>
+    <div class="box"><h5>Words, as the shell splits them</h5><div class="chips" id="cmdWords"></div></div>
+    <div class="labgrid">
+      <div class="box"><h5>What npm does with them</h5><div id="cmdSteps" class="stepbox"></div></div>
+      <div class="box"><h5>In plain words</h5><div id="cmdSay" class="stepbox"></div></div>
+    </div>
+    <div class="box"><h5>Package specs</h5><div id="cmdSpecs" class="specs"></div></div>
+    <p class="legend"><span class="chip r-prog">program</span> <span class="chip r-cmd">command</span> <span class="chip r-arg">argument</span> <span class="chip r-opt">option</span> <span class="chip r-end">-- end of options</span> <span class="chip r-pass">passed on</span></p>
+  </div>
+</section>
+
+<section id="tools" data-deeper="vite-why,vite-features,vite-plugins">
+  <div class="sechead"><span class="eyebrow">Frame 4 · the tools</span><h2>Vite serves our files, transforming each one on request</h2></div>
+  <div class="prose">
+    <p>Browsers run JavaScript, not TypeScript or JSX, and they import modules by URL, not by package name. Something has to translate. Vite does that in two ways. As a <b>dev server</b> (<code>npm run dev</code>), it serves our project on <code>localhost</code> and transforms each file when the browser asks for it, so starting is instant and a saved file updates in place (hot module replacement). As a <b>build tool</b> (<code>npm run build</code>), it transforms everything once, <b>bundles</b> the many modules into a few files and <b>minifies</b> them into <code>dist/</code> for a host to serve.<a class="rd" data-r="vite-why"></a></p>
+    <p>Every request goes through <code>loadAndTransform</code>: <b>load</b> the file, then <b>transform</b> it, which means calling the <code>transform</code> function of every plugin in order. Each plugin receives the code and the file's id, and can return new code.</p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">vite/packages/vite/src/node/server/transformRequest.ts · loadAndTransform()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-lat"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">vite/packages/vite/src/node/server/pluginContainer.ts · transform()</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-pc"></pre>
+    </figure>
+  </div>
+  <div class="prose"><p>This is what the browser actually received when it asked our dev server for <code>/src/App.tsx</code>. The type annotation <code>: Props</code> is gone, because Vite removes types without checking them. That is the job of our editor and of <code>tsc</code> in <code>npm run build</code>.<a class="rd" data-r="vite-features"></a> Each <code>&lt;nav&gt;</code> became a call, <code>_jsxDEV("nav", { className: … })</code>, that returns a plain object. And <code>import { useState } from "react"</code> became a real URL, <code>/node_modules/.vite/deps/react.js</code>, because a browser cannot look up a package name.</p></div>
+  <div class="pair">
+    <figure class="src" data-kind="example">
+      <figcaption><span class="path">src/App.tsx · what we wrote</span><span class="note">our example (the capture's input)</span></figcaption>
+      <pre data-code="c-app"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">GET /src/App.tsx · what the browser received</span><span class="note">real output from Vite 8.3.4</span></figcaption>
+      <pre id="capApp" class="tall"></pre>
+    </figure>
+  </div>
+  <figure class="src real">
+    <figcaption><span class="path">npm run build</span><span class="note">real output: tsc checks types, then Vite bundles</span></figcaption>
+    <pre id="capBuild"></pre>
+  </figure>
+  <div class="tbl"><table>
+    <thead><tr><th>Word</th><th>Plain meaning</th><th>In our project</th></tr></thead>
+    <tbody>
+      <tr><td>CLI</td><td>Command-line interface: a program we run by typing its name</td><td><code>npm</code>, <code>vite</code>, <code>git</code></td></tr>
+      <tr><td>package manager</td><td>Downloads packages and everything they depend on, records exact versions, runs project scripts</td><td>npm (others: pnpm, yarn)</td></tr>
+      <tr><td><code>package.json</code></td><td>The project's description: name, scripts, dependencies</td><td><code>"dev": "vite"</code> is why <code>npm run dev</code> starts Vite</td></tr>
+      <tr><td><code>node_modules</code></td><td>Where installed packages live, per project</td><td>React, Vite, Tailwind</td></tr>
+      <tr><td><code>package-lock.json</code></td><td>The exact version of every installed package, so installs repeat</td><td>Written by <code>npm install</code></td></tr>
+      <tr><td>dependencies / devDependencies</td><td>Needed by the app / needed only while developing (<code>-D</code>)</td><td>react / vite, typescript</td></tr>
+      <tr><td>dev server</td><td>Local web server that transforms files on request and reloads on save</td><td><code>npm run dev</code></td></tr>
+      <tr><td>build tool, bundler, minify</td><td>Prepare for publishing: transform, combine modules, shrink</td><td><code>npm run build</code> → <code>dist/</code></td></tr>
+      <tr><td>type checker</td><td>Checks types without running code</td><td>The editor and <code>tsc</code>; never Vite</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>The one thing to remember:</b> Vite removes types but never checks them. A type error shows up in the editor and stops <code>npm run build</code>, but the dev server still runs the code.</p>
+</section>
+
+<section id="extend" data-deeper="vite-plugins,react-usestate,fowler-ioc">
+  <div class="sechead"><span class="eyebrow">Frame 5 · extending tools</span><h2>API, callback, hook, plugin: four words for one arrangement</h2></div>
+  <div class="prose">
+    <p>Read these in order, because each one builds on the one before.</p>
+    <ol class="ex">
+      <li><b>API</b>: the named functions and objects a program lets other code use, like the buttons on a remote. Examples: the DOM's <code>document.querySelector</code>, React's <code>useState</code>, Node's <code>fs.readFile</code>. <i>We call it.</i></li>
+      <li><b>Callback</b>: a function we hand to other code so that it can call it at the right moment, as in <code>addEventListener('click', fn)</code>, <code>onClick={…}</code> or the function given to <code>.map(…)</code>. <i>It calls us.</i> A common mistake is <code>addEventListener('click', sayHi())</code>: the parentheses call <code>sayHi</code> immediately and hand over its result instead of the function.</li>
+      <li><b>Hook</b> (in tools): a named moment in a host's work where it calls the callbacks plugins gave it. Vite's include <code>config</code> (reading settings), <code>transform</code> (each file) and <code>buildEnd</code>. The loop in Frame 4 is the <code>transform</code> hook being called.</li>
+      <li><b>Plugin</b>: a package of callbacks for a host's hooks, which adds a feature without changing the host's code. A Vite plugin is an object with a <code>name</code> and hook functions. <code>react()</code> and <code>tailwindcss()</code> in <code>vite.config.ts</code> return such objects. A plugin can be a host too: Tailwind is a plugin of Vite, and daisyUI is a plugin of Tailwind.<a class="rd" data-r="vite-plugins"></a></li>
+    </ol>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">tailwindcss/packages/@tailwindcss-vite/src/index.ts</span><span class="note">trimmed: a plugin is a list of named hook objects</span></figcaption>
+      <pre data-code="c-twvite"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">react/packages/react-reconciler/src/ReactFiberHooks.js · mountState()</span><span class="note">verbatim: the other meaning of "hook"</span></figcaption>
+      <pre data-code="c-react"></pre>
+    </figure>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Hook in Vite</th><th>Hook in React</th></tr></thead>
+    <tbody>
+      <tr><td>Who calls whom</td><td>Vite calls our function</td><td>We call React's function</td></tr>
+      <tr><td>What it is</td><td>A named moment in the tool's work</td><td>A <code>use…</code> function that gives a component memory or side effects</td></tr>
+      <tr><td>Example</td><td><code>transform(code, id)</code></td><td><code>useState(0)</code>: stores the value on the component's fiber and returns it with a setter (<code>dispatchSetState</code>)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>The one sentence:</b> a plugin provides callbacks for a host's hooks, through the host's API. React's "hooks" share the word but not the idea.</p>
+</section>
+
+<section id="tailwind" data-deeper="tw-utility,tw-responsive,tw-states,tw-theme,tw-custom">
+  <div class="sechead"><span class="eyebrow">Frame 6 · Tailwind</span><h2>A class name is a small CSS rule, written only if we use it</h2></div>
+  <div class="prose">
+    <p>Tailwind CSS is a list of ready-made <b>utility classes</b>, each one a small CSS rule. Its Vite plugin reads our files, collects every word that looks like a class name, and writes CSS for exactly those words. <code>utilities.ts</code> registers every family. Here is the padding family, which maps <code>px</code> to <code>padding-inline</code>. The spacing helper turns the number into <code>--spacing(4)</code>, and that becomes <code>calc(var(--spacing) * 4)</code>. The theme sets <code>--spacing: 0.25rem</code>, so <code>px-4</code> is 1rem, which is 16px. The multiplier must be a multiple of 0.25, so <code>p-2.5</code> works and <code>p-0.3</code> produces nothing.<a class="rd" data-r="tw-utility,tw-theme"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">tailwindcss/packages/tailwindcss/src/utilities.ts</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-util"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">tailwindcss/packages/tailwindcss/src/variants.ts and theme.css</span><span class="note">trimmed</span></figcaption>
+      <pre data-code="c-var"></pre>
+    </figure>
+  </div>
+  <div class="prose">
+    <p>A <b>variant</b> is a prefix ending in a colon that wraps the rule in a condition. <code>lg:</code> wraps it in <code>@media (width &gt;= 64rem)</code>, so it applies from 1024px wide <b>and up</b>, and a class with no prefix applies at every width. This is what "mobile-first" means: we write the phone layout plainly, then change it for bigger screens. <code>hover:</code> holds a detail many tables leave out. It adds <code>:hover</code> and also wraps the rule in <code>@media (hover: hover)</code>, so a phone, which cannot hover, does not keep the colour after a tap. Variants stack from left to right: <code>lg:hover:x</code> puts the <code>lg</code> media query on the outside.<a class="rd" data-r="tw-responsive,tw-states"></a></p>
+    <p>Here is the real stylesheet the dev server sent for our navbar. Every class we used has exactly one rule, and nothing else is there, except a few extra words that happen to be class names somewhere in the project's files (<code>transform</code>, <code>filter</code>). Tailwind's scanner reads every file that git does not ignore, so a word in a README can produce CSS too. That is harmless, and it shows that the scanner matches words, not meaning. Our own <code>bg-brand</code> appears because of the <code>@utility</code> rule in <code>index.css</code>, which is how it works with <code>hover:</code> and <code>lg:</code> like a built-in class.<a class="rd" data-r="tw-custom"></a></p>
+  </div>
+  <figure class="src real">
+    <figcaption><span class="path">GET /src/index.css?direct · the utilities layer</span><span class="note" id="capCssNote">real output from Tailwind 4.3.3 through Vite</span></figcaption>
+    <pre id="capCss" class="tall"></pre>
+  </figure>
+  <h3>Five rules that read any class</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Rule</th><th>Example</th><th>The CSS Tailwind writes</th></tr></thead>
+    <tbody>
+      <tr><td>A class is a CSS property plus a value</td><td><code>flex</code></td><td><code>display: flex</code></td></tr>
+      <tr><td>Numbers are spacing units of 0.25rem (4px)</td><td><code>px-4</code>, <code>h-16</code></td><td><code>padding-inline: calc(var(--spacing) * 4)</code> = 16px; <code>height: …* 16</code> = 64px</td></tr>
+      <tr><td>Colours are name-shade, 50 (light) to 950 (dark)</td><td><code>text-gray-600</code></td><td><code>color: var(--color-gray-600)</code></td></tr>
+      <tr><td><code>hover:</code> = while a mouse is over it</td><td><code>hover:text-pink-600</code></td><td><code>@media (hover: hover) { .…:hover { color: … } }</code></td></tr>
+      <tr><td><code>sm: md: lg: xl:</code> = from that width up</td><td><code>hidden lg:flex</code></td><td><code>display: none</code>, and from 64rem <code>display: flex</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted" style="font-size:.86rem">Letters: <code>p</code> padding (inside), <code>m</code> margin (outside), <code>x</code> left and right (<code>-inline</code>), <code>y</code> top and bottom (<code>-block</code>), <code>t r b l</code> one side, <code>w</code> width, <code>h</code> height. Breakpoints: <code>sm</code> 40rem (640px), <code>md</code> 48rem (768px), <code>lg</code> 64rem (1024px), <code>xl</code> 80rem (1280px), <code>2xl</code> 96rem (1536px).</p>
+</section>
+
+<section id="twlab" data-deeper="tw-states,tw-theme">
+  <div class="sechead"><span class="eyebrow">Lab · the class reader</span><h2>Type classes, see the CSS, and let this browser compute it</h2></div>
+  <div class="prose"><p>Type one or more classes separated by spaces, exactly as in <code>className="…"</code>. Each class shows the rule Tailwind writes, what its values work out to, and whether its condition is true in this window right now. <b>Check in this browser</b> applies the declarations to a test box 400px wide and reads back what your browser computes.</p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> Our model of Tailwind CSS 4's everyday utilities (layout, flexbox and grid, spacing, sizing, position, type, colour, borders, radius, opacity, z-index) and variants (<code>hover</code>, <code>focus</code>, <code>active</code>, <code>disabled</code>, <code>first</code>, <code>last</code>, <code>odd</code>, <code>even</code>, <code>group-hover</code>, <code>dark</code>, <code>print</code>, <code>sm</code> to <code>2xl</code> and <code>max-*</code>), with the default theme values copied from Tailwind's <code>theme.css</code>.</p><p><b>Checked against.</b> The real Tailwind CSS 4.3.3 compiler on <span class="vnum" data-v="tailwind">2,183</span> distinct classes (hand-picked and seeded random, up to two variants): the same selector, <code>@media</code> wrappers and declarations in the same order, the same theme variables, or rejected by both (<code>verify/compare-tailwind.js</code>). Live: <b>Check in this browser</b> computes the values, and every media condition is tested with your browser's <code>matchMedia</code>.</p><p><b>Not covered.</b> Shadows, rings, transforms, transitions, gradients, arbitrary values such as <code>w-[300px]</code>, opacity modifiers such as <code>bg-black/50</code>, <code>space-x-*</code>, daisyUI's classes, and the merging of rules that share a media query in a full stylesheet.</p></div>
+  <div class="lab">
+    <div class="presets" id="twPresets"></div>
+    <label class="srl" for="twIn">Classes</label>
+    <input id="twIn" class="cmdin" spellcheck="false" autocomplete="off" autocapitalize="off">
+    <div class="ctl"><button type="button" class="go" id="twCheck">Check in this browser</button><span class="pill" id="twPill" role="status"></span><span class="muted" style="font-size:.82rem" id="twWidth"></span></div>
+    <div id="twOut" class="twout"></div>
+  </div>
+</section>
+
+<section id="journey" data-deeper="react-thinking,vite-why">
+  <div class="sechead"><span class="eyebrow">Frame 7 · our code</span><h2>The whole trip in our dev-stack project</h2></div>
+  <div class="prose"><p>Now every word together, in the order things happen when we work on the assignment. Steps 1 to 4 and 7 to 9 run in Node on our machine; steps 5 and 6 run in the browser.</p></div>
+  <ol class="journeylist">
+    <li><b><code>npm create vite@latest dev-stack -- --template react-ts</code></b>: <code>create</code> is <code>init</code>, which runs the package <code>create-vite</code>. It writes the project folder and its <code>package.json</code> (real output below).</li>
+    <li><b><code>npm install</code></b>: Node runs npm, which asks the registry about every dependency (135 requests in our capture) and unpacks them into <code>node_modules</code>, recording exact versions in <code>package-lock.json</code>.</li>
+    <li><b><code>npm install tailwindcss @tailwindcss/vite daisyui</code></b> and two lines in <code>vite.config.ts</code> and <code>index.css</code>: Tailwind becomes a Vite plugin, and daisyUI a Tailwind plugin.</li>
+    <li><b><code>npm run dev</code></b>: npm reads <code>"dev": "vite"</code>, puts <code>node_modules/.bin</code> on PATH, and Node starts Vite's dev server on <code>localhost:5173</code> with the <code>react()</code> and <code>tailwindcss()</code> plugins loaded.</li>
+    <li><b>The browser asks for <code>index.html</code>, then <code>/src/main.tsx</code></b>, and Vite transforms each file as it is requested: types removed, JSX turned into calls, imports rewritten to URLs, CSS written for the classes used.</li>
+    <li><b>The browser runs it</b>: V8 runs React, React calls our components and builds DOM nodes, and Blink does style, layout and paint (<a href="../html-to-pixels/">HTML to pixels</a>). A click finds its way back to our <code>onClick</code> (<a href="../click-to-listener/">a click to our listener</a>).</li>
+    <li><b>Type checking, alongside</b>: the editor runs TypeScript and underlines errors in red. Vite ignores types.</li>
+    <li><b><code>npm run build</code></b>: <code>tsc -b</code> stops on any type error, then Vite bundles and minifies into <code>dist/</code> (the real output is in Frame 4).</li>
+    <li><b>Deploy</b>: Netlify or Vercel serves <code>dist/</code>. From then on, only users' browsers run our code.</li>
+  </ol>
+  <div class="pair">
+    <figure class="src real">
+      <figcaption><span class="path">npm create vite@9.2.1 dev-stack -- --template react-ts</span><span class="note">real output</span></figcaption>
+      <pre id="capCreate"></pre>
+    </figure>
+    <figure class="src real">
+      <figcaption><span class="path">npm ls --depth=0 · after adding Tailwind and daisyUI</span><span class="note">real output</span></figcaption>
+      <pre id="capLs"></pre>
+    </figure>
+  </div>
+</section>
+
+<section id="remember" data-deeper="dunlosky-techniques,roediger-testing,cepeda-spacing,nielsen-ltm">
+  <div class="sechead"><span class="eyebrow">Remembering it</span><h2>How to keep all of this in our heads</h2></div>
+  <div class="prose">
+    <p>This page holds about a hundred words, twenty commands and the five Tailwind rules. Reading it again tomorrow will feel productive, and it is one of the least effective things we can do. This is one of the best-replicated findings in learning research. A 2013 review of ten study techniques by Dunlosky and colleagues rated <b>practice testing</b> (recalling from memory) and <b>distributed practice</b> (spacing reviews out) as the two most useful. It rated <b>rereading</b> and <b>highlighting</b> low, because they make material feel familiar without making it retrievable.<a class="rd" data-r="dunlosky-techniques"></a> Below is what each technique is, why it works, and exactly how to apply it to this page.</p>
+  </div>
+
+  <h3>1 · We forget fast, then slower: the forgetting curve</h3>
+  <div class="prose">
+    <p>Ebbinghaus measured his own memory for nonsense syllables in 1885, and Murre and Dros repeated the experiment in 2015. Most of what we learn is lost within the first day, and what survives fades more slowly after that.<a class="rd" data-r="ebbinghaus,murre-forgetting"></a> The useful part is that each successful recall makes the next drop slower. The chart below illustrates the shape. It is not a measurement of us: retention decays as <code>e<sup>−t/S</sup></code>, and each review multiplies the stability <code>S</code> by 2.5. Add reviews and watch the curve flatten.</p>
+  </div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> A drawing of the textbook model: exponential decay whose time constant grows after each successful review.</p><p><b>Checked against.</b> Nothing numerically. The shape (steep at first, flatter after each spaced review) is what Ebbinghaus, Murre and Dros, and the spacing literature report.</p><p><b>Not covered.</b> Real retention depends on the material, sleep, and how hard each recall was. Use the shape, not the numbers.</p></div>
+  <div class="lab">
+    <div class="ctl">
+      <label for="fcReviews">Reviews: <b id="fcN">3</b></label>
+      <input type="range" id="fcReviews" min="0" max="4" value="3" step="1" aria-describedby="fcSay">
+      <span class="muted" style="font-size:.84rem" id="fcSay"></span>
+    </div>
+    <div class="graphwrap"><svg id="fcSvg" viewBox="0 0 640 230" width="640" height="230" role="img" aria-label="Forgetting curves with and without spaced reviews"></svg></div>
+  </div>
+
+  <h3>2 · Recall, don't reread (retrieval practice)</h3>
+  <div class="prose">
+    <p>Roediger and Karpicke had students either reread a passage or try to write down what they remembered. After five minutes the rereaders did better. After two days and after a week, the students who had practised recalling remembered clearly more, even though rereading <i>felt</i> more effective to them.<a class="rd" data-r="roediger-testing"></a> The effort of pulling something out of memory is what strengthens it. The honest check is the question "can I produce it with the page closed?", not "does this look familiar?".</p>
+    <p><b>Applied here:</b> cover the right-hand column of any table on this page and say the answer out loud first. Use the quizzes in <a href="#try">Try it</a> before reading their explanations. The <a href="#trainer">trainer</a> never shows an answer until we have tried.</p>
+  </div>
+
+  <h3>3 · Space it out (distributed practice)</h3>
+  <div class="prose">
+    <p>The same total time spread over several days beats one long session, and the best gap grows with how long we want to remember. Cepeda and colleagues' meta-analysis of hundreds of experiments found this again and again.<a class="rd" data-r="cepeda-spacing"></a> The simplest schedule is the <b>Leitner system</b>. Cards live in five boxes. A card we recall moves up one box, and a card we miss goes back to box 1. Box 1 is reviewed every day, box 2 every 2 days, box 3 every 4, box 4 every 8 and box 5 every 16. Easy cards drift away; hard ones keep coming back.<a class="rd" data-r="gwern-srs"></a></p>
+    <div class="tbl"><table>
+      <thead><tr><th>Box</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th></tr></thead>
+      <tbody><tr><td>Review again after</td><td>next session (daily)</td><td>2 days</td><td>4 days</td><td>8 days</td><td>16 days</td></tr></tbody>
+    </table></div>
+    <p><b>Applied here:</b> ten minutes a day with the trainer, rather than an hour on Sunday. It remembers which box each card is in, in this browser only.</p>
+  </div>
+
+  <h3>4 · Remember the rule, not the list (chunking)</h3>
+  <div class="prose">
+    <p>We can hold only a handful of items in mind at once, but one item can be a whole <b>chunk</b>: a pattern that stands for many facts.<a class="rd" data-r="miller-chunks"></a> Experts do not remember more facts; they have better chunks. This page is built around four chunks, and each one replaces a long list:</p>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Instead of remembering</th><th>Remember the chunk</th><th>And regenerate</th></tr></thead>
+    <tbody>
+      <tr><td>Hundreds of Tailwind classes</td><td>The five rules: property-value, number × 4px, colour-shade, <code>hover:</code>, <code>lg:</code> = from that width up</td><td><code>mt-8</code> = margin-top 32px; <code>md:grid-cols-2</code> = two columns from 768px</td></tr>
+      <tr><td>Every npm command shape</td><td>Program · command · arguments · options, separated by spaces; <code>--</code> ends options</td><td>Any command we have never seen, read word by word</td></tr>
+      <tr><td>What runs where</td><td>The two-sided diagram: Node prepares, the browser runs</td><td>"Does Vite run in the browser?" No, it is on the left.</td></tr>
+      <tr><td>API, callback, hook, plugin</td><td>"A plugin gives callbacks for a host's hooks, through its API"</td><td>What a VS Code extension or a daisyUI theme is</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>5 · Make it, don't copy it (the generation effect)</h3>
+  <div class="prose">
+    <p>Slamecka and Graf found that words people produce themselves, even from a small cue, are remembered better than words they read.<a class="rd" data-r="slamecka-generation"></a> Copying a command from a tutorial teaches the fingers nothing. Typing it from the goal ("add TypeScript as a dev dependency") makes us build it from the grammar.</p>
+    <p><b>Applied here:</b> the trainer's command cards give a goal and check whatever we type with the command model, so <code>npm i -D typescript</code> and <code>npm install --save-dev typescript</code> both count, because npm reads them identically. Its class cards give a description and check our class against the Tailwind model.</p>
+  </div>
+
+  <h3>6 · Mix the kinds (interleaving)</h3>
+  <div class="prose">
+    <p>Practising one kind of thing at a time (all the spacing classes, then all the colour classes) feels smooth. Mixing them teaches us to tell them apart, which is the skill we need when facing a blank <code>className</code>. Kornell and Bjork found that interleaved examples taught categories better, even though learners believed the blocked order worked better.<a class="rd" data-r="kornell-interleaving"></a></p>
+    <p><b>Applied here:</b> the trainer shuffles terms, commands and classes into one queue.</p>
+  </div>
+
+  <h3>7 · Hooks for the confusions that keep coming back</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Confusion</th><th>Memory hook</th></tr></thead>
+    <tbody>
+      <tr><td>The two <code>@</code>s in <code>@tailwindcss/vite@4.3.3</code></td><td><b>Front @ is the owner, back @ is the age.</b> The scope comes first, like a family name in a phone book; the version comes last.</td></tr>
+      <tr><td>Library or framework</td><td><b>Hollywood:</b> "don't call us, we'll call you" is the framework speaking.</td></tr>
+      <tr><td><code>-D</code></td><td><b>D for Dev</b>: <code>--save-dev</code>, a tool we need only while developing.</td></tr>
+      <tr><td><code>npx</code></td><td><b>x for execute</b>: <code>npx</code> = <code>npm exec</code> (and <code>npm x</code> is a real alias).</td></tr>
+      <tr><td>Where <code>--</code> goes</td><td><b>The double dash is a door</b>: everything after it walks through to the next program.</td></tr>
+      <tr><td>Mobile-first</td><td><b>No prefix = phones. A prefix = "from here up".</b> <code>lg:</code> never means "only laptops".</td></tr>
+      <tr><td>Spacing numbers</td><td><b>Times four</b>: <code>p-4</code> = 16px, <code>h-16</code> = 64px, <code>gap-6</code> = 24px.</td></tr>
+      <tr><td>Hook in Vite vs React</td><td><b>Vite hooks are called on us; React hooks are called by us.</b></td></tr>
+      <tr><td>Vite and types</td><td><b>Vite strips, tsc checks.</b></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>8 · What not to memorize at all</h3>
+  <div class="prose"><p>Memory is for what we need instantly and for the chunks that let us understand. Look the rest up, deliberately and quickly. Knowing <i>where</i> to look is a skill worth practising too.</p></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Need</th><th>Let the tool remember</th></tr></thead>
+    <tbody>
+      <tr><td>The exact Tailwind class</td><td>Tailwind CSS IntelliSense in VS Code: start typing in <code>className</code>, then hover a class to see its CSS. On tailwindcss.com, press Ctrl + K and describe the effect ("rounded corners").</td></tr>
+      <tr><td>An HTML structure</td><td>Emmet: <code>ul&gt;li*5&gt;a</code> then Tab</td></tr>
+      <tr><td>A command's options</td><td><code>npm help install</code>, <code>npm install --help</code>, <code>git commit -h</code></td></tr>
+      <tr><td>A command typed last week</td><td>↑ in the terminal, or Ctrl + R and a few letters to search the history</td></tr>
+      <tr><td>The project's own commands</td><td><code>npm run</code> with no name lists every script in <code>package.json</code></td></tr>
+      <tr><td>Which packages a project uses</td><td><code>npm ls --depth=0</code>, or open <code>package.json</code></td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>9 · Explain it to someone (or to a rubber duck)</h3>
+  <div class="prose"><p>Explaining forces retrieval and shows the gaps immediately: the sentence we cannot finish is the thing we did not understand. After each study session, explain one frame of this page out loud in plain words, without looking, as if to a friend who has never coded. Where we get stuck, reread only that paragraph, then try again.<a class="rd" data-r="oakley-lhtl,matuschak-prompts"></a></p></div>
+
+  <h3>A plan for the next two weeks</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>When</th><th>What (about 10 to 15 minutes)</th></tr></thead>
+    <tbody>
+      <tr><td>Today</td><td>Read the 60-second version, then one pass through the trainer (every card is new, so all go to box 1 or 2). Draw the two-sided diagram from memory.</td></tr>
+      <tr><td>Days 1 to 3</td><td>Trainer, due cards only. Then explain one frame out loud. Use the command lab on every command we type for the assignment.</td></tr>
+      <tr><td>Days 4 to 7</td><td>Trainer, due cards. Write a class list for one component from the design before looking anything up, then check it in the class lab.</td></tr>
+      <tr><td>Days 8 to 14</td><td>Trainer, due cards (only a few now). Do the <a href="#exam">exam questions</a> on paper and mark them honestly.</td></tr>
+      <tr><td>Whenever we stall</td><td>Make a new card for the thing we just had to look up. Cards from our own mistakes are the most valuable ones.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="trainer" data-deeper="matuschak-prompts,gwern-srs,slamecka-generation">
+  <div class="sechead"><span class="eyebrow">Lab · the recall trainer</span><h2>Spaced recall for every word on this page</h2></div>
+  <div class="prose"><p>One card at a time, with the answer hidden until we have tried. For a word card, answer out loud, reveal it, and say honestly whether we got it. Command and class cards are checked by the page's two models, so any form npm or Tailwind would treat the same is accepted. Correct moves a card up a box; a miss sends it back to box 1.</p></div>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> A Leitner-box scheduler (five boxes, reviewed after 0, 2, 4, 8 and 16 days) over <span id="trCount">40</span> cards drawn from this page, in a shuffled, mixed order.</p><p><b>Checked against.</b> Command answers are checked with the command model and class answers with the class model, the same models the verify scripts compare with npm and Tailwind. The schedule itself is a learning aid, not a measurement.</p><p><b>Not covered.</b> Progress is stored in this browser only (localStorage). Another device, a private window or cleared site data starts fresh, and nothing is sent anywhere.</p></div>
+  <div class="lab">
+    <div class="ctl"><span class="boxes" id="trBoxes" aria-label="Cards in each box"></span><span class="pill" id="trDue"></span><button type="button" id="trAll">Practise all now</button><button type="button" id="trReset">Reset progress</button></div>
+    <div class="card" id="trCard" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"What is the difference between an engine and a runtime?","options":["They are two names for the same program","The engine executes the language (V8); the runtime is the engine plus an environment's APIs and event loop (the browser adds the DOM, Node adds files and the network)","The runtime compiles; the engine interprets","An engine runs in the browser, a runtime runs on servers"],"answer":1,"explain":"Our capture asked both: Node said <code>undefined undefined object function</code> for window, document, process and require; Chromium said <code>object object undefined undefined</code>. Same V8, different houses."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"In <code>@tailwindcss/vite@4.3.3</code>, what does each <code>@</code> mean?","options":["Both start versions","The first starts the scope (the owner, @tailwindcss); the one after the name starts the version","The first is a version and the second is a tag","Both are part of the package's name"],"answer":1,"explain":"npm-package-arg looks for the first @ after position 0 (<code>arg.indexOf('@', 1)</code>), so a leading @ is never mistaken for a version. Front @ is the owner, back @ is the age."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Someone typed <code>npm install tailwindcss @tailwindcss/vite@latest/daisyui@latest</code>. What did npm think the second word was?","options":["Two packages, @tailwindcss/vite and daisyui","The package @tailwindcss/vite, from a local folder called latest/daisyui@latest","A syntax error","@tailwindcss/vite at the tag latest, then daisyui ignored"],"answer":1,"explain":"Without the space, everything after the first @ following the name is the spec: <code>latest/daisyui@latest</code>. It contains a slash, so npm-package-arg calls it a directory. Try the preset \"The missing space\" in the command lab."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Why does <code>npm run dev</code> start Vite when typing <code>vite</code> alone says \"command not found\"?","options":["npm installs Vite globally","npm puts node_modules/.bin, where the vite link lives, at the front of PATH before running the script","package.json contains the path to vite.js","Vite registers itself with the operating system"],"answer":1,"explain":"set-path.js pushes <code>resolve(p, 'node_modules', '.bin')</code> for the project folder and each folder above it. Our real <code>npm run where</code> printed exactly that list."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Which statement about Vite and TypeScript is true?","options":["Vite checks types and refuses to serve files with errors","Vite removes types without checking them; the editor and tsc check them","Vite sends TypeScript to the browser, which checks it","Vite converts types into runtime checks"],"answer":1,"explain":"The App.tsx the browser received has no <code>: Props</code> left. The <code>build</code> script runs <code>tsc -b</code> first precisely because Vite does not check."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"What CSS does Tailwind 4 write for <code>hover:text-pink-600</code>?","options":["<code>.hover\\:text-pink-600:hover { color: … }</code> only","<code>@media (hover: hover) { .hover\\:text-pink-600:hover { color: var(--color-pink-600); } }</code>","An inline style added by JavaScript on mouseover","Nothing until the element is hovered"],"answer":1,"explain":"variants.ts wraps hover in <code>@media (hover: hover)</code> so touch screens do not keep the hover colour after a tap. Our real dev-server stylesheet shows exactly this rule."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"What does <code>lg:flex</code> mean on a phone 390px wide?","options":["The element is a flex container","Nothing: lg: applies from 64rem (1024px) up, so on the phone the unprefixed classes decide","It hides the element","It applies only between 1024 and 1280px"],"answer":1,"explain":"Mobile-first: a prefix means \"from this width up\". That is why the navbar uses <code>hidden lg:flex</code>: hidden on phones, flex from 1024px."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Which pair is a plugin and its host?","options":["React is a plugin of react-dom","daisyUI is a plugin of Tailwind, and Tailwind is a plugin of Vite","Vite is a plugin of Node","npm is a plugin of Vite"],"answer":1,"explain":"A plugin gives callbacks for a host's hooks. <code>tailwindcss()</code> returns hook objects for Vite, and <code>@plugin \"daisyui\"</code> in index.css plugs daisyUI into Tailwind."}</script></div>
+  </div>
+  <h3>See it on our own machine</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>Command (in the project folder)</th></tr></thead>
+    <tbody>
+      <tr><td>Every request npm makes to the registry</td><td><code>npm install --loglevel http</code></td></tr>
+      <tr><td>What the registry knows about a package</td><td><code>npm view react-toastify version dist-tags</code></td></tr>
+      <tr><td>The project's scripts</td><td><code>npm run</code> (no name)</td></tr>
+      <tr><td>Where commands like vite live</td><td>Windows: <code>dir node_modules\.bin</code>; macOS/Linux: <code>ls -l node_modules/.bin</code></td></tr>
+      <tr><td>What the browser receives from Vite</td><td>With <code>npm run dev</code> running, open DevTools → Network, click <code>App.tsx</code> and read the Response</td></tr>
+      <tr><td>The CSS Tailwind wrote</td><td>DevTools → Network → <code>index.css</code>, or select an element and read the Styles pane</td></tr>
+      <tr><td>A type check without building</td><td><code>npx tsc --noEmit</code> (or <code>npx tsc -b</code> in a Vite project)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>Put <code>npm create vite@latest dev-stack --template react-ts</code> (no <code>--</code>) in the command lab. Which word ends up where? Predict what create-vite would do with <code>react-ts</code>, then read create-vite's help to check.</li>
+    <li>Run <code>npm view react dist-tags</code>. Which version would <code>npm install react@next</code> install today, and which would <code>npm install react</code> install? Why can they differ?</li>
+    <li>Write the class list for the Banner's "Learn More" button from the design before looking anything up, then put it in the class lab and compare the CSS with what the design needs.</li>
+    <li>In the class lab, type <code>p-0.3</code>, <code>p-1.25</code> and <code>p-13</code>. Which produce CSS, and which line of <code>utilities.ts</code> decides?</li>
+    <li>Write a tiny Vite plugin with a <code>transform(code, id)</code> hook that logs <code>id</code>. Add it to <code>vite.config.ts</code>, load the page, and list which files pass through it, in which order.</li>
+  </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Six questions in the style of a web engineering or software tools exam. Write the answer first, then open the model answer and mark it honestly. Answers about commands were produced by the command model and agree with npm 10.9.4; answers about CSS were produced by the class model and agree with Tailwind CSS 4.3.3.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Parse">
+      <div class="q">Show how npm reads <code>npm i -gD @tailwindcss/vite@latest/daisyui@latest</code>: the command it runs, the settings it sets, and how it reads the package argument (name, scope, spec and spec type). Then fix the command so it does what the author meant.</div>
+      <div class="a">
+        <p>nopt sees <code>-gD</code>. It is not a known option or shorthand, but every letter is a one-letter shorthand, so it expands to <code>--global --save-dev</code>: <code>global = true</code>, <code>save-dev = true</code>. The plain words left are <code>i</code> and the package argument, and <code>deref("i")</code> gives <code>install</code>.</p>
+        <p>npm-package-arg finds the first <code>@</code> after position 0. The name is <code>@tailwindcss/vite</code> (scope <code>@tailwindcss</code>) and the spec is everything after that <code>@</code>: <code>latest/daisyui@latest</code>. The spec contains a slash, so it is a <b>directory</b> spec: npm would look for a local folder called <code>latest/daisyui@latest</code>. Also, <code>-g</code> installs for the whole computer, so <code>-D</code> does nothing useful.</p>
+        <p>Fix: <code>npm install @tailwindcss/vite@latest daisyui@latest</code> (a space between the two specs, and no <code>-g</code>), or <code>-D</code> without <code>-g</code> to record them as dev dependencies.</p>
+        <p class="rub">Marking: 1 for the -gD expansion, 1 for install, 2 for the name, scope and directory spec with the reason, 1 for -g making -D pointless, 1 for the fix.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Explain">
+      <div class="q">A student runs <code>npm create vite@latest app --template react-ts</code> and gets the wrong template. Using npm's code, explain why, and why <code>npm create vite@latest app -- --template react-ts</code> works.</div>
+      <div class="a">
+        <p><code>create</code> is an alias of <code>init</code>. <code>init</code> turns <code>vite@latest</code> into the package <code>create-vite@latest</code> (the line <code>req.name.replace(/^(@[^/]+\/)?/, '$1create-')</code>) and runs it through <code>npm exec</code> with the remaining arguments.</p>
+        <p>Before that, nopt parses npm's own options. <code>--template</code> is not an npm option, and nopt treats an unknown option without <code>=</code> as a switch (<code>typeof argType === 'undefined' &amp;&amp; !hadEq</code>), so it sets npm's <code>template = true</code> and leaves <code>react-ts</code> as an ordinary argument. create-vite receives <code>app react-ts</code> and never sees <code>--template</code>.</p>
+        <p>With <code>--</code>, nopt stops parsing (<code>if (arg.match(/^-{2,}$/))</code>) and pushes every later word into the plain arguments unchanged, so create-vite receives <code>app --template react-ts</code>.</p>
+        <p class="rub">Marking: 1 for create → init → create-vite, 2 for the unknown option becoming npm's setting and react-ts a stray argument, 2 for the -- rule.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Calculate">
+      <div class="q">For <code>px-5 py-2.5 -mt-4 w-1/2 lg:max-w-md</code>, give the CSS Tailwind 4 writes for each class and the computed length in pixels (16px root font size; for <code>w-1/2</code>, a 400px-wide parent).</div>
+      <div class="a">
+        <div class="tbl"><table><thead><tr><th>Class</th><th>CSS</th><th>Pixels</th></tr></thead><tbody>
+          <tr><td><code>px-5</code></td><td><code>padding-inline: calc(var(--spacing) * 5)</code></td><td>5 × 4 = 20px left and right</td></tr>
+          <tr><td><code>py-2.5</code></td><td><code>padding-block: calc(var(--spacing) * 2.5)</code></td><td>10px top and bottom</td></tr>
+          <tr><td><code>-mt-4</code></td><td><code>margin-top: calc(var(--spacing) * -4)</code></td><td>−16px</td></tr>
+          <tr><td><code>w-1/2</code></td><td><code>width: calc(1 / 2 * 100%)</code></td><td>200px</td></tr>
+          <tr><td><code>lg:max-w-md</code></td><td><code>@media (width &gt;= 64rem) { .lg\:max-w-md { max-width: var(--container-md); } }</code></td><td>28rem = 448px, from 1024px-wide windows</td></tr>
+        </tbody></table></div>
+        <p class="rub">Marking: 1 per class (CSS and value both needed). <code>--spacing</code> is 0.25rem = 4px.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="6" data-kind="Trace">
+      <div class="q">Trace what happens from typing <code>npm run dev</code> to the browser running our <code>App</code> component. Name the program or file that does each step, and say which steps run in Node and which in the browser.</div>
+      <div class="a">
+        <p>1. The shell starts <code>npm</code>, which is <code>node</code> running <code>npm-cli.js</code>. nopt and <code>deref</code> turn <code>run</code> into <code>run-script</code>. (Node)</p>
+        <p>2. run-script reads <code>"dev": "vite"</code> from <code>package.json</code>, <code>set-path.js</code> puts <code>node_modules/.bin</code> first on PATH, and the shell finds <code>vite</code>, a link to <code>vite/bin/vite.js</code>. (Node)</p>
+        <p>3. Vite reads <code>vite.config.ts</code>, loads the <code>react()</code> and <code>tailwindcss()</code> plugins and listens on localhost:5173. (Node)</p>
+        <p>4. The browser requests <code>/</code> and <code>/src/main.tsx</code>. For each file, <code>loadAndTransform</code> loads it and the plugin container calls every plugin's <code>transform</code> hook: types are removed, JSX becomes <code>jsxDEV(…)</code> calls, imports become URLs, and Tailwind writes CSS for the classes it found. (Node)</p>
+        <p>5. V8 in the browser runs the modules, <code>createRoot(…).render(&lt;App /&gt;)</code> schedules a render, React calls <code>App</code> and its children and commits DOM nodes, and Blink styles, lays out and paints them. (Browser)</p>
+        <p class="rub">Marking: 1 for npm as a Node program, 1 for the PATH step, 1 for Vite and plugins, 2 for transform per request, 1 for the browser side.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compare">
+      <div class="q">Compare a library and a framework using inversion of control, place React and Next.js, and contrast "hook" in Vite with "hook" in React.</div>
+      <div class="a">
+        <p>With a library, our code holds control and calls it (react-toastify's <code>toast()</code>). With a framework, it holds control and calls our code at points it defines (Next.js calls the function exported from <code>app/about/page.tsx</code> when <code>/about</code> is visited). That reversal is inversion of control.</p>
+        <p>React is in between: we call <code>render</code>, then React calls our components. It is called a library because it covers only the UI. Next.js decides routing, data loading and building, so it is a framework.</p>
+        <p>A Vite hook is a named moment (<code>transform</code>) at which the host calls a plugin's callback. A React hook is a function we call (<code>useState</code>) to give a component state stored on its fiber.</p>
+        <p class="rub">Marking: 1 for inversion of control, 1 for React, 1 for Next.js, 1 for the hook contrast.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Construct">
+      <div class="q">Design a two-week review plan for learning this vocabulary, and justify each choice with evidence from learning research.</div>
+      <div class="a">
+        <p>Short daily sessions instead of one long one, because distributed practice beats massed practice for the same total time (Cepeda et al. 2006). Each session starts with recall from memory (cards, covered tables, explaining aloud), not rereading, because retrieval practice beats restudy after days (Roediger and Karpicke 2006) and rereading is rated low utility (Dunlosky et al. 2013).</p>
+        <p>A Leitner schedule (boxes reviewed after 0, 2, 4, 8, 16 days; a miss goes back to box 1) makes the gaps grow with each success, matching the flattening forgetting curve. Mix terms, commands and classes in one queue (interleaving, Kornell and Bjork 2008). Make commands and class lists from goals rather than copying them (the generation effect, Slamecka and Graf 1978). Learn chunks (the five Tailwind rules, the command grammar) instead of lists (Miller 1956). Add a card for every lookup made during the assignment.</p>
+        <p class="rub">Marking: 1 each for spacing, retrieval, a growing schedule, one more technique (interleaving, generation or chunking), and correct justification throughout.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for the documentation, specifications and papers.</p>
+  <div id="reading-list"></div>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files and data</h2></div>
+  <ul class="src-list">
+    <li><a href="https://github.com/nodejs/node/blob/v22.22.0/src/node_main.cc">node/src/node_main.cc</a></li>
+    <li><a href="https://github.com/nodejs/node/blob/v22.22.0/src/node.cc">node/src/node.cc</a></li>
+    <li><a href="https://github.com/nodejs/node/blob/v22.22.0/src/node_main_instance.cc">node/src/node_main_instance.cc</a></li>
+    <li><a href="https://github.com/npm/cli/blob/v10.9.4/bin/npx-cli.js">npm/bin/npx-cli.js</a></li>
+    <li><a href="https://github.com/npm/cli/blob/v10.9.4/lib/utils/cmd-list.js">npm/lib/utils/cmd-list.js</a></li>
+    <li><a href="https://github.com/npm/cli/blob/v10.9.4/lib/commands/init.js">npm/lib/commands/init.js</a></li>
+    <li><a href="https://github.com/npm/nopt/blob/v8.1.0/lib/nopt-lib.js">nopt/lib/nopt-lib.js</a></li>
+    <li><a href="https://github.com/npm/npm-package-arg/blob/v12.0.2/lib/npa.js">npm-package-arg/lib/npa.js</a></li>
+    <li><a href="https://github.com/npm/run-script/blob/v9.1.0/lib/set-path.js">@npmcli/run-script/lib/set-path.js</a></li>
+    <li><a href="https://github.com/vitejs/vite/blob/v8.3.4/packages/vite/src/node/server/transformRequest.ts">vite/…/server/transformRequest.ts</a></li>
+    <li><a href="https://github.com/vitejs/vite/blob/v8.3.4/packages/vite/src/node/server/pluginContainer.ts">vite/…/server/pluginContainer.ts</a></li>
+    <li><a href="https://github.com/tailwindlabs/tailwindcss/blob/v4.3.3/packages/%40tailwindcss-vite/src/index.ts">@tailwindcss-vite/src/index.ts</a></li>
+    <li><a href="https://github.com/tailwindlabs/tailwindcss/blob/v4.3.3/packages/tailwindcss/src/utilities.ts">tailwindcss/src/utilities.ts</a></li>
+    <li><a href="https://github.com/tailwindlabs/tailwindcss/blob/v4.3.3/packages/tailwindcss/src/variants.ts">tailwindcss/src/variants.ts</a></li>
+    <li><a href="https://github.com/tailwindlabs/tailwindcss/blob/v4.3.3/packages/tailwindcss/theme.css">tailwindcss/theme.css</a></li>
+    <li><a href="https://github.com/facebook/react/blob/v19.3.0/packages/react-reconciler/src/ReactFiberHooks.js">react-reconciler/src/ReactFiberHooks.js</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/web-dev-vocabulary/data">Our capture script and its output (data/)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">Node.js, Vite, React and Tailwind CSS are MIT-licensed; npm is under the Artistic License 2.0; nopt, npm-package-arg and @npmcli/run-script are ISC-licensed. Quoted for study, with credit to each project.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-main">#else
+// UNIX
+
+int main(int argc, char* argv[]) {
+» return node::Start(argc, argv);
+}
+#endif</script>
+
+<script type="text/plain" id="c-start">static ExitCode StartInternal(int argc, char** argv) {
+  CHECK_GT(argc, 0);
+
+  // Hack around with the argv pointer. Used for process.title = "blah".
+  argv = uv_setup_args(argc, argv);
+
+  std::shared_ptr<InitializationResultImpl> result =
+»     InitializeOncePerProcessInternal(
+          std::vector<std::string>(argv, argv + argc));
+  // …
+  NodeMainInstance main_instance(snapshot_data,
+»                                uv_default_loop(),
+                                 per_process::v8_platform.Platform(),
+                                 result->args(),
+                                 result->exec_args());
+  return main_instance.Run();
+}
+
+void NodeMainInstance::Run(ExitCode* exit_code, Environment* env) {
+  if (*exit_code == ExitCode::kNoFailure) {
+    if (!sea::MaybeLoadSingleExecutableApplication(env)) {
+»     LoadEnvironment(env, StartExecutionCallback{});
+    }
+
+    *exit_code =
+»       SpinEventLoopInternal(env).FromMaybe(ExitCode::kGenericUserError);
+  }
+  // …
+}</script>
+
+<script type="text/plain" id="c-npa">function npa (arg, where) {
+  // …
+» const nameEndsAt = arg.indexOf('@', 1) // Skip possible leading @
+  const namePart = nameEndsAt > 0 ? arg.slice(0, nameEndsAt) : arg
+  // …
+  } else if (nameEndsAt > 0) {
+    name = namePart
+»   spec = arg.slice(nameEndsAt + 1) || '*'
+  // …
+}
+
+  setName (name) {
+    const valid = validatePackageName(name)
+    // …
+»   this.scope = name[0] === '@' ? name.slice(0, name.indexOf('/')) : undefined
+    // scoped packages in couch must have slash url-encoded, e.g. @foo%2Fbar
+»   this.escapedName = name.replace('/', '%2f')
+    return this
+  }
+
+function fromRegistry (res) {
+  // …
+  const version = semver.valid(spec, true)
+  const range = semver.validRange(spec, true)
+  if (version) {
+»   res.type = 'version'
+  } else if (range) {
+»   res.type = 'range'
+  } else {
+    if (encodeURIComponent(spec) !== spec) {
+      throw invalidTagName(spec, res.raw)
+    }
+»   res.type = 'tag'
+  }
+  return res
+}</script>
+
+<script type="text/plain" id="c-npx">const cli = require('../lib/cli.js')
+
+// run the resulting command as `npm exec ...args`
+process.argv[1] = require.resolve('./npm-cli.js')
+» process.argv.splice(2, 0, 'exec')
+// …
+for (i = 3; i < process.argv.length; i++) {
+  const arg = process.argv[i]
+  if (arg === '--') {
+    break
+  } else if (/^-/.test(arg)) {
+    // …
+  } else {
+    // found a positional arg, put -- in front of it, and we're done
+»   process.argv.splice(i, 0, '--')
+    break
+  }
+}
+// …
+cli(process)</script>
+
+<script type="text/plain" id="c-cmdlist">// These must resolve to an entry in commands
+const aliases = {
+  // …
+  add: 'install',
+  rm: 'uninstall',
+  // …
+  // short names for common things
+  list: 'ls',
+» create: 'init',
+» i: 'install',
+  t: 'test',
+» run: 'run-script',
+  'clean-install': 'ci',
+» x: 'exec',
+  // …
+}</script>
+
+<script type="text/plain" id="c-init">    } else {
+      const req = npa(initerName)
+      if (req.type === 'git' && req.hosted) {
+        // …
+      } else if (req.registry) {
+»       packageName = `${req.name.replace(/^(@[^/]+\/)?/, '$1create-')}@${req.rawSpec}`
+      } else {
+        // …
+      }
+    }
+
+»   const newArgs = [packageName, ...otherArgs]</script>
+
+<script type="text/plain" id="c-nopt">  for (let i = 0; i < args.length; i++) {
+    let arg = args[i]
+
+»   if (arg.match(/^-{2,}$/)) {
+      // done with keys.
+      // the rest are args.
+»     remain.push.apply(remain, args.slice(i + 1))
+      args[i] = '--'
+      break
+    }
+    // …
+      const isBool = typeof no === 'boolean' ||
+        isTypeDef(argType, BooleanType) ||
+        isTypeArray && hasTypeDef(argType, BooleanType) ||
+»       (typeof argType === 'undefined' && !hadEq) ||
+        // …
+    remain.push(arg)
+  }</script>
+
+<script type="text/plain" id="c-setpath">  const pathArr = []
+  // …
+  // unshift the ./node_modules/.bin from every folder
+  // walk up until dirname() does nothing, at the root
+  let p = projectPath
+  let pp
+  do {
+»   pathArr.push(resolve(p, 'node_modules', '.bin'))
+    pp = p
+    p = dirname(p)
+  } while (p !== pp)
+» pathArr.push(nodeGypPath, PATH)</script>
+
+<script type="text/plain" id="c-lat">  let code: string | null = null
+  // …
+  // load
+  const loadStart = debugLoad ? performance.now() : 0
+» const loadResult = await pluginContainer.load(id)
+
+  if (loadResult == null) {
+    const file = cleanUrl(id)
+    // …
+      try {
+»       code = await fsp.readFile(file, 'utf-8')
+    // …
+  // transform
+  const transformStart = debugTransform ? performance.now() : 0
+» const transformResult = await pluginContainer.transform(code, id, {
+    inMap: map,
+    moduleType,
+  })</script>
+
+<script type="text/plain" id="c-pc">    const ctx = new TransformPluginContext(this, id, code, inMap as SourceMap)
+    // …
+»   for (const plugin of this.getSortedPlugins('transform')) {
+      // …
+      const filter = getCachedFilterForPlugin(plugin, 'transform')
+      if (filter && !filter(id, code, optionsWithSSR.moduleType)) continue
+      // …
+      let result: TransformResult | string | undefined
+      const handler = getHookHandler(plugin.transform)
+      try {
+        result = await this.handleHookPromise(
+»         handler.call(ctx as any, code, id, optionsWithSSR),
+        )
+      } catch (e) {
+        ctx.error(e)
+      }
+      if (!result) continue
+      // …
+      if (isObject(result)) {
+        if (result.code !== undefined) {
+»         code = result.code as string
+      // …</script>
+
+<script type="text/plain" id="c-app">import { useState } from "react";
+
+type Props = { label: string };
+
+function Navbar({ label }: Props) {
+  const [open, setOpen] = useState(false);
+  return (
+    <nav className="sticky top-0 z-50 bg-white border-b border-gray-100">
+      <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
+        <button className="lg:hidden" onClick={() => setOpen(!open)}>☰</button>
+        <a href="#" className="hidden lg:flex hover:text-pink-600">{label}</a>
+        <button className="bg-brand text-white px-5 py-2 rounded-full">Sign Up</button>
+      </div>
+    </nav>
+  );
+}
+
+export default function App() {
+  return <Navbar label="Home" />;
+}</script>
+
+<script type="text/plain" id="c-twvite">export default function tailwindcss(opts: PluginOptions = {}): Plugin[] {
+  // …
+  return [
+    {
+      // Step 1: Scan source files for candidates
+»     name: '@tailwindcss/vite:scan',
+      enforce: 'pre',
+      // …
+    },
+    {
+      // Step 2 (serve mode): Generate CSS
+»     name: '@tailwindcss/vite:generate:serve',
+      apply: 'serve',
+      enforce: 'pre',
+»     transform: {
+        // …
+        async handler(src, id) {
+          if (!isPotentialCssRootFile(id)) return
+          // …
+»         let result = await root.generate(src, (file) => this.addWatchFile(file), I)
+          // …
+          return result
+        },
+      },
+    },
+    // …
+  ]
+}</script>
+
+<script type="text/plain" id="c-react">function mountState<S>(
+  initialState: (() => S) | S,
+): [S, Dispatch<BasicStateAction<S>>] {
+» const hook = mountStateImpl(initialState);
+  const queue = hook.queue;
+  const dispatch: Dispatch<BasicStateAction<S>> = dispatchSetState.bind(
+    null,
+»   currentlyRenderingFiber,
+    queue,
+  ) as any;
+  queue.dispatch = dispatch;
+» return [hook.memoizedState, dispatch];
+}</script>
+
+<script type="text/plain" id="c-util">  function spacingUtility(
+    name: string,
+    // …
+  ) {
+    // …
+»   utilities.static(`${name}-px`, () => handle('1px'))
+    functionalUtility(name, {
+      // …
+      handleBareValue: ({ value }) => {
+        let multiplier = theme.resolve(null, ['--spacing'])
+        if (!multiplier) return null
+»       if (!isValidSpacingMultiplier(value)) return null
+
+»       return `--spacing(${value})`
+      },
+  // …
+  for (let [name, property] of [
+    ['p', 'padding'],
+»   ['px', 'padding-inline'],
+    ['py', 'padding-block'],
+    // …
+    ['pt', 'padding-top'],
+    // …
+  ] as const) {
+    spacingUtility(name, ['--padding', '--spacing'], (value) => [decl(property, value)])
+  }</script>
+
+<script type="text/plain" id="c-var">  // variants.ts
+» variants.static('hover', (r) => {
+»   r.nodes = [styleRule('&:hover', [atRule('@media', '(hover: hover)', r.nodes)])]
+  })
+  staticVariant('focus', ['&:focus'])
+  // …
+  staticVariant('disabled', ['&:disabled'])
+
+  /* theme.css */
+» --spacing: 0.25rem;
+
+  --breakpoint-sm: 40rem;
+  --breakpoint-md: 48rem;
+» --breakpoint-lg: 64rem;
+  --breakpoint-xl: 80rem;
+  --breakpoint-2xl: 96rem;</script>
+
+<script src="../assets/reading.js?v=8c8f971a"></script>
+<script src="npm-tables.js?v=644844a4"></script>
+<script src="command-model.js?v=cbb25e58"></script>
+<script src="tailwind-theme.js?v=62b0ca1e"></script>
+<script src="tailwind-model.js?v=f0bb5465"></script>
+<script src="capture-data.js?v=2d000da7"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+  function $(id){return document.getElementById(id)}
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$)|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(if|else|return|const|let|var|function|for|while|do|break|continue|true|false|new|throw|try|catch|await|async|int|char|static|void|type|export|default|import|from|of)\b|\b([A-Za-z_]\w*)(?=\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+
+  /* ---------- real captures ---------- */
+  var C=window.WDV_CAPTURE;
+  function step(label){for(var i=0;i<C.steps.length;i++)if(C.steps[i].label===label)return C.steps[i];return {cmd:"",out:"(missing)"}}
+  function shown(s){return "$ "+s.cmd+"\n"+s.out}
+  if(C){
+    var q="typeof window, typeof document, typeof process, typeof require";
+    $("capNode").textContent="$ node -e \"console.log("+q+")\"\n"+step("Node: which globals exist?").out;
+    $("capBrowser").textContent="// page.evaluate in a blank page\n["+q+"].join(\" \")\n"+C.browser.answer;
+    $("capInstall").textContent=shown(step("Install, showing every request to the registry"));
+    $("capTags").textContent=shown(step("Ask the registry which version each tag points to"));
+    var w=step("npm run where"),b=step("node_modules/.bin: where commands like vite live");
+    $("capPath").textContent="$ npm pkg get scripts.where\n\"node -e \\\"console.log(process.env.PATH.split(require('path').delimiter).slice(0,4).join('\\\\n'))\\\"\"\n\n$ npm run where\n"+w.out+"\n\n$ ls -l node_modules/.bin   (two of the links)\n"+b.out;
+    $("capApp").textContent=C.served.app;
+    $("capBuild").textContent=shown(step("Build for publishing"));
+    $("capCreate").textContent=shown(step("Create the project"))+"\n\n$ npm pkg get scripts dependencies devDependencies\n"+step("What the generator wrote: package.json scripts").out;
+    $("capLs").textContent=shown(step("What is installed at the top level"));
+    $("capCss").textContent=C.cssHeader+"\n/* … the theme and base layers (Tailwind's reset), then: */\n"+C.utilities;
+    $("capCssNote").textContent="real output: "+(C.cssBytes/1024).toFixed(1)+" KB in all; "+C.daisyLayersDropped+" daisyUI blocks left out here";
+  }
+
+  /* ---------- command lab ---------- */
+  var CM=window.CommandModel;
+  function chip(text,cls,title){return '<span class="chip '+cls+'"'+(title?' title="'+esc(title)+'"':'')+'>'+esc(text===""?"(empty)":text)+'</span>'}
+  function roles(r){
+    // label each word as typed: program, command, argument, option (and its value), "--", or passed on
+    var w=r.words,out=[[w[0],"r-prog"]],notes=r.optionNotes||[],ended=false,seenCmd=false,valueNext=false;
+    if(r.program==="npm"||r.program==="npx"){
+      w.slice(1).forEach(function(word,i,orig){
+        if(ended){out.push([word,"r-pass"]);return}
+        if(word==="--"){out.push([word,"r-end"]);ended=true;return}
+        if(valueNext){out.push([word,"r-opt"]);valueNext=false;return}
+        if(/^-./.test(word)&&!(r.program==="npx"&&seenCmd)){
+          out.push([word,"r-opt"]);
+          var n=notes.filter(function(o){return o.word===word&&typeof o.value==="string"&&o.value!==""})[0];
+          if(n&&n.value===orig[i+1])valueNext=true;
+          return;
+        }
+        if(!seenCmd){out.push([word,"r-cmd"]);seenCmd=true;if(r.program==="npx")ended=true;return}
+        out.push([word,"r-arg"]);
+      });
+      return out;
+    }
+    w.slice(1).forEach(function(x){out.push([x,/^-/.test(x)?"r-opt":"r-arg"])});
+    if(r.program==="git"&&r.subcommand){for(var j=1;j<out.length;j++)if(out[j][0]===r.subcommand){out[j][1]="r-cmd";break}}
+    return out;
+  }
+  function specCard(p){
+    if(p.error)return '<div class="spec bad"><b>'+esc(p.raw)+'</b><span>'+esc(p.error)+': '+esc(p.message)+'</span></div>';
+    var parts=[];
+    if(p.scope)parts.push('<i class="s-scope">'+esc(p.scope)+'/</i>');
+    if(p.name)parts.push('<i class="s-name">'+esc(p.scope?p.name.slice(p.scope.length+1):p.name)+'</i>');
+    var after=p.name!==undefined?p.raw.slice(p.name.length):p.raw;
+    if(after)parts.push('<i class="s-ver">'+esc(after)+'</i>');
+    return '<div class="spec"><div class="specword">'+parts.join("")+'</div><span><b>'+esc(p.type)+'</b>: '+esc(p.text)+(p.warnings&&p.warnings.length?' <em>(npm warns: '+esc(p.warnings.join("; "))+')</em>':'')+'</span></div>';
+  }
+  function runCmd(){
+    var line=$("cmdIn").value,r;
+    $("cmdErr").textContent="";
+    try{r=CM.read(line)}catch(e){$("cmdErr").textContent="The shell step stops here: "+e.message+".";$("cmdWords").innerHTML="";$("cmdSteps").innerHTML="";$("cmdSay").innerHTML="";$("cmdSpecs").innerHTML="";return}
+    if(r.empty){$("cmdWords").innerHTML='<span class="empty">type a command</span>';$("cmdSteps").innerHTML="";$("cmdSay").innerHTML="";$("cmdSpecs").innerHTML="";return}
+    $("cmdWords").innerHTML=roles(r).map(function(x){return chip(x[0],x[1])}).join(" ");
+    var st=[],say=[];
+    if(r.program==="npm"||r.program==="npx"){
+      if(r.npxArgv)st.push('<div><b>npx-cli.js</b> rewrites the words to</div><div class="f">npm '+esc(r.npxArgv.join(" "))+'</div>');
+      (r.optionNotes||[]).forEach(function(n){st.push('<div><b>nopt</b>: <code>'+esc(n.word)+'</code> '+esc(n.text.replace(/^"[^"]*" /,""))+'</div>')});
+      st.push('<div><b>positional words</b> left for npm:</div><div class="f">'+esc(JSON.stringify(r.remain))+'</div>');
+      if(r.typed!==undefined)st.push('<div><b>cmd-list deref</b>: <code>'+esc(r.typed)+'</code> → '+(r.command?'<code>'+esc(r.command)+'</code>':'<b>no such command</b>')+'</div>');
+      var opts=Object.keys(r.options);
+      say.push('<div class="big">'+esc(r.summary.charAt(0).toUpperCase()+r.summary.slice(1))+'.</div>');
+      if(r.initPackage)say.push('<div>It runs the package <code>'+esc(r.initPackage)+'</code> through <code>npm exec</code>, handing it '+(r.args.length>1?'<code>'+esc(r.args.slice(1).join(" "))+'</code>':'no further words')+'.</div>');
+      if(r.command==="run-script")say.push(r.script?'<div>It looks up <code>"'+esc(r.script)+'"</code> in <code>package.json</code>\'s scripts and runs it with <code>node_modules/.bin</code> first on PATH'+(r.scriptArgs.length?', passing <code>'+esc(r.scriptArgs.join(" "))+'</code> on to it':'')+'.</div>':'<div>With no script name, it lists the scripts.</div>');
+      if(r.command==="exec"&&r.execCommand)say.push('<div>It runs the command <code>'+esc(r.execCommand)+'</code> from <code>node_modules/.bin</code>, or downloads the package for this run'+(r.execArgs.length?', passing <code>'+esc(r.execArgs.join(" "))+'</code> to it':'')+'.</div>');
+      if(r.saveTo)say.push('<div>Saved to: <b>'+esc(r.saveTo)+'</b>.</div>');
+      opts.forEach(function(k){var known=Object.prototype.hasOwnProperty.call(CM.tables.options,k);say.push('<div>'+(known?'npm setting':'<b>unknown to npm</b>, kept as a setting')+' <code>'+esc(k)+' = '+esc(JSON.stringify(r.options[k]))+'</code>'+(known?'':': it does not reach any other program')+'.</div>')});
+      if(r.command==="init"&&r.options.template!==undefined)say.push('<div class="warn">Put <code>--</code> before <code>--template</code> so it reaches create-vite.</div>');
+      var specs=(r.specs||[]).concat(r.execSpec?[r.execSpec]:[]);
+      $("cmdSpecs").innerHTML=specs.length?specs.map(specCard).join(""):'<span class="empty">no package specs in this command</span>';
+    } else {
+      st.push('<div>This lab only labels '+esc(r.program||"this")+' commands; it does not check them against the program.</div>');
+      if(r.program==="git"&&r.subcommand)st.push('<div><b>command</b>: <code>'+esc(r.subcommand)+'</code></div>');
+      if(r.code!==undefined)st.push('<div><b>code</b>:</div><div class="f">'+esc(r.code)+'</div>');
+      say.push('<div class="big">'+esc(r.summary.charAt(0).toUpperCase()+r.summary.slice(1))+'.</div>');
+      $("cmdSpecs").innerHTML='<span class="empty">package specs are an npm idea</span>';
+    }
+    $("cmdSteps").innerHTML=st.join("");$("cmdSay").innerHTML=say.join("");
+  }
+  if(CM){
+    $("cmdPresets").innerHTML=CM.PRESETS.map(function(p,i){return '<button type="button" data-i="'+i+'">'+esc(p[0])+'</button>'}).join("");
+    [].forEach.call($("cmdPresets").children,function(b){b.onclick=function(){$("cmdIn").value=CM.PRESETS[+b.getAttribute("data-i")][1];[].forEach.call($("cmdPresets").children,function(x){x.classList.toggle("sel",x===b)});runCmd()}});
+    $("cmdIn").addEventListener("input",function(){[].forEach.call($("cmdPresets").children,function(x){x.classList.remove("sel")});runCmd()});
+    $("cmdIn").value=CM.PRESETS[0][1];$("cmdPresets").children[0].classList.add("sel");runCmd();
+  }
+
+  /* ---------- class lab ---------- */
+  var TM=window.TailwindModel;
+  var PHYS={"padding-inline":["padding-left","padding-right"],"padding-block":["padding-top","padding-bottom"],"margin-inline":["margin-left","margin-right"],"margin-block":["margin-top","margin-bottom"],"padding-inline-start":["padding-left"],"padding-inline-end":["padding-right"],"margin-inline-start":["margin-left"],"margin-inline-end":["margin-right"],"inset":["top","left"],"inset-inline":["left","right"],"inset-block":["top","bottom"],"border-inline-width":["border-left-width"],"border-block-width":["border-top-width"],"border-inline-start-width":["border-left-width"],"border-inline-end-width":["border-right-width"],"border-width":["border-top-width"],"border-radius":["border-top-left-radius"],"gap":["row-gap","column-gap"],"padding":["padding-top"],"margin":["margin-top"],"flex":["flex-grow","flex-basis"],"grid-column":["grid-column-start","grid-column-end"],"border-inline-style":["border-left-style"],"border-block-style":["border-top-style"],"border-style":["border-top-style"],"border-color":["border-top-color"],"overflow":["overflow-x"]};
+  function twRun(check){
+    var list=$("twIn").value.trim().split(/\s+/).filter(Boolean),out=[],bad=0,good=0;
+    var box=null,probe=null;
+    if(check){box=document.createElement("div");box.style.cssText="position:absolute;left:-9999px;top:0;width:400px;height:300px;display:flex;font-size:16px";probe=document.createElement("div");box.appendChild(probe);document.body.appendChild(box)}
+    list.forEach(function(cls){
+      var r=TM.css(cls);
+      if(!r.ok){out.push('<div class="twc bad"><div class="twh"><code>'+esc(cls)+'</code><span>'+esc(r.reason)+'</span></div></div>');return}
+      var notes=[];
+      r.decls.forEach(function(d){var v=TM.resolve(d[1]);if(v&&v!==d[1]&&!/^--tw/.test(d[0]))notes.push('<code>'+esc(d[0])+'</code> = '+esc(v))});
+      r.variants.forEach(function(v){
+        var live="";
+        if(v.media&&window.matchMedia){var on=matchMedia(v.media).matches;live=' <span class="pill '+(on?'ok':'')+'">'+(on?'true in this window now':'false in this window now')+'</span>'}
+        notes.push(esc(v.note)+live);
+      });
+      var comp="";
+      if(check){
+        probe.removeAttribute("style");
+        Object.keys(r.theme).forEach(function(k){probe.style.setProperty(k,r.theme[k])});
+        probe.style.setProperty("--tw-border-style","solid");
+        r.decls.forEach(function(d){probe.style.setProperty(d[0],d[1])});
+        var cs=getComputedStyle(probe),got=[],okAll=true;
+        r.decls.forEach(function(d){if(/^--/.test(d[0]))return;var props=PHYS[d[0]]||[d[0]];props.forEach(function(p){var v=cs.getPropertyValue(p);if(!v)okAll=false;got.push('<code>'+esc(p)+': '+esc(v||"(not computed)")+'</code>')})});
+        okAll?good++:bad++;
+        comp='<div class="twlive">This browser computes '+got.join(", ")+'</div>';
+      }
+      out.push('<div class="twc"><div class="twh"><code>'+esc(cls)+'</code></div><pre class="twcss">'+esc(r.text)+'</pre>'+(notes.length?'<div class="twn">'+notes.join("<br>")+'</div>':'')+comp+'</div>');
+    });
+    if(box)document.body.removeChild(box);
+    $("twOut").innerHTML=out.join("")||'<span class="empty">type a class</span>';
+    $("twWidth").textContent="This window is "+innerWidth+"px wide ("+(innerWidth/16)+"rem).";
+    var pill=$("twPill");
+    if(check){pill.className="pill "+(bad?"bad":"ok");pill.textContent=bad?bad+" class(es) had a property this browser did not compute":"✓ "+good+" class(es): every declaration computed in this browser"}else{pill.className="pill";pill.textContent=""}
+  }
+  if(TM){
+    $("twPresets").innerHTML=TM.PRESETS.map(function(p,i){return '<button type="button" data-i="'+i+'">'+esc(p.length>34?p.slice(0,32)+"…":p)+'</button>'}).join("");
+    [].forEach.call($("twPresets").children,function(b){b.onclick=function(){twLast=false;$("twIn").value=TM.PRESETS[+b.getAttribute("data-i")];[].forEach.call($("twPresets").children,function(x){x.classList.toggle("sel",x===b)});twRun(false)}});
+    $("twIn").addEventListener("input",function(){[].forEach.call($("twPresets").children,function(x){x.classList.remove("sel")});twLast=false;twRun(false)});
+    var twLast=false;
+    $("twCheck").onclick=function(){twLast=true;twRun(true)};
+    addEventListener("resize",function(){twRun(twLast)}); // media conditions change with the window: redraw, keeping the live check if it was run
+    $("twIn").value=TM.PRESETS[0];$("twPresets").children[0].classList.add("sel");twRun(false);
+  }
+
+  /* ---------- forgetting curve (illustration) ---------- */
+  var REV=[1,3,7,16];
+  function curve(n){
+    // R(t) = exp(-(t - lastReview)/S); each review resets to 1 and multiplies S by 2.5
+    var pts=[],S=1.5,last=0,ri=0;
+    for(var t=0;t<=30;t+=0.25){if(ri<n&&t>=REV[ri]){last=REV[ri];S*=2.5;ri++}pts.push([t,Math.exp(-(t-last)/S)])}
+    return pts;
+  }
+  function drawCurve(){
+    var n=+$("fcReviews").value,svg=$("fcSvg"),X=function(t){return 46+t*19},Y=function(r){return 196-r*170};
+    $("fcN").textContent=n;
+    function path(p){return p.map(function(q,i){return (i?"L":"M")+X(q[0]).toFixed(1)+" "+Y(q[1]).toFixed(1)}).join(" ")}
+    var h='<line class="ax" x1="46" y1="196" x2="616" y2="196" stroke="#8a94a3"/><line class="ax" x1="46" y1="26" x2="46" y2="196" stroke="#8a94a3"/>';
+    [0,0.5,1].forEach(function(r){h+='<text class="tl-t s" fill="#8a94a3" font-size="10" x="40" y="'+(Y(r)+4)+'" text-anchor="end">'+(r*100)+'%</text>'});
+    [0,7,14,21,28].forEach(function(d){h+='<text class="tl-t s" fill="#8a94a3" font-size="10" x="'+X(d)+'" y="212" text-anchor="middle">day '+d+'</text>'});
+    h+='<path class="fc-none" fill="none" stroke="#8a94a3" stroke-dasharray="5 4" d="'+path(curve(0))+'"/>';
+    if(n)h+='<path class="fc-rev" fill="none" stroke="#2445d0" stroke-width="2.5" d="'+path(curve(n))+'"/>';
+    for(var i=0;i<n;i++)h+='<circle class="fc-dot" fill="#2445d0" cx="'+X(REV[i])+'" cy="'+Y(1)+'" r="4"/>';
+    if(n)h+='<text class="tl-t s" fill="#8a94a3" font-size="10" x="'+(X(REV[n-1])+8)+'" y="'+(Y(1)+4)+'">← reviews (dots)</text>';
+    h+='<text class="tl-t s" fill="#8a94a3" font-size="10" x="606" y="'+(Y(curve(0)[120][1])-6)+'" text-anchor="end">no reviews</text>';
+    svg.innerHTML=h;
+    var end=curve(n)[120][1];
+    $("fcSay").textContent=n?"With reviews on days "+REV.slice(0,n).join(", ")+", day 30 ends near "+Math.round(end*100)+"% (illustrative), against "+Math.round(curve(0)[120][1]*100)+"% with none.":"With no reviews the curve keeps falling (illustrative numbers).";
+  }
+  $("fcReviews").addEventListener("input",drawCurve);drawCurve();
+
+  /* ---------- recall trainer (Leitner boxes) ---------- */
+  var CARDS=[
+    ["t","Engine vs runtime: what is the difference?","The engine executes the language (V8). The runtime is the engine plus an environment's APIs and event loop: the browser adds the DOM, Node adds files and the network."],
+    ["t","Is Node a compiler?","No. It is a runtime: a C++ program that embeds V8 (which interprets and JIT-compiles) and libuv's event loop."],
+    ["t","Where does our React code run?","Only in the user's browser. Node runs the tools that prepare it."],
+    ["t","Module vs package?","A module is one file with export/import. A package is a folder of modules with a package.json, published to the registry."],
+    ["t","What is the registry?","The server that stores every published package (registry.npmjs.org). npm install downloads from it; authors publish to it."],
+    ["t","What is a scope, and why does it exist?","A prefix @owner/ that only one account can publish under. It shows who made a package and lets two owners use the same short name."],
+    ["t","In @tailwindcss/vite@4.3.3, what does each @ mean?","Front @: the scope (owner). The @ after the name: the version (or range, or tag)."],
+    ["t","Version, range or tag: 4.3.3, ^4.3.0, latest?","4.3.3 is a version, ^4.3.0 a range (at least 4.3.0, below 5), latest a tag the registry points at a version."],
+    ["t","Library or framework: what is the test?","We call a library; a framework calls us (inversion of control)."],
+    ["t","Why is React called a library, and Next.js a framework?","React covers only the UI (we call render, it calls our components). Next.js decides routing, data loading and building, and calls our code."],
+    ["t","What does npm do?","Downloads packages and their dependencies into node_modules, records exact versions in package-lock.json, and runs package.json's scripts."],
+    ["t","What is npx?","npm exec: it runs a command from a package, from node_modules/.bin if installed, otherwise downloads it for this run."],
+    ["t","What does a lone -- do in a command?","Ends npm's options: every word after it is passed on untouched to the next program."],
+    ["t","Why does npm run dev find vite?","npm puts node_modules/.bin (where the vite link lives) first on PATH before running the script."],
+    ["t","Vite is two things. Which?","A dev server while we work, and a build tool (bundle + minify into dist/) when we publish."],
+    ["t","Does Vite check types?","No. It removes them. The editor and tsc check them; npm run build runs tsc first."],
+    ["t","What happens to a file the browser requests from Vite?","loadAndTransform: load it, then call every plugin's transform hook (types removed, JSX to calls, imports to URLs, CSS generated)."],
+    ["t","API, callback, hook, plugin in one sentence?","A plugin provides callbacks for a host's hooks, through the host's API."],
+    ["t","Hook in Vite vs hook in React?","Vite: a named moment where Vite calls our function (transform). React: a use… function we call (useState)."],
+    ["t","Is daisyUI a Vite plugin?","No. It is a Tailwind plugin; Tailwind is the Vite plugin."],
+    ["t","What does hover: add in Tailwind 4, besides :hover?","An @media (hover: hover) wrapper, so touch screens do not keep the hover style after a tap."],
+    ["t","Mobile-first: what does lg: mean?","From 64rem (1024px) wide and up. No prefix applies at every width."],
+    ["t","Why can p-2.5 work but p-0.3 not?","The spacing multiplier must be a multiple of 0.25."],
+    ["c","Install every package package.json already lists","npm install"],
+    ["c","Add react-toastify to the project's dependencies","npm install react-toastify"],
+    ["c","Add TypeScript as a dev dependency","npm install --save-dev typescript"],
+    ["c","Install Tailwind, its Vite plugin and daisyUI in one command","npm install tailwindcss @tailwindcss/vite daisyui"],
+    ["c","Install exactly version 4.3.3 of tailwindcss","npm install tailwindcss@4.3.3"],
+    ["c","Remove daisyui from the project","npm uninstall daisyui"],
+    ["c","Start the dev server (the dev script)","npm run dev"],
+    ["c","Build the project for publishing","npm run build"],
+    ["c","Check TypeScript types once, without writing files, using npx","npx tsc --noEmit"],
+    ["c","Create a Vite React + TypeScript project called dev-stack","npm create vite@latest dev-stack -- --template react-ts"],
+    ["w","Lay children out in a row","flex"],
+    ["w","16px of padding on the left and right","px-4"],
+    ["w","Hidden on phones, shown as flex from 1024px up (two classes, type the second)","lg:flex"],
+    ["w","Turn the text pink-600 on hover","hover:text-pink-600"],
+    ["w","Centre a block that has a max width, using margins","mx-auto"],
+    ["w","Three equal grid columns","grid-cols-3"],
+    ["w","Stick to the top of the window while scrolling (the position part)","sticky"],
+    ["w","Pill-shaped fully rounded corners","rounded-full"]
+  ];
+  var DAYS=[0,2,4,8,16],KEY="rte-wdv-leitner",DAY=86400000,state={},queue=[],cur=null,revealed=false;
+  function load(){try{var s=localStorage.getItem(KEY);state=s?JSON.parse(s)||{}:{}}catch(e){state={}}}
+  function save(){try{localStorage.setItem(KEY,JSON.stringify(state))}catch(e){}}
+  function info(i){return state[i]||{box:0,due:0}}
+  function boxes(){var c=[0,0,0,0,0,0];CARDS.forEach(function(_,i){c[info(i).box]++});$("trBoxes").innerHTML=["new","1","2","3","4","5"].map(function(n,k){return '<span class="bx'+(k?'':' new')+'"><b>'+c[k]+'</b>'+(k?'box '+n:'new')+'</span>'}).join("")}
+  function due(){var now=Date.now();return CARDS.map(function(_,i){return i}).filter(function(i){return info(i).due<=now})}
+  function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),t=a[i];a[i]=a[j];a[j]=t}return a}
+  function start(all){queue=shuffle(all?CARDS.map(function(_,i){return i}):due());next()}
+  function next(){boxes();var d=due().length;$("trDue").textContent=d+" due now";$("trDue").className="pill"+(d?"":" ok");cur=queue.shift();revealed=false;render()}
+  function grade(ok){var s=info(cur);s.box=ok?Math.min(5,s.box+1):1;s.due=Date.now()+DAYS[s.box-1]*DAY;state[cur]=s;save();next()}
+  var KIND={t:"Word",c:"Command: type it",w:"Tailwind class: type it"};
+  function render(){
+    var el=$("trCard");
+    if(cur===undefined){el.innerHTML='<p class="done">Nothing due right now. Come back tomorrow, or press <b>Practise all now</b>.</p>';return}
+    var c=CARDS[cur],s=info(cur);
+    var h='<div class="ch"><span>'+KIND[c[0]]+'</span><span>'+(s.box?'box '+s.box:'new card')+' · '+(queue.length)+' left after this</span></div><div class="cq">'+esc(c[1])+'</div>';
+    if(c[0]==="t"){
+      h+=revealed?'<div class="ca">'+esc(c[2])+'</div><div class="ctl"><span>Did we get it?</span><button type="button" id="trMiss">Not quite → box 1</button><button type="button" class="go" id="trHit">Got it → box '+Math.min(5,s.box+1)+'</button></div>':'<div class="ctl"><button type="button" class="go" id="trShow">Show the answer (say it first)</button></div>';
+    } else {
+      h+='<label class="srl" for="trAns">Your answer</label><input id="trAns" class="cmdin" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="'+(c[0]==="c"?"npm …":"a class")+'"><div class="ctl"><button type="button" class="go" id="trSub">Check</button><button type="button" id="trGive">Show the answer</button></div><div id="trRes" role="status"></div>';
+    }
+    el.innerHTML=h;
+    if($("trShow"))$("trShow").onclick=function(){revealed=true;render();$("trHit").focus()};
+    if($("trHit")){$("trHit").onclick=function(){grade(true)};$("trMiss").onclick=function(){grade(false)}}
+    if($("trSub")){
+      var check=function(){
+        var v=$("trAns").value.trim(),ok;
+        if(c[0]==="c")ok=CM.same(v,c[2]);
+        else{var a=TM.css(v),b=TM.css(c[2]);ok=a.ok&&JSON.stringify([a.decls,a.medias,a.variants.map(function(x){return x.pseudo||""})])===JSON.stringify([b.decls,b.medias,b.variants.map(function(x){return x.pseudo||""})])}
+        $("trRes").innerHTML='<div class="ca '+(ok?'okc':'badc')+'">'+(ok?'✓ Right':'✗ Not the same')+'. Expected: <code>'+esc(c[2])+'</code>'+(ok&&v!==c[2]?' (ours differs in spelling but '+(c[0]==="c"?'npm treats it identically':'Tailwind writes the same CSS')+')':'')+'</div><div class="ctl"><button type="button" class="go" id="trOn">Next card</button></div>';
+        $("trSub").disabled=true;$("trGive").disabled=true;
+        $("trOn").onclick=function(){grade(ok)};$("trOn").focus();
+      };
+      $("trSub").onclick=check;$("trAns").addEventListener("keydown",function(e){if(e.key==="Enter"&&!$("trSub").disabled)check()});
+      $("trGive").onclick=function(){$("trRes").innerHTML='<div class="ca badc">Answer: <code>'+esc(c[2])+'</code>. Type it once yourself now, then it goes back to box 1.</div><div class="ctl"><button type="button" class="go" id="trOn">Next card</button></div>';$("trSub").disabled=true;$("trGive").disabled=true;$("trOn").onclick=function(){grade(false)};$("trOn").focus()};
+    }
+  }
+  if(CM&&TM){
+    $("trCount").textContent=CARDS.length;
+    load();$("trAll").onclick=function(){start(true)};$("trReset").onclick=function(){state={};try{localStorage.removeItem(KEY)}catch(e){}start(false)};
+    start(false);
+  }
+})();
+</script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
+</body>
+</html>

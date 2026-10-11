@@ -1,7 +1,7 @@
 {
  "id": "hit-test",
- "date": "2026-10-09T18:43:05.447Z",
- "platform": "linux 6.18.44-fc-v80 x64",
+ "date": "2026-10-11T22:05:29.752Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
  "node": "22.22.0",
  "v8": "12.4.254.21-node.33",
  "reference": "Chromium 141.0.7390.37 document.elementFromPoint",

@@ -1,0 +1,14 @@
+{
+ "id": "tailwind",
+ "date": "2026-10-11T22:09:34.251Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "Tailwind CSS 4.3.3 (the tailwindcss package's compile() and build(), a fresh compiler per class)",
+ "cases": 2183,
+ "matched": 2183,
+ "passed": true,
+ "seed": 2026,
+ "detail": "2183 distinct classes (217 hand-picked, the rest seeded random, with up to two variants): the same selector, @media wrappers and declarations in the same order, the same :root theme variables, or rejected by both",
+ "failureCount": 0
+}

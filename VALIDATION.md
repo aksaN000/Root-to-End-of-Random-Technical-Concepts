@@ -8,16 +8,18 @@ To rerun everything: `npm test` (setup in [TESTING.md](TESTING.md)). When a chec
 
 | Check | Compared with | Cases | Result | Last run |
 |---|---|---|---|---|
-| [V8 bytecode model](#v8-bytecode-model) | V8 12.4.254.21-node.33 (Node 22.22.0) | 300 | ✅ 300 / 300 match | 2026-10-09 |
-| [LR parser engine](#lr-parser-engine) | Dragon Book 2nd ed. Fig. 4.37 and 4.38; bison (GNU Bison) 3.8.2 | 11 | ✅ 11 / 11 match | 2026-10-09 |
-| [Event-loop playground model](#event-loop-playground-model) | Node 22.22.0 (V8 12.4.254.21-node.33, libuv 1.51.0) | 18 | ✅ 18 / 18 match | 2026-10-09 |
-| [DNS and TLS byte dissectors](#dns-and-tls-byte-dissectors) | scapy 2.8.0 (Python 3.13.16) | 18 | ✅ 18 / 18 match | 2026-10-09 |
-| [CORS decision model](#cors-decision-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 2,880 | ✅ 2,880 / 2,880 match | 2026-10-09 |
-| [HTML parser model](#html-parser-model) | Chrome 141.0.7390.37 DOMParser | 8,929 | ✅ 8,929 / 8,929 match | 2026-10-09 |
-| [Event dispatch model](#event-dispatch-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 1,609 | ✅ 1,609 / 1,609 match | 2026-10-09 |
-| [Hit-test model](#hit-test-model) | Chromium 141.0.7390.37 document.elementFromPoint | 40,320 | ✅ 40,320 / 40,320 match | 2026-10-09 |
-| [Autograd engine](#autograd-engine) | PyTorch 2.14.1+cpu (CPU, Python 3.13.16) | 2,001 | ✅ 2,001 / 2,001 match | 2026-10-09 |
-| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 18 | ✅ 18 / 18 match | 2026-10-09 |
+| [V8 bytecode model](#v8-bytecode-model) | V8 12.4.254.21-node.33 (Node 22.22.0) | 300 | ✅ 300 / 300 match | 2026-10-11 |
+| [LR parser engine](#lr-parser-engine) | Dragon Book 2nd ed. Fig. 4.37 and 4.38; bison (GNU Bison) 3.8.2 | 11 | ✅ 11 / 11 match | 2026-10-11 |
+| [Event-loop playground model](#event-loop-playground-model) | Node 22.22.0 (V8 12.4.254.21-node.33, libuv 1.51.0) | 18 | ✅ 18 / 18 match | 2026-10-11 |
+| [DNS and TLS byte dissectors](#dns-and-tls-byte-dissectors) | scapy 2.8.0 (Python 3.13.16) | 18 | ✅ 18 / 18 match | 2026-10-11 |
+| [CORS decision model](#cors-decision-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 2,880 | ✅ 2,880 / 2,880 match | 2026-10-11 |
+| [HTML parser model](#html-parser-model) | Chrome 141.0.7390.37 DOMParser | 8,929 | ✅ 8,929 / 8,929 match | 2026-10-11 |
+| [Event dispatch model](#event-dispatch-model) | Chromium 141.0.7390.37 (Playwright 1.56.0) | 1,609 | ✅ 1,609 / 1,609 match | 2026-10-11 |
+| [Hit-test model](#hit-test-model) | Chromium 141.0.7390.37 document.elementFromPoint | 40,320 | ✅ 40,320 / 40,320 match | 2026-10-11 |
+| [Autograd engine](#autograd-engine) | PyTorch 2.14.1+cpu (CPU, Python 3.13.16) | 2,001 | ✅ 2,001 / 2,001 match | 2026-10-11 |
+| [npm command model](#npm-command-model) | npm 10.9.4 on Node v22.22.0: bash for word splitting, bin/npx-cli.js, nopt's parse with npm's option definitions, lib/utils/cmd-list.js deref(), and npm-package-arg | 4,793 | ✅ 4,793 / 4,793 match | 2026-10-11 |
+| [Tailwind class model](#tailwind-class-model) | Tailwind CSS 4.3.3 (the tailwindcss package's compile() and build(), a fresh compiler per class) | 2,183 | ✅ 2,183 / 2,183 match | 2026-10-11 |
+| [Pages in a real browser](#pages-in-a-real-browser) | Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0 | 20 | ✅ 20 / 20 match | 2026-10-11 |
 
 ## V8 bytecode model
 
@@ -26,7 +28,7 @@ To rerun everything: `npm test` (setup in [TESTING.md](TESTING.md)). When a chec
 - **Method:** Random expressions over the parameters `a`, `b`, `c` and number literals are compiled by real V8 (`node --print-bytecode`) and by the model.
 - **What "match" means:** The bytecode listing is identical instruction for instruction: opcodes, register operands, feedback slot numbers, and `.Wide`/`.ExtraWide` prefixes. Tokens and syntax trees are not compared directly.
 - **Not covered:** Statements, calls, objects, strings and comparisons; V8 versions other than the one named (bytecode changes between versions, so this check is skipped on other Node versions).
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 300 of 300.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 300 of 300.
 - **Random batches:** 300 with seed 7. The same seeds always generate the same inputs.
 - **Command:** `cd v8-pipeline && node verify/compare-with-node.js 300 7`
 
@@ -37,7 +39,7 @@ To rerun everything: `npm test` (setup in [TESTING.md](TESTING.md)). When a chec
 - **Method:** The expression grammar's table is compared cell by cell with the Dragon Book (2nd ed.) Fig. 4.37 and its parse of `id * id + id` move by move with Fig. 4.38; the conflicts the page teaches are checked; if GNU Bison is installed, its own conflict reports for the same grammars are checked too.
 - **What "match" means:** Every ACTION and GOTO cell, every move, the FIRST and FOLLOW sets shown, and the presence or absence of conflicts.
 - **Not covered:** LALR(1) and canonical LR(1) table construction (the page shows real Bison output for those), error recovery, precedence declarations.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 11 of 11.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 11 of 11.
 
 <details><summary>Individual checks</summary>
 
@@ -64,7 +66,7 @@ ok   bison (GNU Bison) 3.8.2: S -> L = R | R has no conflicts (LALR handles it)
 - **Method:** Hand-written programs (timers, `.then` chains, `async`/`await`, returning promises, `new Promise`) run in Node and in the model. In the browser, the playground also runs every program in the reader's own engine.
 - **What "match" means:** The printed lines and their order are identical.
 - **Not covered:** Rejections, `if`/loops, `process.nextTick`, timer clamping, rendering steps and real task priorities; the model reports these as outside its subset.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 18 of 18.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 18 of 18.
 - **Command:** `cd js-event-loop && node verify/compare-loop-with-node.js`
 
 ## DNS and TLS byte dissectors
@@ -74,7 +76,7 @@ ok   bison (GNU Bison) 3.8.2: S -> L = R | R has no conflicts (LALR handles it)
 - **Method:** scapy, an independent packet library, parses the same captured bytes; fields are compared (IDs, names, types, TTL, address, cipher suites, SNI, groups, signature algorithms, ALPN, versions, key shares), plus the negotiated group and cipher Chrome logged.
 - **What "match" means:** Each listed field has the same value in both parsers.
 - **Not covered:** Field types that do not appear in these captures and decryption of the encrypted TLS records.
-- **Latest run:** 2026-10-09 on Linux-6.18.44-fc-v80-x86_64-with-glibc2.39, Node undefined. Passed: 18 of 18.
+- **Latest run:** 2026-10-11 on Linux-6.18.44-fc-v114-x86_64-with-glibc2.39, Node undefined. Passed: 18 of 18.
 
 <details><summary>Individual checks</summary>
 
@@ -108,7 +110,7 @@ ok   NetLog says the same cipher
 - **Method:** Every combination of method (3) × request headers (5) × credentials mode (2) × Allow-Origin (3) × Allow-Methods (4) × Allow-Headers (4) × Allow-Credentials (2) is fetched by real Chromium from a local server, each at its own URL so preflight caching cannot interfere.
 - **What "match" means:** For every case: whether Chrome sent a preflight, and whether `fetch()` resolved or rejected. Error messages and response headers are not compared.
 - **Not covered:** Non-2xx preflight status codes, redirects, the preflight cache, Private Network Access, `Access-Control-Expose-Headers`, and other browsers. Chrome lets `Access-Control-Allow-Headers: *` cover `Authorization` (the stricter spec rule sits behind a disabled feature flag); the model follows Chrome by default and the page shows the difference.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 2,880 of 2,880. 659 fetches succeeded, 2112 preflights sent.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 2,880 of 2,880. 659 fetches succeeded, 2112 preflights sent.
 - **Command:** `cd fetch-to-the-wire && node verify/cors-matrix.js`
 
 ## HTML parser model
@@ -118,7 +120,7 @@ ok   NetLog says the same cipher
 - **Method:** Hand-picked tricky snippets plus random tag soup from four seeded batches are parsed by real Chrome's `DOMParser` and by the model; duplicates are removed before counting.
 - **What "match" means:** The whole document tree is identical in html5lib test format: element names, attributes and their values, text, comments and the DOCTYPE. Parse errors are not compared.
 - **Not covered:** Tables, forms, `select`, `template`, framesets, ruby, SVG and MathML (the model refuses these), the full named-entity table, and scripts that run during parsing.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 8,929 of 8,929. 61 hand-picked + 9000 random (seeds 7, 2026, 99, 4242); 8929 distinct inputs after removing duplicates.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 8,929 of 8,929. 61 hand-picked + 9000 random (seeds 7, 2026, 99, 4242); 8929 distinct inputs after removing duplicates.
 - **Random batches:** 1,000 with seed 7, 3,000 with seed 2026, 3,000 with seed 99, 2,000 with seed 4242, plus 61 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd html-to-pixels && node verify/compare-with-chrome.js 1000:7 3000:2026 3000:99 2000:4242`
 
@@ -129,7 +131,7 @@ ok   NetLog says the same cipher
 - **Method:** The lab's presets and random programs (a tree, listeners with capture/once/passive and actions such as stopPropagation, preventDefault, queueing a microtask, adding or removing listeners mid-dispatch, and one dispatch) run in the model and in real Chromium with real listeners (`click-to-listener/dispatch-real.js`). "By user" programs are clicked with Playwright's mouse, which enters Chrome at the browser process; "by script" programs call `dispatchEvent` from a script.
 - **What "match" means:** The full log is identical: which listeners ran, in what order, with which `eventPhase` and `currentTarget`, where each microtask ran, and the final `defaultPrevented`.
 - **Not covered:** Shadow DOM and retargeting, `relatedTarget`, default actions, listeners that throw, `handleEvent` objects, `AbortSignal`, and the other events a real click fires (pointerdown, mousedown, …), which the programs do not listen to.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 1,609 of 1,609. 799 real clicks through the browser's input path and 810 script dispatches.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 1,609 of 1,609. 799 real clicks through the browser's input path and 810 script dispatches.
 - **Random batches:** 400 with seed 7, 400 with seed 2026, 400 with seed 99, 400 with seed 4242, plus 10 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd click-to-listener && node verify/compare-dispatch.js`
 
@@ -140,7 +142,7 @@ ok   NetLog says the same cipher
 - **Method:** The lab's presets and random scenes are drawn exactly as the lab draws them, and the model's answer is compared with `document.elementFromPoint` at 40 whole-pixel points per scene.
 - **What "match" means:** The same element (by id) at every point, or both say the stage.
 - **Not covered:** Transforms, opacity, filters and other stacking-context triggers, in-flow content and text, rounded corners, scrollbars, iframes, and fractional points.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 40,320 of 40,320. 1008 distinct scenes (8 presets + 1000 random), 40 points each; 1008 scenes match at every point.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 40,320 of 40,320. 1008 distinct scenes (8 presets + 1000 random), 40 points each; 1008 scenes match at every point.
 - **Random batches:** 250 with seed 7, 250 with seed 2026, 250 with seed 99, 250 with seed 4242, plus 8 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd click-to-listener && node verify/compare-hit-test.js`
 
@@ -151,9 +153,29 @@ ok   NetLog says the same cipher
 - **Method:** The lab's presets and random Python programs (leaves, `+ - * / **`, unary minus, constants, and tanh, exp, log, sin, cos, sigmoid, relu) run in the model and in real PyTorch. The graph is compared by walking `grad_fn.next_functions`; the execution order is recorded with a pre-hook on every node.
 - **What "match" means:** The same graph (every node's name and next edges), the same order of sequence numbers, the same execution order, and the same leaf gradients: nan and inf exactly, other values within 1e-12 times the largest gradient that flowed through the graph.
 - **Not covered:** Tensors with more than one element and broadcasting, in-place operations, `no_grad`, hooks, `create_graph`, and GPU streams.
-- **Latest run:** 2026-10-09 on Linux-6.18.44-fc-v80-x86_64-with-glibc2.39, Node 22.22.0. Passed: 2,001 of 2,001. 11370 backward nodes compared; 295 programs with nan or inf gradients.
+- **Latest run:** 2026-10-11 on Linux-6.18.44-fc-v114-x86_64-with-glibc2.39, Node 22.22.0. Passed: 2,001 of 2,001. 11370 backward nodes compared; 295 programs with nan or inf gradients.
 - **Random batches:** 500 with seed 7, 500 with seed 2026, 500 with seed 99, 500 with seed 4242, plus 8 hand-picked cases. The same seeds always generate the same inputs.
 - **Command:** `cd autograd && python3 verify/compare-with-pytorch.py`
+
+## npm command model
+
+- **Our code:** `web-dev-vocabulary/command-model.js`: shell word splitting, npx's rewrite to `npm exec`, nopt's option parsing, `cmd-list.js` aliases and abbreviations, and npm-package-arg's spec types and name rules (npm's tables are copied into `npm-tables.js`) (page: [web-dev-vocabulary](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/))
+- **Reference:** npm 10.9.4 on Node v22.22.0: bash for word splitting, bin/npx-cli.js, nopt's parse with npm's option definitions, lib/utils/cmd-list.js deref(), and npm-package-arg
+- **Method:** The lab's presets and seeded random command lines (npm and npx, with commands, aliases, typos, known and unknown options, glued shorthands, `--`, and package specs of every type) are split by bash and by the model, then each step is compared with npm's own code from the npm that ships with Node: `bin/npx-cli.js` (run with its last line stubbed), nopt's `parse` with npm's option definitions, `cmd-list.js` `deref()`, and npm-package-arg; hand-picked specs cover the edges. The copied tables are compared with the running npm's.
+- **What "match" means:** The same words, the same rewritten argv, the same options and positional words, the same command, and for each package spec the same type, name, scope and fetch spec, or an error from both (with the same code where npm gives one).
+- **Not covered:** nopt's later type cleaning, everything after parsing (network, the dependency tree, the lockfile), shell features beyond quoting, and rarer hosted-git URL forms.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 4,793 of 4,793. 2977 distinct command lines (11 lab presets, the rest seeded random) checked word by word, option by option and command by command; 1816 package specs (71 hand-picked, the rest from the lines) checked for type, name, scope and fetch spec, or the same error.
+- **Command:** `cd web-dev-vocabulary && node verify/compare-commands.js 3000 2026`
+
+## Tailwind class model
+
+- **Our code:** `web-dev-vocabulary/tailwind-model.js`: Tailwind CSS 4's everyday utilities and variants, with the default theme copied into `tailwind-theme.js` (page: [web-dev-vocabulary](https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/web-dev-vocabulary/))
+- **Reference:** Tailwind CSS 4.3.3 (the tailwindcss package's compile() and build(), a fresh compiler per class)
+- **Method:** Hand-picked and seeded random classes (up to two variants each, including invalid values) are built one at a time by a fresh compiler from the pinned `tailwindcss` package and by the model.
+- **What "match" means:** The same selector, `@media` wrappers and declarations, in the same order and with the same text, and the same `:root` theme variables; or both write nothing.
+- **Not covered:** Shadows, rings, transforms, transitions, gradients, arbitrary values, opacity modifiers, `space-*`, plugins such as daisyUI, and how a full stylesheet merges rules that share a media query.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 2,183 of 2,183. 2183 distinct classes (217 hand-picked, the rest seeded random, with up to two variants): the same selector, @media wrappers and declarations in the same order, the same :root theme variables, or rejected by both.
+- **Command:** `cd web-dev-vocabulary && node verify/compare-tailwind.js 3000 2026`
 
 ## Pages in a real browser
 
@@ -162,7 +184,7 @@ ok   NetLog says the same cipher
 - **Method:** Each page is loaded in real Chromium at 1300 px and 390 px wide. The check fails on script errors, failed requests, sideways scrolling, missing components, quizzes or exam answers that do not respond, stale asset hashes, and accessibility violations found by axe-core in light and dark mode.
 - **What "match" means:** Zero problems on every page at both widths.
 - **Not covered:** Real phones with touch input, screen-reader testing by people, and whether the explanations are clear.
-- **Latest run:** 2026-10-09 on linux 6.18.44-fc-v80 x64, Node 22.22.0. Passed: 18 of 18. 9 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
+- **Latest run:** 2026-10-11 on linux 6.18.44-fc-v114 x64, Node 22.22.0. Passed: 20 of 20. 10 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa.
 
 <details><summary>Per page</summary>
 
@@ -186,6 +208,8 @@ ok   NetLog says the same cipher
 | threads-vs-event-loop | 390 px | 0 | 0 |
 | v8-pipeline | 1300 px | 0 | 0 |
 | v8-pipeline | 390 px | 0 | 0 |
+| web-dev-vocabulary | 1300 px | 0 | 0 |
+| web-dev-vocabulary | 390 px | 0 | 0 |
 </details>
 - **Command:** `node tools/check-pages.js   (add --live for the published site, --browser=firefox or webkit for other engines)`
 
