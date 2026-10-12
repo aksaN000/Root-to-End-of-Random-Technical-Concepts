@@ -1,0 +1,617 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How to Write Code in a .tsx File: JSX Syntax, Arrow Functions, Props, Keys and State | Root to End</title>
+<meta name="description" content="A companion cheat sheet to the Web dev track: the two zones of a React component, if/else and loops in JSX, arrow functions with ( ) or { }, onClick, props, key and new-array state updates, with live React 19 demos.">
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/react-data-loading/tsx-syntax/">
+<style>
+:root{--bg:#f6f7f9;--surface:#fff;--code:#eef1f5;--ink:#141a22;--muted:#566170;--rule:#d7dce3;--accent:#2445d0;--accent-soft:#e3e8fb;--trace:#9a5a00;--trace-bg:#fff0d4;--ok:#1b7a4b;--ok-bg:#dff3e8;--bad:#b4232c;--bad-bg:#fbe3e4;--z1:#0b6b65;--z1-bg:#dcf2ef;--z2:#a3245f;--z2-bg:#fbe6f0;
+--mono:ui-monospace,"JetBrains Mono",SFMono-Regular,Consolas,monospace;--body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1116;--surface:#151a21;--code:#11161d;--ink:#e5e9ef;--muted:#97a2b1;--rule:#28303b;--accent:#8ea5ff;--accent-soft:#1d2645;--trace:#f2b659;--trace-bg:#3a2a10;--ok:#5fd29a;--ok-bg:#12301f;--bad:#ff8a90;--bad-bg:#3a1517;--z1:#4fd1c5;--z1-bg:#123430;--z2:#f08bb8;--z2-bg:#3a1528;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.65}
+a{color:var(--accent)}
+.wrap{max-width:980px;margin:0 auto;padding:24px 18px 80px}
+header{padding:28px 0 18px;border-bottom:1px solid var(--rule)}
+h1{font-size:clamp(1.9rem,5vw,2.8rem);margin:6px 0 10px;line-height:1.15}
+h2{font-size:1.5rem;margin:0 0 6px;line-height:1.25}
+h3{font-size:1.08rem;margin:18px 0 6px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+nav.toc{display:flex;flex-wrap:wrap;gap:6px;margin:16px 0 0}
+nav.toc a{font-family:var(--mono);font-size:.78rem;text-decoration:none;border:1px solid var(--rule);background:var(--surface);color:var(--ink);padding:3px 9px;border-radius:6px}
+section{padding:38px 0 6px;scroll-margin-top:10px}
+p{margin:0 0 12px;max-width:72ch}
+code{font-family:var(--mono);font-size:.88em;background:var(--code);padding:.08em .35em;border-radius:4px;overflow-wrap:anywhere}
+pre{margin:0 0 14px;background:var(--code);border:1px solid var(--rule);border-radius:10px;padding:12px 14px;font-family:var(--mono);font-size:.83rem;line-height:1.6;overflow-x:auto}
+pre .c{color:var(--muted);font-style:italic}
+pre .k{background:var(--trace-bg);color:var(--trace);border-radius:3px}
+pre .bad{background:var(--bad-bg);color:var(--bad);border-radius:3px}
+pre .ok{background:var(--ok-bg);color:var(--ok);border-radius:3px}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface);margin:0 0 14px}
+table{border-collapse:collapse;width:100%;font-size:.9rem}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.74rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 14px;margin:0 0 14px;max-width:72ch}
+.warn{border-left-color:var(--bad)}
+.sticky{background:var(--trace-bg);border:1px solid var(--trace);border-radius:10px;padding:10px 14px;margin:0 0 14px;max-width:72ch}
+.sticky b{color:var(--trace)}
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;margin:0 0 16px}
+.lab h4{margin:0 0 8px;font-size:.95rem}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px}
+button{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 11px;border-radius:7px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,pre:focus-visible,.tbl:focus-visible,.out:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.out{font-family:var(--mono);font-size:.82rem;background:var(--code);border:1px dashed var(--rule);border-radius:8px;padding:8px 10px;min-height:2.6em;white-space:pre-wrap}
+.pill{font-family:var(--mono);font-size:.75rem;padding:2px 9px;border-radius:999px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:700px){.g2{grid-template-columns:1fr}}
+.box{border:1px solid var(--rule);border-radius:10px;padding:10px 12px;background:var(--bg);min-width:0}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.zones{display:block;width:100%;max-width:720px;height:auto}
+.zones .z1{fill:var(--z1-bg);stroke:var(--z1)}.zones .z2{fill:var(--z2-bg);stroke:var(--z2)}.zones .fn{fill:var(--surface);stroke:var(--rule)}
+.zones text{font-family:var(--mono);font-size:12px;fill:var(--ink)}.zones .t1{fill:var(--z1);font-weight:600;font-size:13px}.zones .t2{fill:var(--z2);font-weight:600;font-size:13px}
+.lrow{display:flex;align-items:center;gap:8px;border:1px solid var(--rule);border-radius:8px;padding:6px 10px;margin:0 0 6px;font-size:.9rem;background:var(--surface)}
+.lrow small{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+.qz{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:12px 14px;margin:0 0 12px}
+.qz .q{font-weight:600;margin:0 0 8px}
+.qz .opts{display:flex;flex-direction:column;gap:6px}
+.qz .opts button{text-align:left}
+.qz .opts button.right{border-color:var(--ok);background:var(--ok-bg);color:var(--ok)}
+.qz .opts button.wrong{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+.qz .ex{margin-top:8px;font-size:.9rem;display:none}
+footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--rule);font-size:.85rem;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <a href="../" style="font-family:var(--mono);font-size:.8rem;text-decoration:none">← From a JSON file to the screen</a>
+  <div class="eyebrow" style="margin-top:12px">Web dev track · companion to page 2 · TSX syntax</div>
+  <h1>How to write code in a <code style="font-size:.85em">.tsx</code> file</h1>
+  <p class="lede">If/else, loops, arrow functions with <code>( )</code> or <code>{ }</code>, props, keys, onClick and state updates: everything we used in the Dev Stack project, with live examples. The React demos run the real React 19.2.8 library, the same production build page 2 checks against.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#zones">1 · Two zones</a><a href="#skeleton">2 · File skeleton</a><a href="#zone1">3 · Zone 1</a><a href="#zone2">4 · Zone 2 (JSX)</a><a href="#fn-in-jsx">4.7 · Functions in JSX</a><a href="#arrows">5 · ( ) vs { }</a><a href="#now">6 · { } runs now</a><a href="#props">7 · Props</a><a href="#key">8 · key</a><a href="#state">9 · State updates</a><a href="#ts">10 · TypeScript</a><a href="#cheat">11 · Cheat sheet</a><a href="#quiz">12 · Quiz</a>
+  </nav>
+</header>
+
+<section id="zones">
+  <h2>1 · The one rule: a component has two zones</h2>
+  <p>A component is a normal JavaScript function. Before <code>return</code> we are in plain JavaScript; inside <code>return ( … )</code> we are in JSX. Almost every “how do I write X?” question is answered by asking: <b>which zone am I in?</b></p>
+  <svg class="zones" viewBox="0 0 720 300" role="img" aria-label="A component function with Zone 1, normal JavaScript before return, and Zone 2, JSX inside return, where only expressions in curly braces work.">
+    <rect class="fn" x="4" y="4" width="712" height="292" rx="14" stroke-width="1"/>
+    <text x="22" y="28">function TechCard({ prop_tech, prop_added }: TechCardProps) {</text>
+    <rect class="z1" x="30" y="42" width="660" height="100" rx="10" stroke-width="1.2"/>
+    <text class="t1" x="46" y="64">Zone 1 · normal JavaScript / TypeScript (before return)</text>
+    <text x="46" y="88">const, let, if / else, switch, for, for…of, while, functions, console.log</text>
+    <text x="46" y="110">const badgeColor = BADGE_COLORS[prop_tech.category] ?? "bg-gray-100";</text>
+    <text x="46" y="130">if (!prop_tech) return null;</text>
+    <rect class="z2" x="30" y="156" width="660" height="112" rx="10" stroke-width="1.2"/>
+    <text class="t2" x="46" y="178">Zone 2 · JSX (inside return ( … ))</text>
+    <text x="46" y="202">HTML-like tags; JavaScript only inside { }, and only EXPRESSIONS</text>
+    <text x="46" y="226">✓ {prop_tech.name}  ✓ {a ? b : c}  ✓ {ok &amp;&amp; &lt;p/&gt;}  ✓ {list.map(…)}</text>
+    <text x="46" y="250">✗ {if (…) …}   ✗ {for (…) …}   ✗ {const x = 1}</text>
+    <text x="22" y="288">}</text>
+  </svg>
+  <h3>Expression or statement?</h3>
+  <div class="tbl"><table>
+    <thead><tr><th></th><th>Meaning</th><th>Examples</th></tr></thead>
+    <tbody>
+      <tr><td><b>Expression</b></td><td>Gives back a <b>value</b>. It could stand on the right of <code>const x = …</code></td><td><code>5</code>, <code>tech.name</code>, <code>a + b</code>, <code>a ? b : c</code>, <code>ok &amp;&amp; &lt;p/&gt;</code>, <code>list.map(…)</code>, <code>getName()</code></td></tr>
+      <tr><td><b>Statement</b></td><td><b>Does</b> something; gives no value</td><td><code>if (…) {…}</code>, <code>for (…) {…}</code>, <code>while</code>, <code>const x = 1;</code>, <code>return</code></td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>Test:</b> can we write <code>const result = ___</code> with it? Yes → expression → allowed inside JSX's <code>{ }</code>. No → statement → only in Zone 1.</p>
+  <div class="lab" id="lab-expr">
+    <h4>Try it: expression or statement?</h4>
+    <div id="exprQ"></div>
+    <div class="out" id="exprOut" aria-live="polite">Pick an answer for each line.</div>
+  </div>
+</section>
+
+<section id="skeleton">
+  <h2>2 · The file skeleton</h2>
+<pre><span class="c">// 1. Imports (top of the file)</span>
+import { useState } from "react";
+import type { Technology } from "../types";
+
+<span class="c">// 2. Things outside components: run ONCE, when the file loads</span>
+const BADGE_COLORS: Record&lt;string, string&gt; = { Frontend: "bg-sky-50 text-sky-700" };
+
+<span class="c">// 3. The props type: what this component expects to be given</span>
+type TechCardProps = {
+  prop_tech: Technology;
+  prop_added: boolean;
+};
+
+<span class="c">// 4. The component</span>
+function TechCard({ prop_tech, prop_added }: TechCardProps) {
+  <span class="c">// ── Zone 1: normal JavaScript ──</span>
+  const badgeColor = BADGE_COLORS[prop_tech.category] ?? "bg-gray-100";
+
+  <span class="c">// ── Zone 2: JSX ──</span>
+  return (
+    &lt;article&gt;
+      &lt;h3&gt;{prop_tech.name}&lt;/h3&gt;
+    &lt;/article&gt;
+  );
+}
+
+<span class="c">// 5. Export, so other files can import it</span>
+export default TechCard;</pre>
+</section>
+
+<section id="zone1">
+  <h2>3 · Zone 1: normal JavaScript (before <code>return</code>)</h2>
+  <p>Everything works exactly as in plain JavaScript. Use this zone to prepare values, then just <em>use</em> them in the JSX.</p>
+<pre>function Example({ stack }: { stack: Technology[] }) {
+  <span class="c">// variables</span>
+  const count = stack.length;
+  let label = "";
+
+  <span class="c">// if / else if / else</span>
+  if (count === 0) {
+    label = "No technologies selected yet.";
+  } else if (count === 1) {
+    label = "1 Technology Selected";
+  } else {
+    label = count + " Technologies Selected";
+  }
+
+  <span class="c">// switch</span>
+  switch (count) {
+    case 0: console.log("empty"); break;
+    default: console.log("not empty");
+  }
+
+  <span class="c">// loops</span>
+  for (let i = 0; i &lt; stack.length; i++) console.log(stack[i].name);
+  for (const tech of stack) console.log(tech.name);
+  stack.forEach((tech) =&gt; console.log(tech.name));
+
+  <span class="c">// a helper function</span>
+  function isAdded(id: string) {
+    return stack.some((t) =&gt; t.id === id);
+  }
+
+  return &lt;p&gt;{label}&lt;/p&gt;;   <span class="c">// Zone 2 only USES what Zone 1 prepared</span>
+}</pre>
+  <h3>Early return: “if X, show something else entirely”</h3>
+<pre>function Panel({ stack }: { stack: Technology[] }) {
+  if (stack.length === 0) {
+    return &lt;p&gt;Your stack is empty.&lt;/p&gt;;   <span class="c">// stop here</span>
+  }
+  return &lt;ul&gt;…&lt;/ul&gt;;                       <span class="c">// only reached when not empty</span>
+}</pre>
+  <p><code>return null;</code> means “draw nothing”.</p>
+</section>
+
+<section id="zone2">
+  <h2>4 · Zone 2: JSX (inside <code>return</code>)</h2>
+  <h3>4.1 Show a value: <code>{ }</code></h3>
+<pre>&lt;h3&gt;{prop_tech.name}&lt;/h3&gt;
+&lt;p&gt;{stack.length} selected&lt;/p&gt;
+&lt;p&gt;{prop_tech.rating * 2}&lt;/p&gt;                          <span class="c">{/* any expression, maths too */}</span>
+&lt;img src={prop_tech.icon} alt={prop_tech.name} /&gt;    <span class="c">{/* attribute: braces, NO quotes */}</span>
+&lt;span className="text-xs"&gt;fixed text&lt;/span&gt;           <span class="c">{/* plain text: quotes, no braces */}</span></pre>
+  <p class="callout warn"><code>src="{prop_tech.icon}"</code> with quotes gives the literal text <code>{prop_tech.icon}</code>. Quotes <b>or</b> braces, never both.</p>
+
+  <h3>4.2 if / else → <code>condition ? A : B</code></h3>
+<pre>{prop_added ? "✓ Added to Stack" : "Add to Stack"}
+
+{stack.length === 0 ? (
+  &lt;div&gt;Your stack is empty.&lt;/div&gt;
+) : (
+  &lt;ul&gt;…&lt;/ul&gt;
+)}</pre>
+  <p>Read it as “true? → A, otherwise → B”. The round brackets around multi-line JSX are only for neatness.</p>
+
+  <h3>4.3 “if” with no else → <code>condition &amp;&amp; A</code></h3>
+<pre>{stack.length &gt; 0 &amp;&amp; &lt;button&gt;Remove all&lt;/button&gt;}</pre>
+  <p class="callout warn"><b>Trap:</b> <code>{stack.length &amp;&amp; &lt;button/&gt;}</code> prints a literal <b>0</b> on the page when the stack is empty, because <code>0 &amp;&amp; …</code> is <code>0</code> and React prints numbers. Make the left side a real true/false: <code>stack.length &gt; 0 &amp;&amp; …</code>.</p>
+  <div class="lab" id="lab-and">
+    <h4>Try it with real React: what does <code>{n &amp;&amp; &lt;b&gt;has items&lt;/b&gt;}</code> show?</h4>
+    <div class="row"><button data-n="0">n = 0</button><button data-n="3">n = 3</button></div>
+    <div class="g2"><div class="box"><h5>{n &amp;&amp; …}</h5><div id="andA">loading React…</div></div><div class="box"><h5>{n &gt; 0 &amp;&amp; …}</h5><div id="andB">loading React…</div></div></div>
+  </div>
+
+  <h3>4.4 else if (three or more cases)</h3>
+<pre>{count === 0 ? "None" : count === 1 ? "One" : "Many"}   <span class="c">// works, but hard to read</span></pre>
+  <p>Better: decide in Zone 1 (the <code>label</code> example in Section 3) and write <code>{label}</code> in the JSX.</p>
+
+  <h3>4.5 Loops → <code>.map()</code></h3>
+  <p><code>for</code> is a statement, so it can't go in <code>{ }</code>. <code>.map()</code> is an expression: it <b>returns a new array</b>, here an array of JSX, and React draws every item in it.</p>
+<pre>&lt;ul&gt;
+  {stack.map((tech) =&gt; (
+    &lt;li <span class="k">key={tech.id}</span>&gt;{tech.name}&lt;/li&gt;
+  ))}
+&lt;/ul&gt;
+
+<span class="c">// filter first, then map</span>
+{technologies
+  .filter((t) =&gt; t.category === "Frontend")
+  .map((t) =&gt; &lt;TechCard key={t.id} prop_tech={t} … /&gt;)}</pre>
+
+  <h3>4.6 JSX is not quite HTML</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>HTML</th><th>JSX</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td><code>class="…"</code></td><td><code>className="…"</code></td><td><code>class</code> is a reserved word in JavaScript</td></tr>
+      <tr><td><code>for="email"</code> (label)</td><td><code>htmlFor="email"</code></td><td><code>for</code> is reserved too</td></tr>
+      <tr><td><code>onclick="…"</code></td><td><code>onClick={() =&gt; …}</code></td><td>camelCase, and the value is a <b>function</b></td></tr>
+      <tr><td><code>&lt;img&gt;</code>, <code>&lt;br&gt;</code></td><td><code>&lt;img /&gt;</code>, <code>&lt;br /&gt;</code></td><td>every tag must be closed</td></tr>
+      <tr><td><code>style="color:red"</code></td><td><code>style={{ color: "red" }}</code></td><td>outer braces = JavaScript, inner braces = an object</td></tr>
+      <tr><td><code>&lt;!-- comment --&gt;</code></td><td><code>{/* comment */}</code></td><td>a JS comment inside braces</td></tr>
+      <tr><td>several top-level elements</td><td>one parent: <code>&lt;div&gt;…&lt;/div&gt;</code> or <code>&lt;&gt;…&lt;/&gt;</code></td><td><code>return</code> gives back only <b>one</b> thing; the fragment <code>&lt;&gt;</code> adds no element</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="fn-in-jsx">4.7 Functions inside JSX: why <code>onClick={() =&gt; { … }}</code> is allowed in Zone 2</h3>
+  <p>Zone 2 only allows expressions, and a function written as an arrow <b>is</b> an expression: its value is a function. It passes the test, because <code>const handle = () =&gt; { … }</code> is valid. So it may go inside <code>{ }</code>.</p>
+  <p>Writing the function does <b>not</b> run it. React stores it on the button and calls it on click. And inside the function's own <code>{ }</code> body we are inside a function again, so <b>Zone 1 rules apply there</b>: <code>const</code>, <code>if</code>, <code>console.log</code> and <code>return</code> are all fine.</p>
+<pre>&lt;button
+  onClick={<span class="k">() =&gt; {</span>                               <span class="c">// Zone 2: a function VALUE (an expression) ✓</span>
+    console.log("clicked", prop_tech.name);   <span class="c">// inside the body: Zone 1 again, statements ✓</span>
+    if (prop_added) return;
+    prop_onAdd(prop_tech);
+  <span class="k">}}</span>
+&gt;
+  Add to Stack
+&lt;/button&gt;</pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Inside <code>onClick={ }</code> we write</th><th>What the button receives</th><th>Runs</th></tr></thead>
+    <tbody>
+      <tr><td><code>() =&gt; prop_onAdd(prop_tech)</code></td><td>a small function (short body, automatic return)</td><td>on click ✓</td></tr>
+      <tr><td><code>() =&gt; { …several statements… }</code></td><td>a small function (block body)</td><td>on click ✓</td></tr>
+      <tr><td><code>handleClick</code> (defined in Zone 1, <b>no brackets</b>)</td><td>that function</td><td>on click ✓</td></tr>
+      <tr><td><code>handleClick()</code> or <code>prop_onAdd(prop_tech)</code></td><td>the <b>result</b> of calling it now (<code>undefined</code>)</td><td>immediately, while drawing ✗</td></tr>
+    </tbody>
+  </table></div>
+  <p>When the handler grows, move it to Zone 1 and pass it by name. It reads more cleanly and does the same thing:</p>
+<pre>function TechCard({ prop_tech, prop_onAdd, prop_added }: TechCardProps) {
+  <span class="c">// Zone 1: a normal function</span>
+  function handleClick() {
+    if (prop_added) return;
+    prop_onAdd(prop_tech);
+  }
+
+  return (
+    &lt;button onClick={<span class="k">handleClick</span>}&gt;Add to Stack&lt;/button&gt;   <span class="c">// the NAME, no ()</span>
+  );
+}</pre>
+  <p class="sticky"><b>Sticky note:</b> a zone is about <b>where</b> code sits. JSX's <code>{ }</code> takes expressions, and a function is an expression. Once we are inside a function's <code>{ }</code> body, we are back in normal JavaScript, so a JSX attribute can hold a whole little Zone 1.</p>
+</section>
+
+<section id="arrows">
+  <h2>5 · Arrow functions: <code>( )</code> vs <code>{ }</code></h2>
+  <div class="g2">
+    <div class="box"><h5>Body with ( ) or nothing: automatic return</h5>
+<pre style="margin:0">const double = (n) =&gt; n * 2;
+const card = (t) =&gt; (
+  &lt;li&gt;{t.name}&lt;/li&gt;
+);</pre></div>
+    <div class="box"><h5>Body with { }: you MUST write return</h5>
+<pre style="margin:0">const double = (n) =&gt; {
+  const result = n * 2;
+  <span class="k">return result;</span>
+};</pre></div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>We write</th><th>Returns</th></tr></thead>
+    <tbody>
+      <tr><td><code>(t) =&gt; t.name</code></td><td><code>t.name</code> ✓</td></tr>
+      <tr><td><code>(t) =&gt; (&lt;li&gt;{t.name}&lt;/li&gt;)</code></td><td>the <code>&lt;li&gt;</code> ✓</td></tr>
+      <tr><td><code>(t) =&gt; { return &lt;li&gt;{t.name}&lt;/li&gt;; }</code></td><td>the <code>&lt;li&gt;</code> ✓</td></tr>
+      <tr><td><code>(t) =&gt; { &lt;li&gt;{t.name}&lt;/li&gt; }</code></td><td><b>undefined</b> ✗: braces but no return, so <code>.map()</code> gives an array of nothing and <b>no cards appear, with no error</b></td></tr>
+      <tr><td><code>() =&gt; { name: "React" }</code></td><td><b>undefined</b> ✗: JS reads the braces as a block. Write <code>() =&gt; ({ name: "React" })</code> to return an object</td></tr>
+    </tbody>
+  </table></div>
+  <div class="lab" id="lab-arrow">
+    <h4>Try it: what does <code>["React", "Vue", "Svelte"].map(…)</code> give back? (runs real JavaScript)</h4>
+    <div class="row" id="arrowBtns"></div>
+    <pre id="arrowCode" style="margin:0 0 8px"></pre>
+    <div class="out" id="arrowOut" aria-live="polite"></div>
+  </div>
+  <p><b>Choose ( )</b> when the function is just one value or one piece of JSX. <b>Choose { } + return</b> when we need statements first (a <code>const</code>, an <code>if</code>, a <code>console.log</code>).</p>
+<pre><span class="c">// ( ): just JSX</span>
+{stack.map((tech) =&gt; (
+  &lt;li key={tech.id}&gt;{tech.name}&lt;/li&gt;
+))}
+
+<span class="c">// { }: a statement first, so return is needed</span>
+{stack.map((tech) =&gt; {
+  const short = tech.name.slice(0, 3);
+  return &lt;li key={tech.id}&gt;{short}&lt;/li&gt;;
+})}</pre>
+</section>
+
+<section id="now">
+  <h2>6 · The braces <code>{ }</code> run <b>now</b>, not on click</h2>
+  <p>The browser does not understand JSX. Before the page runs, Vite turns every tag into a function call that builds a plain object:</p>
+<pre>&lt;button onClick={prop_onAdd(prop_tech)}&gt;Add to Stack&lt;/button&gt;
+<span class="c">// becomes roughly</span>
+jsx("button", { onClick: prop_onAdd(prop_tech), children: "Add to Stack" })</pre>
+  <p>JavaScript works out every value of an object <b>immediately</b>, like <code>const s = { total: add(2, 3) }</code> runs <code>add</code> right away. So <code>onClick={prop_onAdd(prop_tech)}</code> calls it <b>while drawing</b> and stores its result (<code>undefined</code>) as the click handler.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>We write</th><th>When it runs</th><th>With what</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td><b>A</b> <code>onClick={() =&gt; prop_onAdd(prop_tech)}</code></td><td>on click</td><td>the technology</td><td>✓ correct</td></tr>
+      <tr><td><b>B</b> <code>onClick={prop_onAdd(prop_tech)}</code></td><td>immediately, while drawing</td><td>the technology</td><td>✗ every card adds itself on page load; the button does nothing</td></tr>
+      <tr><td><b>C</b> <code>onClick={prop_onAdd}</code></td><td>on click</td><td>the click <b>event</b></td><td>✗ the wrong thing is added</td></tr>
+    </tbody>
+  </table></div>
+  <div class="lab" id="lab-click">
+    <h4>Try it with real React: look at the log BEFORE clicking</h4>
+    <div id="clickDemo">loading React…</div>
+    <div class="out" id="clickLog" aria-live="polite" style="margin-top:8px"></div>
+  </div>
+  <p class="sticky"><b>Sticky note:</b> <code>onClick</code> needs <b>a function</b>, not the result of calling one. To pass an argument, wrap the call: <code>() =&gt; doIt(x)</code>. Same rule as <code>useEffect(fn)</code>: <code>fn</code> hands the function over, <code>fn()</code> calls it now.</p>
+</section>
+
+<section id="props">
+  <h2>7 · Props: how a parent hands data to a child</h2>
+  <p>Props work exactly like function arguments.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Plain JavaScript</th><th>React</th></tr></thead>
+    <tbody>
+      <tr><td>Define: <code>function greet(name) { … }</code></td><td>Define: <code>function TechCard({ prop_tech }) { … }</code></td></tr>
+      <tr><td>Call: <code>greet("Aksan")</code></td><td>Use: <code>&lt;TechCard prop_tech={tech} /&gt;</code></td></tr>
+      <tr><td><code>name</code> is the argument</td><td><code>prop_tech</code> is a prop</td></tr>
+    </tbody>
+  </table></div>
+<pre>&lt;TechCard prop_tech={tech} /&gt;
+<span class="c">//        └───┬───┘ └─┬─┘</span>
+<span class="c">//        prop NAME   prop VALUE  (together: one prop)</span>
+
+<span class="c">// React collects every prop into ONE object, the "props":</span>
+TechCard({ prop_tech: reactObject })</pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Word</th><th>Means</th></tr></thead>
+    <tbody>
+      <tr><td><b>prop</b></td><td>one name + value pair, for example <code>prop_tech={tech}</code></td></tr>
+      <tr><td><b>prop name</b></td><td><code>prop_tech</code>, the label the child looks for</td></tr>
+      <tr><td><b>prop value</b></td><td><code>tech</code>, what is sent</td></tr>
+      <tr><td><b>props</b></td><td>the object holding all of a component's props</td></tr>
+    </tbody>
+  </table></div>
+  <h3>The name does not have to match the value, but both sides must agree</h3>
+<pre><span class="c">// Technologies.tsx (sending)</span>
+&lt;TechCard key={tech.id} <span class="k">techs</span>={tech} /&gt;
+
+<span class="c">// TechCard.tsx (receiving): the same label in 3 places</span>
+type TechCardProps = { <span class="k">techs</span>: Technology };
+function TechCard({ <span class="k">techs</span> }: TechCardProps) {
+  return &lt;h3&gt;{<span class="k">techs</span>.name}&lt;/h3&gt;;
+}</pre>
+  <h3>Passing a function down: “lifting state up”</h3>
+  <p>When two siblings (the cards and the Your Stack panel) need the same data, it lives in their <b>common parent</b>. The parent passes the data down to show it, and a function down so children can ask for changes.</p>
+<pre>Technologies   owns stack + addToStack
+   │  &lt;TechGrid onAdd={addToStack} stack={stack} /&gt;
+   ▼
+TechGrid       passes them on
+   │  &lt;TechCard prop_onAdd={onAdd} prop_added={stack.some(…)} … /&gt;
+   ▼
+TechCard       button: onClick={() =&gt; prop_onAdd(prop_tech)}
+               <span class="c">// addToStack, onAdd and prop_onAdd are the SAME function</span></pre>
+  <p class="sticky"><b>Sticky note:</b> functions go <b>down</b> so children can ask; data comes <b>down</b> so children can show it. Props are read-only: a child never changes its props, it calls a function the parent gave it.</p>
+</section>
+
+<section id="key">
+  <h2>8 · <code>key</code>: a name tag for list items</h2>
+  <p>When a list re-renders, React compares the new items with the old ones. With a key it matches by name tag (“the item tagged <code>vue</code> is still <code>vue</code>”); without one it matches by position, which goes wrong when items are removed or reordered.</p>
+  <div class="lab" id="lab-key">
+    <h4>Try it with real React: tick React in both lists, then remove the first item</h4>
+    <div class="row"><button id="keyRm">Remove the first item</button><button id="keyReset">Start again</button></div>
+    <div class="g2"><div class="box"><h5>key={tech.id}</h5><div id="keyA">loading React…</div></div><div class="box"><h5>key={index}</h5><div id="keyB">loading React…</div></div></div>
+    <div class="out" id="keyMsg" aria-live="polite">Tick the box next to React in BOTH lists, then remove the first item.</div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>Rule</th><th>Why</th></tr></thead>
+    <tbody>
+      <tr><td>Put <code>key</code> on the element <code>.map()</code> returns</td><td>That is the list React compares</td></tr>
+      <tr><td>Unique within that list, and stable for the same item (<code>tech.id</code>)</td><td>The same technology always gets the same tag</td></tr>
+      <tr><td>Avoid the array index when items can be added, removed or reordered</td><td>The bug in the right-hand list above</td></tr>
+      <tr><td><code>key</code> is not a prop</td><td>React keeps it; the component never receives it</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="state">
+  <h2>9 · State updates: always a <b>new</b> array or object</h2>
+  <p>When we call <code>setStack(newValue)</code>, React checks <code>Object.is(oldValue, newValue)</code>. For objects and arrays that is an <b>identity</b> check (“is it the very same object in memory?”), not a check of the contents.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>What we pass to setStack</th><th>Object.is(old, new)</th><th>Redraw?</th></tr></thead>
+    <tbody>
+      <tr><td>the same array after <code>stack.push(tech)</code></td><td>true (same object)</td><td>No ✗</td></tr>
+      <tr><td><code>[...stack, tech]</code></td><td>false (new object)</td><td>Yes ✓</td></tr>
+      <tr><td><code>stack.filter((t) =&gt; t.id !== id)</code></td><td>false (filter always makes a new array)</td><td>Yes ✓</td></tr>
+      <tr><td><code>[]</code> (remove all)</td><td>false</td><td>Yes ✓</td></tr>
+    </tbody>
+  </table></div>
+  <div class="lab" id="lab-push">
+    <h4>Try it with real React: push vs a new array</h4>
+    <div id="pushDemo">loading React…</div>
+  </div>
+  <div class="lab" id="lab-is">
+    <h4>Object.is in real JavaScript</h4>
+    <div class="row" id="isBtns"></div>
+    <div class="out" id="isOut" aria-live="polite"></div>
+  </div>
+  <p class="sticky"><b>Sticky note:</b> never change state in place (<code>push</code>, <code>pop</code>, <code>splice</code>, <code>stack[0] = …</code>). Add with <code>[...stack, x]</code>, remove with <code>stack.filter(…)</code>, clear with <code>[]</code>.</p>
+</section>
+
+<section id="ts">
+  <h2>10 · The TypeScript parts we used</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>Syntax</th><th>Meaning</th><th>From our project</th></tr></thead>
+    <tbody>
+      <tr><td><code>: type</code></td><td>“this is of this type”</td><td><code>function addToStack(tech: Technology)</code></td></tr>
+      <tr><td><code>type X = { … }</code></td><td>describe an object's shape</td><td><code>type TechCardProps = { prop_tech: Technology; … }</code></td></tr>
+      <tr><td><code>boolean</code>, <code>string</code>, <code>number</code></td><td>basic types</td><td><code>prop_added: boolean</code></td></tr>
+      <tr><td><code>Technology[]</code></td><td>an array of Technology</td><td><code>stack: Technology[]</code></td></tr>
+      <tr><td><code>(tech: Technology) =&gt; void</code></td><td>a function that takes a Technology and returns nothing</td><td><code>prop_onAdd</code></td></tr>
+      <tr><td><code>useState&lt;Technology[]&gt;([])</code></td><td>the state's type in <code>&lt; &gt;</code>; without it, <code>[]</code> would be <code>never[]</code></td><td><code>stack</code></td></tr>
+      <tr><td><code>Record&lt;string, string&gt;</code></td><td>an object with string keys and string values</td><td><code>BADGE_COLORS</code></td></tr>
+      <tr><td><code>Promise&lt;Technology[]&gt;</code></td><td>a promise that will give a Technology array</td><td><code>loadTechnologies()</code></td></tr>
+      <tr><td><code>import type { … }</code></td><td>import only a type (removed from the final JavaScript)</td><td><code>import type { Technology }</code></td></tr>
+      <tr><td><code>a ?? b</code></td><td>a, unless a is null or undefined, then b</td><td><code>BADGE_COLORS[…] ?? "bg-gray-100"</code></td></tr>
+      <tr><td><code>`text ${x}`</code></td><td>template literal: a string with JavaScript inside <code>${ }</code></td><td><code>className={`… ${badgeColor}`}</code></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="cheat">
+  <h2>11 · Cheat sheet</h2>
+  <div class="tbl"><table>
+    <thead><tr><th>We want to…</th><th>Zone 1 (before return)</th><th>Zone 2 (inside JSX <code>{ }</code>)</th></tr></thead>
+    <tbody>
+      <tr><td>Show a value</td><td>–</td><td><code>{tech.name}</code></td></tr>
+      <tr><td>if / else</td><td><code>if (…) {…} else {…}</code></td><td><code>{cond ? A : B}</code></td></tr>
+      <tr><td>if, no else</td><td><code>if (…) {…}</code></td><td><code>{cond &amp;&amp; A}</code> (cond must be true/false)</td></tr>
+      <tr><td>else if</td><td><code>if … else if … else</code> into a variable</td><td><code>{label}</code></td></tr>
+      <tr><td>Loop</td><td><code>for</code>, <code>for…of</code>, <code>forEach</code></td><td><code>{list.map((x) =&gt; &lt;li key={x.id}&gt;…&lt;/li&gt;)}</code></td></tr>
+      <tr><td>Filter a list</td><td><code>const fe = list.filter(…)</code></td><td><code>{list.filter(…).map(…)}</code></td></tr>
+      <tr><td>Make a variable</td><td><code>const x = …</code></td><td>✗ not allowed; make it in Zone 1</td></tr>
+      <tr><td>Show something else entirely</td><td><code>if (…) return &lt;p&gt;…&lt;/p&gt;;</code></td><td>–</td></tr>
+      <tr><td>Comment</td><td><code>// …</code></td><td><code>{/* … */}</code></td></tr>
+      <tr><td>Run on click</td><td>–</td><td><code>onClick={() =&gt; doIt(x)}</code></td></tr>
+      <tr><td>Pass data to a child</td><td>–</td><td><code>&lt;Child name={value} /&gt;</code>, received as <code>function Child({ name })</code></td></tr>
+      <tr><td>Update an array state</td><td><code>setList([...list, x])</code>, <code>setList(list.filter(…))</code></td><td>–</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="quiz">
+  <h2>12 · Quick quiz</h2>
+  <div id="quizBox"></div>
+</section>
+
+<footer>A companion to <a href="../">Web dev track 2 · From a JSON file to the screen</a>, part of <a href="../../">Root to End</a>. The demos load <code>../vendor/react-19.2.8.production.js</code> (MIT, Meta Platforms, Inc.); <code>verify/check-tsx-page.js</code> runs every demo in Chromium and checks its result. Something wrong or unclear? <a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=mistake.yml&amp;title=%5Breact-data-loading%2Ftsx-syntax%5D%20">Tell us</a>.</footer>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;"); }
+
+  /* ---------- expression or statement ---------- */
+  var EX = [["tech.name", "e"], ["if (ok) { … }", "s"], ["a ? b : c", "e"], ["for (const t of list) { … }", "s"], ["list.map((t) => t.name)", "e"], ["const x = 5;", "s"], ["ok && <p>hi</p>", "e"], ["return x;", "s"]];
+  var exprAns = {};
+  $("exprQ").innerHTML = EX.map(function (x, i) { return '<div class="row"><code style="min-width:15em">' + esc(x[0]) + '</code><button data-i="' + i + '" data-v="e">expression</button><button data-i="' + i + '" data-v="s">statement</button><span class="pill" id="exa' + i + '"></span></div>'; }).join("");
+  $("exprQ").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var i = +b.getAttribute("data-i"), v = b.getAttribute("data-v"), ok = EX[i][1] === v, p = $("exa" + i);
+    p.className = "pill " + (ok ? "ok" : "bad"); p.textContent = ok ? "✓" : "✗ it's a" + (EX[i][1] === "e" ? "n expression" : " statement");
+    exprAns[i] = ok; var n = Object.keys(exprAns).length, r = Object.keys(exprAns).filter(function (k) { return exprAns[k]; }).length;
+    $("exprOut").textContent = r + " of " + n + " right so far. Expressions can go inside JSX's { }; statements cannot.";
+  });
+
+  /* ---------- arrow functions, real JavaScript ---------- */
+  var AR = [
+    ["( ) automatic return", "(name) => name.toUpperCase()"],
+    ["{ } with return", "(name) => {\n  const big = name.toUpperCase();\n  return big;\n}"],
+    ["{ } WITHOUT return", "(name) => {\n  name.toUpperCase();\n}"],
+    ["object, no ( )", "(name) => { label: name }"],
+    ["object wrapped in ( )", "(name) => ({ label: name })"]];
+  function showArrow(i) {
+    [].forEach.call($("arrowBtns").children, function (b, k) { b.classList.toggle("sel", k === i); });
+    var src = AR[i][1], code = '["React", "Vue", "Svelte"].map(' + src + ")";
+    $("arrowCode").textContent = code;
+    var out; try { out = Function('"use strict"; return ' + code)(); } catch (e) { out = "Error: " + e.message; }
+    $("arrowOut").textContent = "Real result: " + JSON.stringify(out, function (k, v) { return v === undefined ? "__undef__" : v; }).replace(/"__undef__"/g, "undefined") + (Array.isArray(out) && out.every(function (x) { return x === undefined; }) ? "\n→ nothing came back: braces with no return" : "");
+  }
+  $("arrowBtns").innerHTML = AR.map(function (a, i) { return '<button data-i="' + i + '">' + esc(a[0]) + "</button>"; }).join("");
+  [].forEach.call($("arrowBtns").children, function (b, i) { b.onclick = function () { showArrow(i); }; });
+  showArrow(0);
+
+  /* ---------- Object.is, real JavaScript ---------- */
+  var IS = [["Object.is(5, 5)", function () { return Object.is(5, 5); }], ["Object.is([1, 2], [1, 2])", function () { return Object.is([1, 2], [1, 2]); }], ["const a = [1, 2]; Object.is(a, a)", function () { var a = [1, 2]; return Object.is(a, a); }], ["const a = [1]; a.push(2); Object.is(a, a)", function () { var a = [1]; a.push(2); return Object.is(a, a); }], ["const a = [1]; Object.is(a, [...a, 2])", function () { var a = [1]; return Object.is(a, a.concat([2])); }]];
+  $("isBtns").innerHTML = IS.map(function (x, i) { return '<button data-i="' + i + '"><code>' + esc(x[0]) + "</code></button>"; }).join("");
+  [].forEach.call($("isBtns").children, function (b, i) { b.onclick = function () { var r = IS[i][1](); $("isOut").textContent = IS[i][0] + "  →  " + r + (r ? "   (same → React would skip the redraw)" : "   (different → React redraws)"); }; });
+
+  /* ---------- quiz ---------- */
+  var Q = [
+    ["Where can we write a normal if / else statement?", ["Inside JSX's { }", "Before return (Zone 1)", "Anywhere", "Nowhere in React"], 1, "if is a statement. Statements live in Zone 1; inside JSX use a ? b : c."],
+    ["stack.map((t) => { <li>{t.name}</li> }) shows…", ["The list", "Nothing, with no error", "An error message", "One item"], 1, "Braces after => are a block, and without return the function gives undefined, so .map() returns an array of undefined."],
+    ["Which onClick adds the technology only when clicked?", ["onClick={prop_onAdd(prop_tech)}", "onClick={prop_onAdd}", "onClick={() => prop_onAdd(prop_tech)}", "onClick=\"prop_onAdd(prop_tech)\""], 2, "The arrow creates a function and hands it to React; it runs on click. The first option calls it now, while drawing; the second gets the click event, not the technology."],
+    ["The stack is empty. What does {stack.length && <button>Remove all</button>} show?", ["Nothing", "The button", "A 0 on the page", "false"], 2, "0 && … is 0, and React prints numbers. Use stack.length > 0 && …"],
+    ["Why does setStack(stack) after stack.push(tech) not redraw?", ["push is slow", "It is the same array object, so Object.is says nothing changed", "push only works on strings", "React needs useEffect first"], 1, "Object.is checks identity for arrays. Use setStack([...stack, tech]) to give React a new array."],
+    ["We write <TechCard techs={tech} />. What must TechCard do?", ["Nothing; names are matched automatically", "Receive { techs } and use techs everywhere", "Rename tech to techs in Technologies.tsx", "Add techs to the key"], 1, "The prop name is the label the child looks for; the props type, the destructuring and every use inside must say techs."]];
+  $("quizBox").innerHTML = Q.map(function (q, i) { return '<div class="qz"><p class="q">' + (i + 1) + ". " + esc(q[0]) + '</p><div class="opts">' + q[1].map(function (o, k) { return '<button data-q="' + i + '" data-k="' + k + '">' + esc(o) + "</button>"; }).join("") + '</div><p class="ex" id="qx' + i + '"><b>Why:</b> ' + esc(q[3]) + "</p></div>"; }).join("");
+  $("quizBox").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b) return;
+    var i = +b.getAttribute("data-q"), k = +b.getAttribute("data-k"), btns = b.parentNode.children;
+    [].forEach.call(btns, function (x, j) { x.classList.toggle("right", j === Q[i][2]); x.classList.toggle("wrong", j === k && k !== Q[i][2]); });
+    $("qx" + i).style.display = "block";
+  });
+
+  /* ---------- real React demos ---------- */
+  var PATHS = ["../vendor/react-19.2.8.production.js", "../react-data-loading/vendor/react-19.2.8.production.js"];
+  var s = document.createElement("script");
+  s.src = PATHS[0];
+  // In the repo the bundle is in ../vendor/; in the offline guide, in ../react-data-loading/vendor/. Try one, then the other.
+  s.onerror = function () { var s2 = document.createElement("script"); s2.src = PATHS[1]; s2.onload = s.onload; s2.onerror = fail; document.head.appendChild(s2); };
+  function fail() { ["andA", "andB", "clickDemo", "keyA", "keyB", "pushDemo"].forEach(function (id) { $(id).textContent = "Could not load the React bundle (vendor/react-19.2.8.production.js). Keep this page next to its react-data-loading folder."; }); }
+  s.onload = function () {
+    var React = window.React, RDC = window.ReactDOMClient, h = React.createElement;
+    // && demo
+    var ra = RDC.createRoot($("andA")), rb = RDC.createRoot($("andB"));
+    function andDraw(n) { ra.render(h("div", null, "Page shows: [", n && h("b", null, "has items"), "]")); rb.render(h("div", null, "Page shows: [", n > 0 && h("b", null, "has items"), "]")); }
+    [].forEach.call(document.querySelectorAll("#lab-and [data-n]"), function (b) { b.onclick = function () { [].forEach.call(document.querySelectorAll("#lab-and [data-n]"), function (x) { x.classList.toggle("sel", x === b); }); andDraw(+b.getAttribute("data-n")); }; });
+    document.querySelector('#lab-and [data-n="0"]').click();
+    // onClick three ways
+    var lines = [];
+    function add(x) { var what = x && x.nativeEvent ? "a click EVENT object (not a technology!)" : JSON.stringify(x); lines.push("add() called with " + what); $("clickLog").textContent = lines.join("\n"); }
+    var T = ["React", "Vue", "Svelte"];
+    function Demo() {
+      function row(label, code, make) { return h("div", { className: "row" }, h("b", null, label), h("code", null, code), T.map(function (t) { return h("button", { key: t, onClick: make(t) }, t); })); }
+      return h("div", null,
+        row("A", "onClick={() => add(tech)}", function (t) { return function () { add(t); }; }),
+        row("B", "onClick={add(tech)}", function (t) { return add(t); }),
+        row("C", "onClick={add}", function () { return add; }));
+    }
+    RDC.createRoot($("clickDemo")).render(h(Demo));
+    // key demo
+    var ALL = [{ id: "react", name: "React" }, { id: "vue", name: "Vue.js" }, { id: "svelte", name: "Svelte" }, { id: "next", name: "Next.js" }];
+    function Row(p) { return h("label", { className: "lrow" }, h("input", { type: "checkbox" }), p.tech.name, h("small", null, "key=" + JSON.stringify(p.k))); }
+    function List(p) { return h("div", null, p.items.map(function (t, i) { var k = p.byId ? t.id : i; return h(Row, { key: k, tech: t, k: k }); })); }
+    var ka = RDC.createRoot($("keyA")), kb = RDC.createRoot($("keyB")), items = ALL.slice(), gen = 0;
+    function kdraw() { ka.render(h(List, { items: items, byId: true, key: "a" + gen })); kb.render(h(List, { items: items, byId: false, key: "b" + gen })); }
+    $("keyRm").onclick = function () { if (!items.length) return; items = items.slice(1); kdraw(); $("keyMsg").textContent = "Left: the ticked React row was removed, so nothing is ticked. Right: Vue.js is ticked now! React reused the row with key=0 for Vue.js, and the tick stayed on that row."; };
+    $("keyReset").onclick = function () { items = ALL.slice(); gen++; kdraw(); $("keyMsg").textContent = "Tick the box next to React in BOTH lists, then remove the first item."; };
+    kdraw();
+    // push demo
+    function Push() {
+      var st = React.useState(["React"]), list = st[0], setList = st[1];
+      return h("div", null,
+        h("div", { className: "row" },
+          h("button", { onClick: function () { list.push("Item " + (list.length + 1)); setList(list); } }, "push, then setList(list)"),
+          h("button", { onClick: function () { setList(list.concat(["Item " + (list.length + 1)])); } }, "setList([...list, new])")),
+        h("div", { className: "out" }, "On screen: " + list.join(", ") + "\nArray length: " + list.length + " (this only updates when React redraws)"),
+        h("p", { style: { fontSize: ".85rem", margin: "8px 0 0" } }, "Click \"push\" a few times: nothing changes on screen. Then click the other button once: React redraws, and all the pushed items appear at once."));
+    }
+    RDC.createRoot($("pushDemo")).render(h(Push));
+  };
+  document.head.appendChild(s);
+})();
+</script>
+<script>
+// Code blocks and tables that scroll sideways (on phones) must be reachable with the keyboard.
+(function () {
+  function mark() {
+    document.querySelectorAll("pre, .tbl, .out").forEach(function (el) {
+      if (el.scrollWidth > el.clientWidth + 1) { el.tabIndex = 0; if (!el.getAttribute("aria-label")) el.setAttribute("aria-label", el.tagName === "PRE" ? "Code example (scrolls sideways)" : "Scrolling content"); }
+      else if (el.tabIndex === 0) el.removeAttribute("tabindex");
+    });
+  }
+  mark(); window.addEventListener("resize", mark); setTimeout(mark, 1500);
+})();
+</script>
+</body>
+</html>

@@ -7,6 +7,7 @@ Live: https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/react-
 | File | What it is |
 |---|---|
 | `index.html` | The page |
+| `tsx-syntax/index.html` | Companion cheat sheet: how to write code in a .tsx file, with live demos on real JavaScript and real React; checked by `verify/check-tsx-page.js` |
 | `react-model.js` | The model: `DepsModel` (renders and effect runs for a dependency array and a click sequence) and `TIMELINES` (the steps of the two line-by-line labs) |
 | `deps-real.js` | Runs a click sequence on real React; shared by the page's "Check in this browser" button and the verifier |
 | `vendor/react-19.2.8.production.js` | react and react-dom 19.2.8, production build, bundled with esbuild by `verify/build-vendor.js`; loaded only for the live check |

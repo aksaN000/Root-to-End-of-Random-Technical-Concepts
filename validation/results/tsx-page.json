@@ -1,0 +1,13 @@
+{
+ "id": "tsx-page",
+ "date": "2026-10-12T08:16:18.542Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "Chromium 141.0.7390.37: the page's own demos on real JavaScript and the vendored React 19.2.8 production build",
+ "cases": 26,
+ "matched": 26,
+ "passed": true,
+ "detail": "every demo on react-data-loading/tsx-syntax/ against the claim the page makes about it, plus script errors, failed requests, sideways scroll and axe-core at 1300 and 390 px",
+ "failureCount": 0
+}

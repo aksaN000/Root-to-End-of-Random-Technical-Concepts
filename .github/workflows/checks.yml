@@ -48,7 +48,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npx playwright install --with-deps chromium
-      - run: node tools/run-all-checks.js --only=cors,html,dispatch,hit,react,pages
+      - run: node tools/run-all-checks.js --only=cors,html,dispatch,hit,react,tsx,pages
       - if: always()
         uses: actions/upload-artifact@v5
         with:

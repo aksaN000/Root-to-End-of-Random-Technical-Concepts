@@ -1,7 +1,7 @@
 // Runs every verification in the repo and prints one summary.
 //   npm test                     (or: node tools/run-all-checks.js)
 //   node tools/run-all-checks.js --quick     fewer random cases, faster
-//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit autograd commands tailwind react pages)
+//   node tools/run-all-checks.js --only=v8,lr,loop,packets   run some checks (ids: v8 lr loop packets cors html dispatch hit autograd commands tailwind react tsx pages)
 // Checks that need something missing (Python + scapy, Playwright's Chromium, Node 22 for the
 // exact V8 bytecode) are reported as SKIP with the reason, not as failures.
 const { spawnSync } = require("child_process"), path = require("path");
@@ -28,6 +28,7 @@ const CHECKS = [
   { id: "commands", name: "Command model vs real npm (bash, npx, nopt, cmd-list, npm-package-arg)", dir: "web-dev-vocabulary", cmd: [node, "verify/compare-commands.js"].concat(quick ? ["400", "7"] : []), need: hasBash ? null : "needs bash to compare word splitting (use WSL or Git Bash on Windows)" },
   { id: "tailwind", name: "Tailwind class model vs the real Tailwind compiler", dir: "web-dev-vocabulary", cmd: [node, "verify/compare-tailwind.js"].concat(quick ? ["400", "7"] : []), need: hasTailwind ? null : "needs the tailwindcss package (npm install)" },
   { id: "react", name: "React data-loading model vs real React 19 (dependency arrays, timelines, StrictMode)", dir: "react-data-loading", cmd: [node, "verify/compare-with-react.js"].concat(quick ? ["10", "7"] : []), need: hasPlaywright ? (hasReact ? null : "needs the react, react-dom and esbuild packages (npm install)") : "needs Playwright (npm install, then npx playwright install chromium)" },
+  { id: "tsx", name: "TSX syntax companion page: every live demo on real JavaScript and real React", dir: "react-data-loading", cmd: [node, "verify/check-tsx-page.js"], need: hasPlaywright ? (hasReact ? null : "needs the react, react-dom and esbuild packages (npm install)") : "needs Playwright (npm install, then npx playwright install chromium)" },
   { id: "pages", name: "Every page loads cleanly (desktop and phone width)", dir: ".", cmd: [node, "tools/check-pages.js"], need: hasPlaywright ? null : "needs Playwright (npm install, then npx playwright install chromium)" }
 ];
 const onlyArg = process.argv.find(a => a.startsWith("--only="));

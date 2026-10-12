@@ -65,9 +65,10 @@ PASS Autograd engine vs real PyTorch (graph, order, gradients)
 PASS Command model vs real npm (bash, npx, nopt, cmd-list, npm-package-arg)
 PASS Tailwind class model vs the real Tailwind compiler
 PASS React data-loading model vs real React 19 (dependency arrays, timelines, StrictMode)
+PASS TSX syntax companion page: every live demo on real JavaScript and real React
 PASS Every page loads cleanly (desktop and phone width)
 
-13 passed, 0 failed, 0 skipped
+14 passed, 0 failed, 0 skipped
 ```
 
 Other commands:
@@ -75,7 +76,7 @@ Other commands:
 | Command | What it does |
 |---|---|
 | `npm run test:quick` | Same checks with fewer random cases (does not overwrite the saved results) |
-| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit autograd commands tailwind react pages`) |
+| `node tools/run-all-checks.js --only=cors,html` | Some checks only (ids: `v8 lr loop packets cors html dispatch hit autograd commands tailwind react tsx pages`) |
 | `npm run test:pages` | Only the page checks, on your local copy |
 | `npm run test:live` | The page checks against the published site |
 | `node tools/check-pages.js --browser=firefox` | The page checks in Firefox (run `npx playwright install firefox` first; `webkit` works the same way) |
@@ -96,6 +97,7 @@ Other commands:
 | npm commands | `web-dev-vocabulary/command-model.js` | npm 10.9.4's own code, from the npm that ships with Node: bash splits each line, then `bin/npx-cli.js` (run with its last line stubbed), nopt's parse with npm's option definitions, `cmd-list.js` `deref()` and npm-package-arg, on the lab presets, hand-picked specs and seeded random command lines; the copied tables in `npm-tables.js` are compared too | `web-dev-vocabulary/verify/compare-commands.js [count] [seed]` |
 | Tailwind classes | `web-dev-vocabulary/tailwind-model.js` | The pinned `tailwindcss` package's compiler, a fresh one per class: the same selector, `@media` wrappers, declarations and `:root` theme variables, or both writing nothing; the copied theme in `tailwind-theme.js` is compared too | `web-dev-vocabulary/verify/compare-tailwind.js [count] [seed]` |
 | React data loading | `react-data-loading/react-model.js` | Real react and react-dom 19.2.8 (production and development builds, bundled with esbuild) in Chromium: every click sequence up to length 4 and seeded random ones on four dependency arrays, compared step by step for renders and effect runs (clicks are real `click()` calls on React's buttons); both line-by-line labs against React's logged order with the screen at each step, at two server delays; StrictMode request and render counts; the uncached-promise loop; the wrong-file-name blank page; the vendored bundle against a fresh build | `react-data-loading/verify/compare-with-react.js [count] [seed]` |
+| TSX syntax page | `react-data-loading/tsx-syntax/index.html` | Its own demos in Chromium, each against the claim the text makes: `&&` printing `0`, the three `onClick` versions (calls while drawing, on click, with the event), every arrow-function and `Object.is` button against real JavaScript, the id-vs-index key demo, push vs a new array on real React 19.2.8; plus errors, sideways scroll and axe-core at 1300 and 390 px | `react-data-loading/verify/check-tsx-page.js` |
 | Pages | every `index.html` | Real Chromium at 1300 px and 390 px: script errors, failed requests, sideways scrolling, every quiz and exam question clicked, asset version hashes, and axe-core (WCAG 2.2 A/AA) in light and dark mode | `tools/check-pages.js [--live] [--browser=…]` |
 
 ### Results and failures
