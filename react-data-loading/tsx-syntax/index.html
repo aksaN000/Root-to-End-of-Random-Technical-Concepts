@@ -76,7 +76,7 @@ footer{margin-top:40px;padding-top:14px;border-top:1px solid var(--rule);font-si
   <h1>How to write code in a <code style="font-size:.85em">.tsx</code> file</h1>
   <p class="lede">If/else, loops, arrow functions with <code>( )</code> or <code>{ }</code>, props, keys, onClick and state updates: everything we used in the Dev Stack project, with live examples. The React demos run the real React 19.2.8 library, the same production build page 2 checks against.</p>
   <nav class="toc" aria-label="Sections">
-    <a href="#zones">1 · Two zones</a><a href="#skeleton">2 · File skeleton</a><a href="#zone1">3 · Zone 1</a><a href="#zone2">4 · Zone 2 (JSX)</a><a href="#fn-in-jsx">4.7 · Functions in JSX</a><a href="#arrows">5 · ( ) vs { }</a><a href="#now">6 · { } runs now</a><a href="#props">7 · Props</a><a href="#key">8 · key</a><a href="#state">9 · State updates</a><a href="#ts">10 · TypeScript</a><a href="#cheat">11 · Cheat sheet</a><a href="#quiz">12 · Quiz</a>
+    <a href="#zones">1 · Two zones</a><a href="#skeleton">2 · File skeleton</a><a href="#zone1">3 · Zone 1</a><a href="#zone2">4 · Zone 2 (JSX)</a><a href="#fn-in-jsx">4.7 · Functions in JSX</a><a href="#arrows">5 · ( ) vs { }</a><a href="#now">6 · { } runs now</a><a href="#props">7 · Props</a><a href="#key">8 · key</a><a href="#state">9 · State updates</a><a href="#build">10 · Five-step order</a><a href="#ts">11 · TypeScript</a><a href="#cheat">12 · Cheat sheet</a><a href="#quiz">13 · Quiz</a>
   </nav>
 </header>
 
@@ -445,8 +445,76 @@ TechCard       button: onClick={() =&gt; prop_onAdd(prop_tech)}
   <p class="sticky"><b>Sticky note:</b> never change state in place (<code>push</code>, <code>pop</code>, <code>splice</code>, <code>stack[0] = …</code>). Add with <code>[...stack, x]</code>, remove with <code>stack.filter(…)</code>, clear with <code>[]</code>.</p>
 </section>
 
+<section id="build">
+  <h2>10 · Building a feature: the five-step order</h2>
+  <p>Sections 7 to 9 are the pieces. This section is the <b>order</b> to put them in. Every feature of the Dev Stack page (add, “✓ Added”, remove, remove all) was built with the same five steps, always in this order.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Step</th><th>Question to ask</th><th>In our code</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 · Owner</b></td><td>Which component should <i>remember</i> this data? The closest component that contains <b>everyone</b> who reads or changes it.</td><td>The cards change <code>stack</code>, the panel shows it, so <code>Technologies</code> (their common parent) owns it</td></tr>
+      <tr><td><b>2 · Memory</b></td><td>Create the state, in the owner</td><td><code>const [stack, setStack] = useState&lt;Technology[]&gt;([]);</code></td></tr>
+      <tr><td><b>3 · Changer</b></td><td>Write the functions that change it, next to the state (only the owner has the setter)</td><td><code>addToStack</code>, <code>removeFromStack</code>, <code>clearStack</code></td></tr>
+      <tr><td><b>4 · Hops</b></td><td>Pass data or changers down, one component at a time, to where they are needed</td><td><code>Technologies</code> → <code>TechGrid</code> → <code>TechCard</code></td></tr>
+      <tr><td><b>5 · Use</b></td><td>Show the data, or call the changer on a click</td><td>the panel's list, the button's <code>onClick</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Every hop is three edits</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Edit</th><th>Where</th><th>Example (TechGrid → TechCard)</th></tr></thead>
+    <tbody>
+      <tr><td><b>send</b></td><td>the parent's JSX</td><td><code>&lt;TechCard prop_added={…} /&gt;</code></td></tr>
+      <tr><td><b>declare</b></td><td>the child's <code>type …Props</code></td><td><code>prop_added: boolean;</code></td></tr>
+      <tr><td><b>receive</b></td><td>the child's parameter list</td><td><code>function TechCard({ …, prop_added })</code></td></tr>
+    </tbody>
+  </table></div>
+  <p>If TypeScript underlines a prop in red, one of the three edits is missing: usually “declare”.</p>
+  <h3>The three features, step by step</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>Feature</th><th>Owner · Memory</th><th>Changer</th><th>Hops</th><th>Use</th></tr></thead>
+    <tbody>
+      <tr><td><b>A · Add to the stack</b></td><td>new: <code>Technologies</code>, <code>useState</code></td><td>new: <code>addToStack</code></td><td>2 hops carrying a <b>function</b>: <code>onAdd</code> → <code>prop_onAdd</code></td><td>button <code>onClick</code>; panel list</td></tr>
+      <tr><td><b>B · “✓ Added” and the count</b></td><td>already there</td><td>none</td><td>2 hops carrying <b>data</b>: <code>stack</code> → <code>prop_added</code> (one true/false per card)</td><td>button <code>disabled</code>, colour, text; count line</td></tr>
+      <tr><td><b>C · Remove one, remove all</b></td><td>already there</td><td>new: <code>removeFromStack</code> (<code>filter</code>), <code>clearStack</code> (<code>[]</code>)</td><td><b>none</b>: the buttons are in the panel, which is inside the owner</td><td>✕ on each row; “Remove all”</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Worked out, not stored</h3>
+  <p>In feature C we wrote no code to turn a removed card's button back to “Add to Stack”. It happens anyway: <code>prop_added</code> is not saved anywhere, it is <b>worked out from <code>stack</code></b> on every draw (<code>stack.some(…)</code> in <code>TechGrid</code>). Change the owner's state, and everything worked out from it updates by itself.</p>
+  <p class="sticky"><b>Sticky note:</b> one piece of state, in one owner. If a value can be worked out from state (a count, “is it added?”, a filtered list), work it out while drawing; do not make a second <code>useState</code> for it, or the two will drift apart.</p>
+
+  <h3>Before you write: plan the boxes, the data and the looks</h3>
+  <p>Most of the shape of the code can be decided from the design, before any code exists. Three short lists, on paper:</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Plan</th><th>How</th><th>What it decides</th></tr></thead>
+    <tbody>
+      <tr><td><b>1 · Boxes</b></td><td>Draw a box around each part of the design and give it a noun. A part becomes its own component if it <b>has its own heading</b>, <b>repeats</b> (cards, rows), <b>has its own buttons or behaviour</b>, or <b>appears on more than one page</b>.</td><td>which components and files exist, and the tree (who is inside whom)</td></tr>
+      <tr><td><b>2 · Data</b></td><td>For every value that changes, write who <b>shows</b> it and who <b>changes</b> it.</td><td>the owner (step 1 above) and every hop, so you know the props before writing them</td></tr>
+      <tr><td><b>3 · Looks</b></td><td>For every box, list the different ways it can look: loading, empty, filled, error, selected…</td><td>where conditions go. 2 looks → <code>? :</code>. 1 look or nothing → <code>&amp;&amp;</code>. 3+ looks, or a look more than a few lines long → a variable in Zone 1, or its own component</td></tr>
+    </tbody>
+  </table></div>
+  <h4>The plan for the Dev Stack page</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>Box</th><th>Why it is a component</th><th>Looks</th></tr></thead>
+    <tbody>
+      <tr><td><code>Navbar</code>, <code>Banner</code>, <code>Footer</code></td><td>own part of the page</td><td>Navbar: menu open / closed on phones</td></tr>
+      <tr><td><code>Technologies</code></td><td>own heading; owns <code>stack</code></td><td>–</td></tr>
+      <tr><td><code>TechGrid</code></td><td>waits for the data (Suspense)</td><td>loading / loaded</td></tr>
+      <tr><td><code>TechCard</code></td><td>repeats 12 times</td><td>added / not added</td></tr>
+      <tr><td><code>StackPanel</code></td><td>own heading, own buttons</td><td>empty / list</td></tr>
+    </tbody>
+  </table></div>
+  <div class="tbl"><table>
+    <thead><tr><th>Changing value</th><th>Shown by</th><th>Changed by</th><th>Owner</th></tr></thead>
+    <tbody>
+      <tr><td>the 12 technologies</td><td><code>TechGrid</code></td><td>nobody (loaded once)</td><td>module level + <code>use()</code> in <code>TechGrid</code></td></tr>
+      <tr><td><code>stack</code></td><td><code>TechCard</code> (“added?”), <code>StackPanel</code></td><td><code>TechCard</code> (add), <code>StackPanel</code> (✕, remove all)</td><td><code>Technologies</code>, their common parent</td></tr>
+      <tr><td>menu open?</td><td><code>Navbar</code></td><td><code>Navbar</code></td><td><code>Navbar</code> itself</td></tr>
+    </tbody>
+  </table></div>
+  <p>Then write a <b>skeleton first</b>: every component returning a placeholder (<code>&lt;div&gt;StackPanel&lt;/div&gt;</code>), wired together with its props, and check the layout in the browser. Fill each box in afterwards. The plan will not be perfect, and moving a block into its own component later (“refactoring”) is a normal part of the job, but the plan gets the big shape right first.</p>
+</section>
+
 <section id="ts">
-  <h2>10 · The TypeScript parts we used</h2>
+  <h2>11 · The TypeScript parts we used</h2>
   <div class="tbl"><table>
     <thead><tr><th>Syntax</th><th>Meaning</th><th>From our project</th></tr></thead>
     <tbody>
@@ -466,7 +534,7 @@ TechCard       button: onClick={() =&gt; prop_onAdd(prop_tech)}
 </section>
 
 <section id="cheat">
-  <h2>11 · Cheat sheet</h2>
+  <h2>12 · Cheat sheet</h2>
   <div class="tbl"><table>
     <thead><tr><th>We want to…</th><th>Zone 1 (before return)</th><th>Zone 2 (inside JSX <code>{ }</code>)</th></tr></thead>
     <tbody>
@@ -481,13 +549,14 @@ TechCard       button: onClick={() =&gt; prop_onAdd(prop_tech)}
       <tr><td>Comment</td><td><code>// …</code></td><td><code>{/* … */}</code></td></tr>
       <tr><td>Run on click</td><td>–</td><td><code>onClick={() =&gt; doIt(x)}</code></td></tr>
       <tr><td>Pass data to a child</td><td>–</td><td><code>&lt;Child name={value} /&gt;</code>, received as <code>function Child({ name })</code></td></tr>
+      <tr><td>Build a feature</td><td colspan="2">Owner → Memory → Changer → Hops (send, declare, receive) → Use (section 10)</td></tr>
       <tr><td>Update an array state</td><td><code>setList([...list, x])</code>, <code>setList(list.filter(…))</code></td><td>–</td></tr>
     </tbody>
   </table></div>
 </section>
 
 <section id="quiz">
-  <h2>12 · Quick quiz</h2>
+  <h2>13 · Quick quiz</h2>
   <div id="quizBox"></div>
 </section>
 
@@ -542,7 +611,10 @@ TechCard       button: onClick={() =&gt; prop_onAdd(prop_tech)}
     ["Which onClick adds the technology only when clicked?", ["onClick={prop_onAdd(prop_tech)}", "onClick={prop_onAdd}", "onClick={() => prop_onAdd(prop_tech)}", "onClick=\"prop_onAdd(prop_tech)\""], 2, "The arrow creates a function and hands it to React; it runs on click. The first option calls it now, while drawing; the second gets the click event, not the technology."],
     ["The stack is empty. What does {stack.length && <button>Remove all</button>} show?", ["Nothing", "The button", "A 0 on the page", "false"], 2, "0 && … is 0, and React prints numbers. Use stack.length > 0 && …"],
     ["Why does setStack(stack) after stack.push(tech) not redraw?", ["push is slow", "It is the same array object, so Object.is says nothing changed", "push only works on strings", "React needs useEffect first"], 1, "Object.is checks identity for arrays. Use setStack([...stack, tech]) to give React a new array."],
-    ["We write <TechCard techs={tech} />. What must TechCard do?", ["Nothing; names are matched automatically", "Receive { techs } and use techs everywhere", "Rename tech to techs in Technologies.tsx", "Add techs to the key"], 1, "The prop name is the label the child looks for; the props type, the destructuring and every use inside must say techs."]];
+    ["We write <TechCard techs={tech} />. What must TechCard do?", ["Nothing; names are matched automatically", "Receive { techs } and use techs everywhere", "Rename tech to techs in Technologies.tsx", "Add techs to the key"], 1, "The prop name is the label the child looks for; the props type, the destructuring and every use inside must say techs."],
+    ["The cards add to stack and the Your Stack panel shows it. Where should useState for stack go?", ["In TechCard", "In the panel", "In their closest common parent, Technologies", "In a new file"], 2, "Step 1, Owner: state lives in the closest component that contains everyone who reads or changes it."],
+    ["Why did remove need no new props, while add needed two hops?", ["Remove is simpler", "The remove buttons are in the panel, which is inside the owner, so the changer is already in reach", "filter does not need props", "React passes them automatically"], 1, "Hops are only needed to reach components below the owner. The panel's buttons sit in Technologies itself."],
+    ["We remove React from the stack. Why does its card say Add to Stack again without extra code?", ["React remembers old buttons", "prop_added is worked out from stack on every draw", "filter resets the cards", "The key changes"], 1, "prop_added = stack.some(...) is recalculated each draw, so it follows stack automatically."]];
   $("quizBox").innerHTML = Q.map(function (q, i) { return '<div class="qz"><p class="q">' + (i + 1) + ". " + esc(q[0]) + '</p><div class="opts">' + q[1].map(function (o, k) { return '<button data-q="' + i + '" data-k="' + k + '">' + esc(o) + "</button>"; }).join("") + '</div><p class="ex" id="qx' + i + '"><b>Why:</b> ' + esc(q[3]) + "</p></div>"; }).join("");
   $("quizBox").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b) return;
