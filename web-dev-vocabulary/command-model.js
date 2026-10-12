@@ -61,7 +61,11 @@
   var has = function (o, k) { return Object.prototype.hasOwnProperty.call(o, k); };
 
   /* ---------- 3. nopt: options versus positional words ---------- */
-  function typeOf(k) { if (!has(T.options, k)) return undefined; var t = T.options[k]; return Array.isArray(t) ? { f: t[0], lits: t[1] } : { f: t, lits: [] }; }
+  // "interfaces": like npm, the IP addresses of this computer's network interfaces (none known in a browser)
+  function interfaceAddrs() {
+    try { var ni = require("os").networkInterfaces(); return Object.keys(ni).reduce(function (a, n) { return a.concat(ni[n].map(function (i) { return i.address; })); }, []); } catch (e) { return []; }
+  }
+  function typeOf(k) { if (!has(T.options, k)) return undefined; var t = T.options[k]; return Array.isArray(t) ? { f: t[0], lits: t[1] === "interfaces" ? interfaceAddrs() : t[1] } : { f: t, lits: [] }; }
   function resolveShort(arg) {
     var abbrevs = abbrev(Object.keys(T.options), "opts"), sh = T.shorthands;
     arg = arg.replace(/^-+/, "");

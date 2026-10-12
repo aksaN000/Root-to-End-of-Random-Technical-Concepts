@@ -12,13 +12,16 @@ function tables() {
     const lits = ts.filter(t => typeof t === "string");
     opts[k] = lits.length ? [flags, lits] : flags;
   }
+  // npm builds local-address's allowed words from this computer's network interfaces (getLocalAddresses()
+  // in definitions.js), so they differ on every machine. We record where they come from, not one machine's IPs.
+  if (Array.isArray(opts["local-address"])) opts["local-address"] = [opts["local-address"][0], "interfaces"];
   const sh = {}; for (const [k, v] of Object.entries(I.shorthands)) sh[k] = Array.isArray(v) ? v : String(v).split(/\s+/);
   return { npm: I.version, commands: I.cmdList.commands, aliases: I.cmdList.aliases, options: opts, shorthands: sh };
 }
 module.exports = tables;
 if (require.main === module) {
   const t = tables();
-  const out = "/* npm " + t.npm + "'s command list, aliases, option types and shorthands, copied by verify/extract-npm-tables.js.\n   Option types: B Boolean, S String, N Number, A Array, 0 null, O another type (path, URL, …); a second entry lists allowed words. */\n" +
+  const out = "/* npm " + t.npm + "'s command list, aliases, option types and shorthands, copied by verify/extract-npm-tables.js.\n   Option types: B Boolean, S String, N Number, A Array, 0 null, O another type (path, URL, …); a second entry lists allowed words\n   (\"interfaces\": the IP addresses of the computer npm runs on, as npm reads them from os.networkInterfaces()). */\n" +
     "(function (g) { var T = " + JSON.stringify(t) + ";\n  if (typeof module !== \"undefined\" && module.exports) module.exports = T; else g.NPM_TABLES = T;\n})(this);\n";
   fs.writeFileSync(path.join(__dirname, "..", "npm-tables.js"), out);
   console.log("wrote npm-tables.js for npm " + t.npm + ": " + t.commands.length + " commands, " + Object.keys(t.aliases).length + " aliases, " + Object.keys(t.options).length + " options, " + Object.keys(t.shorthands).length + " shorthands");
