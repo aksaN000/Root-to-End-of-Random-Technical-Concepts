@@ -10,7 +10,10 @@
   },
   "devDependencies": {
     "axe-core": "4.13.0",
+    "esbuild": "0.28.2",
     "playwright": "1.56.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "tailwindcss": "4.3.3"
   }
 }

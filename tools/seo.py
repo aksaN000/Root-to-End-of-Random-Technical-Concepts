@@ -35,7 +35,10 @@ PAGES=[
   "From the chain rule to loss.backward()","PyTorch's autograd engine, from the chain rule to .grad",["chain rule","grad_fn graph","engine","AccumulateGrad",".grad"],["autograd","backpropagation","PyTorch","automatic differentiation","reverse mode","computational graph","gradient"]),
  ("web-dev-vocabulary/index.html","web-dev-vocabulary/","web-dev-vocabulary","Web Dev Vocabulary from the Source: Node, npm, npx, Vite, Plugins and Tailwind | Root to End",
   "Node, npm, npx, packages, scopes, Vite, plugins, hooks and Tailwind classes, traced to the real code, with labs that match npm and Tailwind exactly, and a spaced recall trainer.",
-  "From the engine to the plugin","Web dev track 1/4: from the node binary to a Tailwind class",["node","npm · npx","Vite + plugins","Tailwind","our components"],["npm","npx","Node.js","Vite","Tailwind CSS","package.json","semver","plugins","spaced repetition","web development"]),
+  "From the engine to the plugin","Web dev track 1/5: from the node binary to a Tailwind class",["node","npm · npx","Vite + plugins","Tailwind","our components"],["npm","npx","Node.js","Vite","Tailwind CSS","package.json","semver","plugins","spaced repetition","web development"]),
+ ("react-data-loading/index.html","react-data-loading/","react-data-loading","From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript | Root to End",
+  "How a React component loads data: use(promise) with Suspense, useEffect with useState and the dependency array, and plain JavaScript, traced into React 19's source and checked against real React.",
+  "From a JSON file to the screen","Web dev track 2/5: use() + Suspense, useEffect + useState, plain JS",["the DOM","useState","useEffect","use() + Suspense","our component"],["React","useEffect","useState","use","Suspense","dependency array","React 19","fetch","re-render","StrictMode"]),
 ]
 def head(path,url,slug,title,desc,kw):
     u=BASE+url; img=BASE+"assets/og/"+slug+".png"

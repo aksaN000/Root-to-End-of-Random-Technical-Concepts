@@ -1,0 +1,980 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript | Root to End</title>
+<meta name="description" content="How a React component loads data: use(promise) with Suspense, useEffect with useState and the dependency array, and plain JavaScript, traced into React 19&#x27;s source and checked against real React.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo:wght@500;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/root-kit.css?v=55fd7cdc">
+<style>
+/* Layout: the shared source-trace grid. Signature element: the line-by-line labs, our own code with the running line lit, next to what React holds and what the screen shows. */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --code:#eef1f5; --ink:#141a22; --muted:#566170; --rule:#d7dce3;
+  --accent:#2445d0; --accent-soft:#e3e8fb; --trace:#9a5a00; --trace-bg:#fff0d4; --ok:#1b7a4b; --ok-bg:#dff3e8; --bad:#b4232c; --bad-bg:#fbe3e4;
+  --s-k:#9a5a00; --s-k-bg:#fff0d4; --s-b:#6d3fc4; --s-b-bg:#ece5fb; --s-c:#0b6b65; --s-c-bg:#dcf2ef; --s-m:#2445d0; --s-m-bg:#e3e8fb; --s-j:#1b7a4b; --s-j-bg:#dff3e8;
+  --c-com:#5b6574; --c-str:#a1420e; --c-kw:#5b2fb3; --c-fn:#1d5fa8; --c-num:#0b7a6e;
+  --display:"Chivo","Arial Narrow",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0e1116; --surface:#151a21; --code:#11161d; --ink:#e5e9ef; --muted:#97a2b1; --rule:#28303b;
+  --accent:#8ea5ff; --accent-soft:#1d2645; --trace:#f2b659; --trace-bg:#3a2a10; --ok:#5fd29a; --ok-bg:#12301f; --bad:#ff8a90; --bad-bg:#3a1517;
+  --s-k:#f2b659; --s-k-bg:#3a2a10; --s-b:#b79bff; --s-b-bg:#2a2145; --s-c:#4fd1c5; --s-c-bg:#123430; --s-m:#8ea5ff; --s-m-bg:#1d2645; --s-j:#5fd29a; --s-j-bg:#12301f;
+  --c-com:#97a2b2; --c-str:#f0a875; --c-kw:#c3a6ff; --c-fn:#86b8f0; --c-num:#6fd6c6; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--body);font-size:16.5px;line-height:1.68;padding-inline:20px;padding-block:0 64px}
+a{color:var(--accent)}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.08em .35em;border-radius:4px}
+h1,h2,h3{font-family:var(--display);text-wrap:balance;line-height:1.15;margin:0}
+h2{font-size:clamp(1.55rem,3.2vw,2.1rem);font-weight:800;letter-spacing:-.01em}
+h3{font-size:1.12rem;font-weight:700;margin-top:1.2rem}
+p{margin:0}
+.wrap{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:250px minmax(0,1fr);gap:48px}
+.prose{max-width:68ch;display:flex;flex-direction:column;gap:14px}
+.eyebrow{font-family:var(--mono);font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;color:var(--trace)}
+.muted{color:var(--muted)}
+.rail{position:sticky;top:env(safe-area-inset-top,0px);align-self:start;padding-block:28px;max-height:100vh;overflow:auto}
+.rail .lbl{font-family:var(--mono);font-size:.7rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase;margin-bottom:10px;display:flex;justify-content:space-between}
+.frames{list-style:none;margin:0;padding:0;display:flex;flex-direction:column-reverse;border-left:2px solid var(--rule)}
+.frames a{display:block;text-decoration:none;color:var(--muted);font-family:var(--mono);font-size:.76rem;line-height:1.35;padding:7px 10px 7px 12px;margin-left:-2px;border-left:2px solid transparent}
+.frames a b{display:block;font-weight:500;color:var(--ink);font-family:var(--body);font-size:.84rem}
+.frames a:hover{background:var(--surface)}
+.frames a.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.frames a.on b{color:var(--accent)}
+.rail .base{font-family:var(--mono);font-size:.7rem;color:var(--muted);padding:8px 0 0 12px}
+header.hero{padding-block:56px 36px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:20px}
+.hero h1{font-size:clamp(2.1rem,5.6vw,3.7rem);font-weight:800;letter-spacing:-.02em}
+.hero .lede{font-size:1.12rem;max-width:62ch;color:var(--muted)}
+.back{font-family:var(--mono);font-size:.78rem;text-decoration:none}
+.journey{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--mono);font-size:.76rem}
+.journey a{text-decoration:none;border:1px solid var(--c);border-radius:6px;padding:3px 9px;color:var(--c);background:var(--cb)}
+.journey i{font-style:normal;color:var(--muted)}
+.st-k{--c:var(--s-k);--cb:var(--s-k-bg)}.st-b{--c:var(--s-b);--cb:var(--s-b-bg)}.st-c{--c:var(--s-c);--cb:var(--s-c-bg)}.st-m{--c:var(--s-m);--cb:var(--s-m-bg)}.st-j{--c:var(--s-j);--cb:var(--s-j-bg)}
+section{padding-block:56px 8px;display:flex;flex-direction:column;gap:18px;scroll-margin-top:12px}
+.sechead{display:flex;flex-direction:column;gap:6px}
+figure.src{margin:0;border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:hidden;min-width:0}
+figure.src figcaption{display:flex;flex-wrap:wrap;gap:4px 12px;justify-content:space-between;align-items:baseline;padding:8px 14px;border-bottom:1px solid var(--rule);background:var(--surface);font-family:var(--mono);font-size:.74rem}
+figure.src figcaption .path{color:var(--ink);font-weight:500;word-break:break-all}
+figure.src figcaption .note{color:var(--muted)}
+figure.src pre{margin:0;overflow-x:auto;padding:10px 0;font-family:var(--mono);font-size:.8rem;line-height:1.6;tab-size:2}
+pre .ln{display:block;padding:0 14px;white-space:pre;border-left:3px solid transparent}
+pre .ln.key{background:var(--trace-bg);border-left-color:var(--trace)}
+.t-com{color:var(--c-com);font-style:italic}.t-str{color:var(--c-str)}.t-kw{color:var(--c-kw)}.t-fn{color:var(--c-fn)}.t-num{color:var(--c-num)}
+.pair{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,380px),1fr));gap:14px}
+.callout{border-left:3px solid var(--accent);padding:4px 0 4px 16px;max-width:68ch}
+.callout b{font-weight:600}
+.panel{border:1px solid var(--rule);border-radius:12px;background:var(--surface);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+button,select,textarea,input{font:inherit;font-size:.86rem;border:1px solid var(--rule);background:var(--bg);color:var(--ink);padding:6px 10px;border-radius:7px}
+button{cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible,a:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.sel{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+button.go{background:var(--accent);border-color:var(--accent);color:var(--surface)}
+.stagehead{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted)}
+.pill{font-family:var(--mono);font-size:.72rem;padding:2px 9px;border-radius:999px;background:var(--code);color:var(--muted)}
+.pill.ok{background:var(--ok-bg);color:var(--ok)}.pill.bad{background:var(--bad-bg);color:var(--bad)}
+.pill:empty{display:none}
+.tbl{overflow-x:auto;border:1px solid var(--rule);border-radius:10px;background:var(--surface)}
+table{border-collapse:collapse;font-size:.86rem;width:100%}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--rule);vertical-align:top}
+th{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:500}
+tr:last-child td{border-bottom:0}
+ol.ex{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:10px;max-width:72ch}
+.src-list{columns:2 300px;font-size:.84rem;font-family:var(--mono);padding-left:1.2em;margin:0}
+.src-list li{margin-bottom:6px;break-inside:avoid}
+.bytes{font-family:var(--mono);font-size:.8rem;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,150px),1fr));gap:6px}
+.bytes div{border:1px solid var(--rule);border-radius:8px;padding:6px 8px;background:var(--surface)}
+.bytes b{display:block;font-size:.72rem;color:var(--muted);font-weight:500}
+.bytes .hot{border-color:var(--s-k);background:var(--s-k-bg)}
+
+/* labs */
+.lab{border:2px solid var(--accent);border-radius:14px;background:var(--surface);padding:14px 16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.presets button{font-size:.8rem;padding:4px 9px}
+.lab textarea{width:100%;min-height:7.5em;font-family:var(--mono);font-size:.88rem;line-height:1.55;resize:vertical;background:var(--code)}
+.labgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.labgrid{grid-template-columns:1fr}}
+.box{border:1px solid var(--rule);border-radius:8px;padding:8px 10px;min-width:0;background:var(--bg)}
+.box h5{margin:0 0 6px;font-family:var(--mono);font-size:.68rem;font-weight:500;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.err{font-size:.88rem;color:var(--bad);min-height:1.2em}
+.chips{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.chip{font-family:var(--mono);font-size:.76rem;padding:2px 8px;border-radius:5px;background:var(--code);border:1px solid transparent}
+.chip.acc{background:var(--s-j-bg);color:var(--s-j)}
+.chip.next{border-color:var(--accent);color:var(--accent)}
+.empty{font-size:.78rem;color:var(--muted)}
+.mobile-toc{display:none}
+@media (max-width:900px){
+  .wrap{grid-template-columns:1fr;gap:0}
+  .rail{display:none}
+  .mobile-toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .mobile-toc a{font-size:.78rem;font-family:var(--mono);text-decoration:none;border:1px solid var(--rule);border-radius:6px;padding:3px 8px;color:var(--ink);background:var(--surface)}
+}
+/* this page */
+.codepane{border:1px solid var(--rule);border-radius:10px;background:var(--code);overflow:auto;min-width:0;max-height:34em}
+.codepane pre{margin:0;padding:8px 0;font-family:var(--mono);font-size:.78rem;line-height:1.55}
+.codepane .ln{display:block;padding:0 12px 0 0;white-space:pre;border-left:3px solid transparent}
+.codepane .ln .n{display:inline-block;width:2.6em;text-align:right;padding-right:.9em;color:var(--c-com);user-select:none}
+.codepane .ln.hi{background:var(--trace-bg);border-left-color:var(--trace)}
+.side{display:flex;flex-direction:column;gap:10px;min-width:0}
+.desc{font-size:.95rem;line-height:1.6;min-height:6.4em}
+.vals{font-family:var(--mono);font-size:.8rem;white-space:pre-wrap;margin:0}
+.screen{border:2px dashed var(--rule);border-radius:10px;padding:10px 12px;font-size:.9rem;display:flex;gap:8px;flex-wrap:wrap;align-items:center;min-height:3.2em}
+.screen .part{border:1px solid var(--rule);border-radius:6px;padding:2px 8px;background:var(--surface);font-size:.82rem}
+.screen .part.spin{border-color:var(--trace);color:var(--trace);background:var(--trace-bg)}
+.screen .part.grid{border-color:var(--ok);color:var(--ok);background:var(--ok-bg)}
+.screen .blank{color:var(--muted);font-style:italic}
+.realtag{font-family:var(--mono);font-size:.72rem;color:var(--ok)}
+.loglist{margin:0;padding:0;list-style:none;font-family:var(--mono);font-size:.78rem;display:flex;flex-direction:column;gap:2px}
+.loglist li{display:grid;grid-template-columns:5.4em minmax(0,1fr);gap:8px;padding:2px 6px;border-radius:4px}
+.loglist li .s{color:var(--muted)}
+.loglist li.c{background:var(--accent-soft)}
+.loglist li.c .w{color:var(--accent)}
+.runs{border:1px solid var(--rule);border-radius:8px;max-height:20em;overflow:auto;background:var(--bg)}
+.runs td{font-family:var(--mono);font-size:.78rem;padding:3px 8px}
+.ran{color:var(--ok);font-weight:600}.skip{color:var(--muted);text-decoration:line-through}.none{color:var(--muted)}
+.counters{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:12px}
+.big{font-family:var(--display);font-size:1.6rem;font-weight:800}
+.stale{color:var(--bad);font-weight:600}
+label.chk{display:flex;gap:8px;align-items:center;font-size:.88rem}
+.vs td:first-child{font-weight:600}
+</style>
+<!-- seo:start -->
+<link rel="canonical" href="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/react-data-loading/">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Root to End">
+<meta property="og:title" content="From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript">
+<meta property="og:description" content="How a React component loads data: use(promise) with Suspense, useEffect with useState and the dependency array, and plain JavaScript, traced into React 19&#x27;s source and checked against real React.">
+<meta property="og:url" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/react-data-loading/">
+<meta property="og:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/react-data-loading.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript">
+<meta name="twitter:description" content="How a React component loads data: use(promise) with Suspense, useEffect with useState and the dependency array, and plain JavaScript, traced into React 19&#x27;s source and checked against real React.">
+<meta name="twitter:image" content="https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/assets/og/react-data-loading.png">
+<meta name="theme-color" content="#2445d0">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "LearningResource", "name": "From a JSON File to the Screen in React: use() with Suspense, useEffect with useState, and Plain JavaScript", "description": "How a React component loads data: use(promise) with Suspense, useEffect with useState and the dependency array, and plain JavaScript, traced into React 19's source and checked against real React.", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/react-data-loading/", "inLanguage": "en", "author": {"@type": "Person", "name": "aksaN000", "url": "https://github.com/aksaN000"}, "learningResourceType": ["interactive simulation", "explanation", "practice questions"], "educationalLevel": "undergraduate", "keywords": "React, useEffect, useState, use, Suspense, dependency array, React 19, fetch, re-render, StrictMode", "isPartOf": {"@type": "WebSite", "name": "Root to End", "url": "https://aksan000.github.io/Root-to-End-of-Random-Technical-Concepts/"}, "isAccessibleForFree": true}</script>
+<!-- seo:end -->
+</head>
+<body>
+<div class="wrap">
+<nav class="rail" aria-label="Sections as a call stack">
+  <div class="lbl"><span>Loading data</span><span>top = our code</span></div>
+  <ol class="frames" id="frames">
+    <li><a href="#plain"><b>Plain JavaScript</b>a variable never moves a pixel</a></li>
+    <li><a href="#state"><b>useState</b>React calls our function again</a></li>
+    <li><a href="#effect"><b>useEffect</b>called now, run after the commit</a></li>
+    <li><a href="#deps"><b>The dependency array</b>Object.is, item by item</a></li>
+    <li><a href="#suspense"><b>use() and Suspense</b>a throw caught by a boundary</a></li>
+    <li><a href="#ours"><b>Our Technologies section</b>both versions, side by side</a></li>
+    <li><a href="#real"><b>Real output</b>React's own order</a></li>
+    <li><a href="#try"><b>Try it ourselves</b>quizzes and exercises</a></li>
+    <li><a href="#exam"><b>Exam practice</b>5 questions, model answers</a></li>
+    <li><a href="#reading"><b>Reading list</b>by depth</a></li>
+  </ol>
+  <div class="base">— bottom: the DOM, the only thing the browser draws</div>
+</nav>
+
+<main style="min-width:0">
+<header class="hero">
+  <a class="back" href="../">← Root to End</a>
+  <span class="eyebrow">Web dev track · 2 of 5 · checked against React 19.2.8 in Chromium on 720 programs</span>
+  <h1>From a JSON file to the screen</h1>
+  <p class="lede">The <a href="../web-dev-vocabulary/">first page of the track</a> set up a Vite + React project. Now our component needs data from <code>public/Technologies.json</code>. We load it three ways: plain JavaScript, <code>useEffect</code> with <code>useState</code>, and <code>use(promise)</code> with <code>&lt;Suspense&gt;</code>, and follow each one into React's source until we know which line runs when, and why the screen changes.</p>
+  <div class="journey" aria-label="Layers this page follows">
+    <a class="st-k" href="#plain">the DOM</a><i>→</i><a class="st-m" href="#state">useState slots</a><i>→</i><a class="st-c" href="#effect">effect list</a><i>→</i><a class="st-c" href="#deps">Object.is</a><i>→</i><a class="st-b" href="#suspense">use() and Suspense</a><i>→</i><a class="st-j" href="#ours">our Technologies.tsx</a>
+  </div>
+  <p style="font-size:.9rem;margin:0">Web dev track: <a href="../web-dev-vocabulary/">1 · From the engine to the plugin</a> · <b>2 · From a JSON file to the screen</b> · next: 3 · From JSX to the DOM (planned), then 4 · From setState to the screen and 5 · From a URL to a Next.js page.</p>
+  <nav class="mobile-toc" aria-label="Sections">
+    <a href="#plain">Plain JS</a><a href="#state">useState</a><a href="#effect">useEffect</a><a href="#deps">Dependency array</a><a href="#suspense">use + Suspense</a><a href="#ours">Our code</a><a href="#real">Real output</a><a href="#try">Try it</a><a href="#exam">Exam</a><a href="#reading">Reading</a>
+  </nav>
+  <p class="muted" style="font-size:.86rem">How this was checked: the dependency-array lab's model gives the same renders and effect runs as real React 19.2.8 on 720 click programs (every sequence of up to four clicks, plus seeded random ones, on four arrays), and both line-by-line labs match the order real React logs, screen by screen (<code>verify/compare-with-react.js</code>). Source excerpts are from React's <code>v19.2.8</code> tag, fetched in October 2026.</p>
+</header>
+
+<aside class="tldr" aria-labelledby="tl-h">
+  <div class="tl-head"><b id="tl-h">The 60-second version</b><span>read this first, or come back to it after the deep dive</span></div>
+  <ol>
+    <li><span>The browser draws only the <b>DOM</b>. Changing a variable changes nothing on screen. In plain JavaScript our script runs once, so a variable keeps its value, and <b>we</b> update the DOM by hand.</span></li>
+    <li><span>React <b>calls our component function again</b> on every render, so local variables start fresh each time. <code>useState</code> keeps a value in a slot React owns, and <code>setX</code> asks React to render again and change the DOM for us.</span></li>
+    <li><span><code>useEffect(fn, deps)</code> is called during render, but <code>fn</code> is only stored. React calls it <b>after the commit</b>, and again only when an item in <code>deps</code> changed by <code>Object.is</code>. With <code>[]</code>, nothing can change, so it runs once.</span></li>
+    <li><span><code>use(promise)</code> returns the value if the promise is done, and otherwise <b>throws</b>. The nearest <code>&lt;Suspense&gt;</code> shows its fallback, and when the promise settles React renders the component again. So the promise must be the <b>same object</b> every time: create it once, outside the component.</span></li>
+  </ol>
+  <figure>
+    <svg viewBox="0 0 360 232" width="360" height="232" style="max-width:100%;height:auto" font-family="monospace" role="img" aria-label="Three rows: plain JavaScript changes a variable and then the DOM by hand; useState's setter makes React call the component again and commit the DOM; a settled promise pings React, which renders the suspended component again.">
+      <defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path class="tl-head-m" fill="#8a94a3" d="M0 0L10 5L0 10z"/></marker></defs>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="4" y="14">plain JS</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="2" y="20" width="104" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="54" y="39" text-anchor="middle">count++</text>
+      <rect class="tl-box hot" fill="none" stroke="#8a94a3" x="122" y="20" width="160" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="202" y="39" text-anchor="middle">WE write textContent</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="296" y="20" width="62" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="327" y="39" text-anchor="middle">screen</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M106 35 H118" marker-end="url(#ah)"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M282 35 H292" marker-end="url(#ah)"/>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="4" y="90">useState</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="2" y="96" width="104" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="54" y="115" text-anchor="middle">setCount()</text>
+      <rect class="tl-box hot" fill="none" stroke="#8a94a3" x="122" y="96" width="160" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="202" y="115" text-anchor="middle">React calls Counter()</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="296" y="96" width="62" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="327" y="115" text-anchor="middle">commit</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M106 111 H118" marker-end="url(#ah)"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M282 111 H292" marker-end="url(#ah)"/>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="4" y="166">use(promise)</text>
+      <rect class="tl-box" fill="none" stroke="#8a94a3" x="2" y="172" width="104" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="54" y="191" text-anchor="middle">promise settles</text>
+      <rect class="tl-box hot" fill="none" stroke="#8a94a3" x="122" y="172" width="160" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="202" y="191" text-anchor="middle">ping: TechGrid() again</text>
+      <rect class="tl-box good" fill="none" stroke="#8a94a3" x="296" y="172" width="62" height="30" rx="7"/><text class="tl-t s" fill="#8a94a3" font-size="9.5" x="327" y="191" text-anchor="middle">commit</text>
+      <path class="tl-a" fill="none" stroke="#8a94a3" d="M106 187 H118" marker-end="url(#ah)"/><path class="tl-a" fill="none" stroke="#8a94a3" d="M282 187 H292" marker-end="url(#ah)"/>
+      <text class="tl-t s" fill="#8a94a3" font-size="10" x="180" y="226" text-anchor="middle">only the middle column differs: who decides what changes</text>
+    </svg>
+    <figcaption>Three ways a new value reaches the screen</figcaption>
+  </figure>
+  <div class="tl-more">The <a href="#effect-lab">useEffect lab</a> and the <a href="#suspense-lab">Suspense lab</a> light up our own code line by line. The <a href="#deps-lab">dependency-array lab</a> can re-run any click sequence on real React in this browser.</div>
+</aside>
+
+<section id="plain" data-deeper="mdn-dom-scripting,mdn-dom,mdn-async-fn">
+  <div class="sechead"><span class="eyebrow">Frame 0 · the root</span><h2>A variable never moves a pixel</h2></div>
+  <div class="prose">
+    <p>The browser draws the <b>DOM</b>, the tree of element objects it built from our HTML (the <a href="../html-to-pixels/">HTML to pixels</a> page follows that tree to the screen). Our JavaScript variables live somewhere else entirely, in the engine's memory. Nothing connects them: <code>count++</code> changes a number in memory, and the screen stays exactly as it was until some code writes to the DOM.<a class="rd" data-r="mdn-dom"></a></p>
+    <p>In plain JavaScript that code is ours. The script runs <b>once</b>, top to bottom, so a variable declared at the top keeps its value for the life of the page. A click handler runs again on every click, changes the variable, and then must also change the DOM element that shows it.<a class="rd" data-r="mdn-dom-scripting"></a></p>
+  </div>
+  <figure class="src" data-kind="example">
+    <figcaption><span class="path">counter.js · plain JavaScript</span><span class="note">two separate jobs: remember, then show</span></figcaption>
+    <pre data-code="c-plain"></pre>
+  </figure>
+  <div class="scope" data-kind="illustration"><p><b>What it is.</b> Two counters. The left one is real plain JavaScript running on this page. The right one is a small imitation of React's cycle: a function that returns what the screen should show, called again after every change.</p><p><b>Checked against.</b> The left side is the real browser. The right side is an illustration; real React's renders are checked in the dependency-array lab.</p><p><b>Not covered.</b> How React compares the old and new output to change only the text that differs; that is reconciliation, on the planned page 4 of the track.</p></div>
+  <div class="lab">
+    <div class="counters">
+      <div class="panel">
+        <div class="stagehead">Plain JavaScript</div>
+        <p class="big" aria-live="polite">Screen: <span id="pjScreen">0</span></p>
+        <p class="vals">variable count = <span id="pjVar">0</span> <span id="pjWarn" class="stale"></span></p>
+        <label class="chk"><input type="checkbox" id="pjForget"> I forgot the line <code>span.textContent = count</code></label>
+        <div class="ctl"><button type="button" id="pjBtn" class="go">Click</button></div>
+      </div>
+      <div class="panel">
+        <div class="stagehead">React-style</div>
+        <p class="big" aria-live="polite">Screen: <span id="rxScreen">0</span></p>
+        <p class="vals">React's slot: count = <span id="rxVar">0</span></p>
+        <p class="vals" id="rxLog">render 1: Counter() returned "clicked 0 times", committed</p>
+        <div class="ctl"><button type="button" id="rxBtn" class="go">Click</button></div>
+      </div>
+    </div>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>On one click</th><th>Plain JavaScript</th><th>React</th></tr></thead>
+    <tbody>
+      <tr><td>1. Remember the new value</td><td><code>count++</code>, a normal variable that lives as long as the page</td><td><code>setCount(count + 1)</code> puts an update on a slot React owns</td></tr>
+      <tr><td>2. Work out the new screen</td><td>We decide which element needs to change</td><td>React calls our component again, and it returns new JSX</td></tr>
+      <tr><td>3. Change the DOM</td><td><code>span.textContent = count</code>, written by us</td><td>React compares old and new JSX and changes only what differs (the commit)</td></tr>
+      <tr><td>4. Draw</td><td>The browser, by itself</td><td>The browser, by itself</td></tr>
+    </tbody>
+  </table></div>
+  <p class="callout"><b>So plain JavaScript has no "re-render" at all, and no need for <code>useState</code>.</b> Its variables never reset, because nothing calls the script again; and the screen changes only where we write to the DOM. Forget one write (tick the box above) and the screen is silently wrong. React exists to remove step 3 from our code: we change data, and React works out every DOM change.</p>
+</section>
+
+<section id="state" data-deeper="react-render-commit,react-snapshot,react-usestate">
+  <div class="sechead"><span class="eyebrow">Frame 1 · React calls our function again</span><h2>useState: a slot that survives the next call</h2></div>
+  <div class="prose">
+    <p>A React component is a function, and React calls it whenever it needs to know what the screen should look like. That call is a <b>render</b>. Changing the real DOM to match is the <b>commit</b>. Each render is a fresh function call, so <code>let count = 0</code> inside the component is created again, set to 0, every time.<a class="rd" data-r="react-render-commit"></a></p>
+    <p>So the value has to live outside our function. React keeps one object per component instance, a <b>fiber</b>, and on it a list of hooks in call order. The first time <code>useState</code> runs, <code>mountStateImpl</code> makes a hook, stores our starting value in <code>hook.memoizedState</code>, and <code>mountState</code> returns it with a <code>dispatch</code> function bound to this fiber. That pair is the <code>[count, setCount]</code> we destructure. On later renders <code>useState</code> ignores the starting value and returns what the slot holds.<a class="rd" data-r="react-snapshot"></a></p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">packages/react-reconciler/src/ReactFiberHooks.js · mountStateImpl(), mountState()</span><span class="note">trimmed (the dev-only double call of an initializer)</span></figcaption>
+    <pre data-code="c-mountstate"></pre>
+  </figure>
+  <div class="prose">
+    <p>Calling <code>setCount</code> runs <code>dispatchSetStateInternal</code>. Usually it queues the update and calls <code>scheduleUpdateOnFiber</code>: that is the request to render again. But first it may try a shortcut. If nothing else is pending on this fiber or its alternate (the copy from the previous render), it computes the new state right away and compares it with <code>Object.is</code>. Equal means there is nothing to do, and React returns without scheduling a render.<a class="rd" data-r="mdn-object-is,react-usestate"></a></p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">packages/react-reconciler/src/ReactFiberHooks.js · dispatchSetStateInternal()</span><span class="note">trimmed to the eager comparison and the schedule</span></figcaption>
+    <pre data-code="c-dispatch"></pre>
+  </figure>
+  <p class="callout"><b>The shortcut has a condition, and real React shows it.</b> Right after a real update, the old fiber still carries that update's lane, so the check at the top fails. The first <code>setCount(sameValue)</code> then <i>does</i> call our component once; React finds every state unchanged and throws that render away, with no commit and no effect. The next same-value call takes the shortcut. The dependency-array lab reproduces this exactly (try "count + 1", then "same value" twice), and the react.dev page warns that React "may still need to call your component before skipping the children".<a class="rd" data-r="react-usestate"></a></p>
+</section>
+
+<section id="effect" data-deeper="react-sync-effects,react-useeffect,react-strict">
+  <div class="sechead"><span class="eyebrow">Frame 2 · effects</span><h2>useEffect is called now; our function runs after the commit</h2></div>
+  <div class="prose">
+    <p>The line <code>useEffect(() =&gt; { … }, [])</code> holds two functions. <code>useEffect</code> itself is <b>called</b> during the render: the brackets after its name call it. Our arrow function is only <b>passed</b> to it as a value, like the function we pass to <code>setTimeout(fn, 1000)</code> or <code>button.addEventListener("click", fn)</code>. Those calls run now and keep <code>fn</code> for later; <code>useEffect</code> does the same.</p>
+    <p>On the first render, <code>mountEffectImpl</code> receives our arrow as <code>create</code> and pushes it onto the fiber's effect list, flagged <code>HookHasEffect</code> ("run me"). There is no <code>create()</code> anywhere in it. After the commit has changed the DOM, <code>commitHookEffectListMount</code> walks that list and, for every effect with the flag, finally calls <code>create()</code>. That is the moment our fetch starts. Waiting until then means the page (here, the spinner) is already on screen, and React can check the dependency array on later renders before deciding whether to run the effect at all.<a class="rd" data-r="react-sync-effects"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">packages/react-reconciler/src/ReactFiberHooks.js · mountEffectImpl()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-mounteffect"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">packages/react-reconciler/src/ReactFiberCommitEffects.js · commitHookEffectListMount()</span><span class="note">trimmed to the production branch</span></figcaption>
+      <pre data-code="c-commit"></pre>
+    </figure>
+  </div>
+
+  <h3 id="effect-lab">Lab: the useEffect version, line by line</h3>
+  <div class="prose"><p>This is the version of our Technologies section that keeps the data in <code>useState</code> and fetches in an effect (the full file is in <a href="#ours">Frame 5</a>). Step through it. The lit lines are the ones running; on the right are the values React holds, the state of the effect, the network, and the screen.</p></div>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> The order in which React 19 runs this component, our effect and our fetch, with the screen at each step.</p><p><b>Checked against.</b> <code>verify/compare-with-react.js</code> runs the same component on real React 19.2.8 (production build) with the server answering after 300 ms and after 800 ms. Real React logs exactly the steps marked "real React logs this", in this order, with the same screen at each one.</p><p><b>Not covered.</b> StrictMode, which renders twice and runs the effect twice in development (see <a href="#real">Real output</a>), and a fetch that fails.</p></div>
+  <div class="lab" id="lab-effect">
+    <div class="ctl"><button type="button" data-k="prev">← Back</button><button type="button" data-k="next" class="go">Next step →</button><button type="button" data-k="reset">Start again</button><span class="pill" data-k="ctr"></span><span class="realtag" data-k="real"></span></div>
+    <div class="labgrid">
+      <div class="codepane" tabindex="0" aria-label="TechnologiesEffect.tsx with the running lines highlighted"><pre data-k="code"></pre></div>
+      <div class="side">
+        <p class="desc" data-k="desc" aria-live="polite"></p>
+        <div class="box"><h5>State in React's slots</h5><p class="vals" data-k="st"></p></div>
+        <div class="box"><h5>Our effect</h5><p class="vals" data-k="e"></p></div>
+        <div class="box"><h5>Network</h5><p class="vals" data-k="n"></p></div>
+        <div class="box"><h5>Screen</h5><div class="screen" data-k="scr"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="deps" data-deeper="react-useeffect,react-reactive-effects,mdn-object-is">
+  <div class="sechead"><span class="eyebrow">Frame 3 · the dependency array</span><h2>What goes in <code>[ ]</code>, and when the effect runs again</h2></div>
+  <div class="prose">
+    <p>On every render after the first, <code>updateEffectImpl</code> runs instead. If we passed an array, it hands this render's array and the previous one to <code>areHookInputsEqual</code>, which walks them item by item with <code>is</code>, React's name for <code>Object.is</code>. All equal: the effect is pushed <b>without</b> <code>HookHasEffect</code>, and the commit skips it. Anything different, or no array at all (<code>nextDeps</code> is <code>null</code>, so the comparison is never made): the flag is set and the effect runs after the commit.<a class="rd" data-r="react-useeffect"></a></p>
+    <p>So the array holds <b>the values our effect reads</b>: state, props, or anything computed from them. React's rule is that every such value belongs in it. Our fetch reads nothing that can change (a fixed file name), so <code>[]</code> is correct, and with an empty array the loop has nothing to compare and always answers "equal".<a class="rd" data-r="react-reactive-effects"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">packages/react-reconciler/src/ReactFiberHooks.js · updateEffectImpl()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-updateeffect"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">ReactFiberHooks.js · areHookInputsEqual() and packages/shared/objectIs.js</span><span class="note">trimmed (development warnings)</span></figcaption>
+      <pre data-code="c-equal"></pre>
+    </figure>
+  </div>
+  <div class="tbl"><table>
+    <thead><tr><th>We write</th><th>The effect runs</th><th>Typical use</th></tr></thead>
+    <tbody>
+      <tr><td><code>useEffect(fn)</code></td><td>After every committed render</td><td>Rarely what we want</td></tr>
+      <tr><td><code>useEffect(fn, [])</code></td><td>Once, after the first commit</td><td>Load data once, connect a listener once</td></tr>
+      <tr><td><code>useEffect(fn, [count])</code></td><td>After the first commit, then after any render where <code>count</code> changed</td><td><code>document.title = `Clicked ${count} times`</code>; fetch again when a selected category changes</td></tr>
+      <tr><td><code>return () =&gt; { … }</code> inside <code>fn</code></td><td>The cleanup: before the next run, and when the component goes away</td><td>Clear a timer, remove a listener, ignore a stale response</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 id="deps-lab">Lab: pick an array, then click</h3>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> A component with two pieces of state, <code>count</code> and <code>dark</code>, and one effect whose array we choose. Each click is a state change; the table shows, for every moment, whether React rendered the component and whether the effect ran, and why.</p><p><b>Checked against.</b> Real React 19.2.8, by <code>verify/compare-with-react.js</code>: every click sequence of up to four clicks and 60 seeded random longer ones, on all four arrays, 720 programs, all equal. The button below runs our clicks on real React in this browser.</p><p><b>Not covered.</b> StrictMode's extra development runs, cleanup functions, and objects or functions in the array (a new object every render always counts as "changed").</p></div>
+  <div class="lab" id="lab-deps">
+    <div class="presets" id="depModes" role="group" aria-label="Dependency array"></div>
+    <div class="box"><h5>The effect we are testing</h5><pre class="vals" id="depCode"></pre></div>
+    <div class="ctl"><button type="button" data-a="inc">count + 1</button><button type="button" data-a="dark">toggle dark</button><button type="button" data-a="same">setCount(count): same value</button><button type="button" id="depReset">Reset</button><span class="pill" id="depState"></span></div>
+    <div class="runs" tabindex="0" aria-label="What React did at each moment"><table><thead><tr><th>#</th><th>moment</th><th>render</th><th>effect</th><th>why</th></tr></thead><tbody id="depRows"></tbody></table></div>
+    <div class="ctl"><button type="button" id="depCheck">Check in this browser</button><span class="pill" id="depVerdict" role="status"></span></div>
+  </div>
+  <p class="callout">Try <b>[count]</b>, then "count + 1" (runs), "toggle dark" (render, effect skipped: dark is not in the array). Then <b>no array</b>, "count + 1", and "same value" twice: the first same-value click renders and is thrown away, so even an effect with no array does not run, and the second does not render at all (Frame 1 explains the lane check behind it).</p>
+</section>
+
+<section id="suspense" data-deeper="react-use,react-suspense,react-19-blog">
+  <div class="sechead"><span class="eyebrow">Frame 4 · use() and Suspense</span><h2>A component that throws, and a boundary that catches</h2></div>
+  <div class="prose">
+    <p><code>use</code>, added in React 19, reads a value from a promise during render.<a class="rd" data-r="react-19-blog"></a> It first checks that it was given a "thenable" (an object with a <code>.then</code> method), then <code>trackUsedThenable</code> looks at a property React writes onto the promise itself: <code>status</code>. If it says <code>"fulfilled"</code>, <code>use</code> returns <code>value</code> straight away. If the promise has no status yet, React sets it to <code>"pending"</code>, attaches its own <code>.then</code> that will write <code>status</code> and <code>value</code> when the promise settles, and then <b>throws</b> <code>SuspenseException</code>. Our component stops on that line; the rest of it never runs.<a class="rd" data-r="react-use"></a></p>
+    <p>The throw unwinds React's work loop up to the nearest <code>&lt;Suspense&gt;</code>, which renders its <code>fallback</code> instead, and React commits that. It also attaches a <b>ping</b> listener to the same promise. When the promise settles, <code>pingSuspendedRoot</code> marks the root and schedules a render. React then calls our component again <b>from the top</b>; this time <code>status</code> is <code>"fulfilled"</code>, so <code>use</code> returns the data.<a class="rd" data-r="react-suspense"></a></p>
+  </div>
+  <div class="pair">
+    <figure class="src">
+      <figcaption><span class="path">packages/react-reconciler/src/ReactFiberHooks.js · use()</span><span class="note">verbatim</span></figcaption>
+      <pre data-code="c-use"></pre>
+    </figure>
+    <figure class="src">
+      <figcaption><span class="path">packages/react-reconciler/src/ReactFiberWorkLoop.js · attachPingListener()</span><span class="note">trimmed (cache lookups, DevTools)</span></figcaption>
+      <pre data-code="c-ping"></pre>
+    </figure>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">packages/react-reconciler/src/ReactFiberThenable.js · trackUsedThenable()</span><span class="note">trimmed to the status switch and the throw</span></figcaption>
+    <pre data-code="c-track"></pre>
+  </figure>
+  <div class="prose">
+    <p>Because React re-runs the component rather than resuming it, the promise must be <b>the same object</b> on the retry: only that object carries <code>status: "fulfilled"</code>. In our file it is created once, at the top level, when the module first runs. If we wrote <code>use(loadTechnologies())</code> inside the component, each retry would make a brand-new promise with no status, start another request, and suspend again, forever. Real React does exactly that: 22 requests in two seconds and the spinner never leaves (<a href="#real">Real output</a>). React's development warning "A component was suspended by an uncached promise" fires only when it re-runs the same render attempt and sees a different promise at the same position; in this loop each attempt is new, so we saw no warning at all.</p>
+    <p>One step real React takes that our first sketch missed: right after committing the fallback, React 19 renders the suspended part once more, while the promise is still pending, to warm up siblings it skipped during the unwind. <code>use</code> throws again and nothing on screen changes. The lab shows it as its own step, because real React logs it.</p>
+  </div>
+  <figure class="src">
+    <figcaption><span class="path">packages/react-reconciler/src/ReactFiberWorkLoop.js · module state</span><span class="note">verbatim: the prewarm render</span></figcaption>
+    <pre data-code="c-prewarm"></pre>
+  </figure>
+
+  <h3 id="suspense-lab">Lab: the use() + Suspense version, line by line</h3>
+  <div class="scope" data-kind="model"><p><b>What it is.</b> The order in which this file, React and the network run, with the promise's status and the screen at each step.</p><p><b>Checked against.</b> Real React 19.2.8 (production build), server delays 300 ms and 800 ms: the steps marked "real React logs this" appear in real React's log in this order, with the same screen.</p><p><b>Not covered.</b> StrictMode (it renders <code>Technologies</code> twice in development but still sends one request), errors (they need an error boundary), and server-side rendering.</p></div>
+  <div class="lab" id="lab-suspense">
+    <div class="ctl"><button type="button" data-k="prev">← Back</button><button type="button" data-k="next" class="go">Next step →</button><button type="button" data-k="reset">Start again</button><span class="pill" data-k="ctr"></span><span class="realtag" data-k="real"></span></div>
+    <div class="labgrid">
+      <div class="codepane" tabindex="0" aria-label="Technologies.tsx with the running lines highlighted"><pre data-k="code"></pre></div>
+      <div class="side">
+        <p class="desc" data-k="desc" aria-live="polite"></p>
+        <div class="box"><h5>technologiesPromise</h5><p class="vals" data-k="p"></p></div>
+        <div class="box"><h5>Network</h5><p class="vals" data-k="n"></p></div>
+        <div class="box"><h5>Screen</h5><div class="screen" data-k="scr"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ours" data-deeper="vite-public,react-no-effect,react-strict">
+  <div class="sechead"><span class="eyebrow">Frame 5 · our code</span><h2>The Dev Stack Technologies section, both ways</h2></div>
+  <div class="prose"><p>Both files load <code>public/Technologies.json</code> (Vite serves <code>public/</code> at <code>/</code> during development and copies it unchanged into <code>dist/</code> when we build, so the same URL works after deploying).<a class="rd" data-r="vite-public"></a> They show the same spinner, then the same grid. What differs is who does each job.</p></div>
+  <div class="pair">
+    <figure class="src" data-kind="example">
+      <figcaption><span class="path">src/components/Technologies.tsx · use() + Suspense</span><span class="note">the version we submit (card markup trimmed)</span></figcaption>
+      <pre data-code="c-ours-suspense"></pre>
+    </figure>
+    <figure class="src" data-kind="example">
+      <figcaption><span class="path">src/components/TechnologiesEffect.tsx · useEffect + useState</span><span class="note">the version we compare with (trimmed)</span></figcaption>
+      <pre data-code="c-ours-effect"></pre>
+    </figure>
+  </div>
+  <div class="tbl"><table class="vs">
+    <thead><tr><th>Job</th><th>use() + Suspense</th><th>useEffect + useState</th><th>Plain JavaScript</th></tr></thead>
+    <tbody>
+      <tr><td>Start the fetch once</td><td>Top-level line, runs when the module loads</td><td>Inside <code>useEffect(…, [])</code>, after the first commit</td><td>The script runs once</td></tr>
+      <tr><td>Hold the data</td><td>The promise (React writes <code>status</code> and <code>value</code> on it)</td><td><code>useState</code> slots on the fiber</td><td>A normal variable</td></tr>
+      <tr><td>Know it is still loading</td><td>Suspense, automatically</td><td>A <code>loading</code> state we keep</td><td>We track it ourselves</td></tr>
+      <tr><td>Show the spinner</td><td><code>fallback={…}</code></td><td><code>loading ? spinner : grid</code></td><td>Insert it, later remove it</td></tr>
+      <tr><td>Trigger the redraw</td><td>React's ping listener on the promise</td><td>Our <code>setTechnologies</code> and <code>setLoading</code></td><td>We write the DOM</td></tr>
+      <tr><td>Requests in development (StrictMode)</td><td>1</td><td>2 (effects run twice in development only)</td><td>1</td></tr>
+    </tbody>
+  </table></div>
+  <div class="prose">
+    <p><b>Why <code>async</code> goes on a helper, never on the component or the effect.</b> An <code>async</code> function always returns a promise.<a class="rd" data-r="mdn-async-fn"></a> A component in the browser must return JSX, not a promise (React 19 throws "async Client Component" when it detects one), and an effect function may return only nothing or a cleanup function. So both versions put <code>async</code> on <code>loadTechnologies</code> and call it.</p>
+    <p><b>The blank page we hit while writing this.</b> The file was <code>public/Technologies.json</code>, and the code fetched <code>/technologies.json</code>. Windows file names ignore case; URLs do not, and neither does Vite's list of public files or a Linux server like Netlify's. The server answered with a 404 page, <code>res.json()</code> failed on its first character ("Unexpected token '&lt;', "&lt;!doctype "... is not valid JSON"), the promise rejected, <code>use</code> threw that error, and with no error boundary to catch it React removed the whole tree. Real React does exactly this in our check. The name in <code>fetch</code> must match the file name exactly.</p>
+  </div>
+  <p class="callout"><b>Which to submit:</b> the use() + Suspense version. It has less code, fetches once even in development, and needs no loading state of our own. The useEffect version is the one most tutorials and existing projects use, so it is worth recognising, and react.dev points out its weak spots (race conditions, no caching) in "You Might Not Need an Effect".<a class="rd" data-r="react-no-effect"></a></p>
+</section>
+
+<section id="real" data-deeper="react-strict">
+  <div class="sechead"><span class="eyebrow">Real output</span><h2>React's own order, captured</h2></div>
+  <div class="prose"><p>Each line below was logged by real React 19.2.8 in Chromium running our two components, with the server answering after 300 ms. A MutationObserver adds a highlighted line each time a commit changed the screen. The production build is what <code>npm run build</code> ships; the development build with <code>&lt;StrictMode&gt;</code> is what <code>npm run dev</code> gives us.</p></div>
+  <div class="scope" data-kind="observed"><p><b>What it is.</b> Output of <code>data/capture.js</code>: our components written with <code>React.createElement</code>, served from a fake origin by Playwright so that <code>fetch</code> is a real network request we can delay and count.</p><p><b>Checked against.</b> It is the real system; the verifier runs the same programs on every check.</p><p><b>Not covered.</b> Timing (the order is what matters), other browsers, and Vite's dev server itself (we bundle the same packages with esbuild).</p></div>
+  <div class="cols">
+    <div class="panel"><div class="stagehead">use() + Suspense · production</div><ul class="loglist" id="logSuspense"></ul></div>
+    <div class="panel"><div class="stagehead">useEffect + useState · production</div><ul class="loglist" id="logEffect"></ul></div>
+  </div>
+  <div class="cols">
+    <div class="panel"><div class="stagehead">useEffect + useState · development, StrictMode</div><ul class="loglist" id="logStrict"></ul><p class="muted" style="font-size:.82rem;margin:0" id="noteStrict"></p></div>
+    <div class="panel"><div class="stagehead">The bug: a new promise in every render</div><ul class="loglist" id="logUncached"></ul><p class="muted" style="font-size:.82rem;margin:0" id="noteUncached"></p></div>
+  </div>
+</section>
+
+<section id="try">
+  <div class="sechead"><span class="eyebrow">Frame 6 · practice</span><h2>Predict, then check</h2></div>
+  <div class="quizzes">
+    <div class="quiz"><script type="application/json">{"q":"During render, React reaches <code>useEffect(() =&gt; { load(); }, [])</code>. What runs at that moment?","options":["<code>useEffect</code> and our arrow function, then <code>load()</code>","Only <code>useEffect</code>: it stores our arrow on the fiber's effect list, and React calls it after the commit","Nothing: React skips hooks until the DOM exists","Only our arrow function, because <code>[]</code> means run immediately"],"answer":1,"explain":"<b>Passed, not called.</b> The brackets after <code>useEffect</code> call it; our arrow is only an argument. <code>mountEffectImpl</code> pushes it as <code>create</code>, and <code>commitHookEffectListMount</code> later does <code>create()</code>."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Plain JavaScript: a click handler runs <code>count++</code> but nothing else. What does the screen show after three clicks, starting from 0?","options":["3","0, because no code changed the DOM","It throws, because count is not state","1, because the browser batches the updates"],"answer":1,"explain":"<b>The browser draws the DOM, not our variables.</b> Without <code>span.textContent = count</code> the variable is 3 and the screen still says 0."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"With <code>useEffect(fn, [count])</code>, we click \"toggle dark\". What happens?","options":["The component does not render","It renders, and the effect runs because something changed","It renders, and the effect is skipped: <code>count</code> is the same by <code>Object.is</code>","The effect runs without a render"],"answer":2,"explain":"<b>Item by item.</b> <code>setDark</code> causes a render, but <code>areHookInputsEqual</code> only compares the items in the array, and <code>count</code> did not change."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"<code>TechGrid</code> calls <code>use(loadTechnologies())</code> directly. What does the user see?","options":["The grid, after one request","A spinner forever, with a new request on every retry","An error: use() only accepts context","The grid, after two requests in StrictMode"],"answer":1,"explain":"<b>A new promise has no status.</b> Each retry calls <code>loadTechnologies()</code> again, so <code>use</code> gets a fresh pending promise and suspends again. Real React sent 22 requests in two seconds."}</script></div>
+    <div class="quiz"><script type="application/json">{"q":"Right after a click that changed <code>count</code>, we call <code>setCount(count)</code> with the same value. What does real React 19.2.8 do?","options":["Nothing at all","Renders the component once, finds nothing changed, and discards the render: no commit, no effect","Renders and runs every effect","Throws a warning about a redundant update"],"answer":1,"explain":"<b>The lane is still there.</b> <code>dispatchSetStateInternal</code> only compares early when neither fiber has pending lanes. Right after an update the alternate still has one, so React renders, bails out, and clears it; the next same-value call does nothing."}</script></div>
+  </div>
+  <h3>See it on our own machine</h3>
+  <div class="tbl"><table>
+    <thead><tr><th>What to see</th><th>How</th></tr></thead>
+    <tbody>
+      <tr><td>Renders and effects in order</td><td><code>console.log("render", loading)</code> in the component body and <code>console.log("effect")</code> as the first line of the effect; reload and read the console</td></tr>
+      <tr><td>StrictMode's double effect</td><td>Network tab in development: <code>Technologies.json</code> twice in the useEffect version, once in the Suspense version; once each after <code>npm run build</code> and <code>npm run preview</code></td></tr>
+      <tr><td>The spinner for longer</td><td>DevTools → Network → throttling "Slow 4G", then reload</td></tr>
+      <tr><td>A suspended component</td><td>React DevTools → Components: the Suspense node, and the "Suspend" toggle that forces its fallback</td></tr>
+      <tr><td>The status React writes</td><td>In <code>TechGrid</code>, <code>console.log(technologiesPromise)</code> after <code>use()</code>: the promise object now has <code>status: "fulfilled"</code> and <code>value</code></td></tr>
+    </tbody>
+  </table></div>
+  <h3>Exercises</h3>
+  <ol class="ex">
+    <li>In the dependency-array lab, choose <b>[count, dark]</b>. Predict the effect column for "toggle dark, same value, same value, count + 1" before clicking, then press "Check in this browser".</li>
+    <li>Add <code>useEffect(() =&gt; { document.title = `${count} selected`; }, [count])</code> to a counter. Which array would make the title go stale, and which would update it more often than needed?</li>
+    <li>Change the useEffect version so that a failed fetch shows an error message instead of spinning forever. What has to change in state, and where does <code>res.ok</code> come in?</li>
+    <li>Move <code>use(technologiesPromise)</code> from <code>TechGrid</code> into <code>Technologies</code>. Predict what disappears behind the spinner, then try it.</li>
+    <li>Write the plain JavaScript version of the Technologies section with <code>fetch</code>, <code>createElement</code> and <code>appendChild</code>. Count the DOM operations it needs when one technology is added to the stack, and compare with one <code>setStack</code> call.</li>
+  </ol>
+</section>
+
+<section id="exam">
+  <div class="sechead"><span class="eyebrow">Exam practice</span><h2>Exam-style questions, with model answers</h2></div>
+  <div class="prose"><p>Five questions in the style of a web engineering exam. Write our answer first, then open the model answer and mark ourselves honestly. Orders and counts in the answers come from the verified labs and the captured real React output.</p></div>
+  <div class="exam">
+    <div class="exam-bar"><span class="tally"></span><span>Self-marks stay on this page only; refreshing clears them.</span></div>
+    <div class="exq" data-marks="6" data-kind="Trace">
+      <div class="q">For the useEffect version of the Technologies section (production build, no StrictMode), list in order: each render with the values of <code>loading</code> and <code>technologies.length</code>, each commit with what the screen shows, the effect run, and the fetch. How many renders, commits, effect runs and requests are there?</div>
+      <div class="a">
+        <p>Render 1: <code>loading = true</code>, 0 items. Commit: the spinner. Effect runs and sends the fetch. The response arrives, <code>res.json()</code> gives 12 items, <code>setTechnologies(data)</code> and <code>setLoading(false)</code> queue two updates for one render. Render 2: <code>loading = false</code>, 12 items. The effect is not run again (<code>[]</code> unchanged). Commit: the grid.</p>
+        <p>Totals: 2 renders, 2 commits, 1 effect run, 1 request (the "useEffect + useState · production" log in Real output).</p>
+        <p class="rub">Marking: 1 for render 1's values, 1 for "effect after the first commit", 1 for the fetch and response, 1 for one batched render, 1 for "effect skipped", 1 for the totals.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Explain">
+      <div class="q">A student writes <code>fetch("/Technologies.json").then(r =&gt; r.json()).then(d =&gt; setTechnologies(d))</code> directly in the component body. The Network tab shows the request repeating forever. Explain why, naming the comparison React uses, and give two correct fixes.</div>
+      <div class="a">
+        <p>The component body runs on every render. Each response calls <code>setTechnologies</code> with a new array from <code>JSON.parse</code>; <code>Object.is(oldArray, newArray)</code> is false because they are different objects, so React schedules another render, which runs the fetch again: a loop.</p>
+        <p>Fix 1: move the fetch into <code>useEffect(…, [])</code>, which React runs once after the first commit. Fix 2: create the promise once at module level and read it with <code>use(promise)</code> inside a component wrapped in <code>&lt;Suspense&gt;</code>.</p>
+        <p class="rub">Marking: 1 for "body runs every render", 1 for the new array, 1 for <code>Object.is</code>, 1 per fix.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="5" data-kind="Trace">
+      <div class="q">A component has state <code>count</code> and <code>dark</code> and <code>useEffect(fn, [count])</code>. After the mount, the user clicks: count + 1, toggle dark, <code>setCount(count)</code> (same value), <code>setCount(count)</code> again. For the mount and each click, say whether React 19.2.8 renders the component and whether the effect runs.</div>
+      <div class="a">
+        <p>Mount: renders, effect runs (always on the first commit). count + 1: renders, effect runs (count 0 → 1). toggle dark: renders, effect skipped (count unchanged). First same value: renders once and bails out, effect does not run (the previous update's lane was still on the fiber, so the eager comparison was not allowed). Second same value: no render at all (eager <code>Object.is</code> bail-out).</p>
+        <p class="rub">Marking: 1 per moment; the third same-value mark needs the lane reason, not just the answer. (This is the lab's [count] array with those clicks; real React agrees.)</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Compare">
+      <div class="q">Compare <code>use(promise)</code> with Suspense and <code>useEffect</code> with <code>useState</code> for loading data once: when the request starts, where the data lives, what triggers the second render, and how many requests the development build sends under StrictMode.</div>
+      <div class="a">
+        <p>use + Suspense: the request starts when the module runs (before any render); the data lives on the promise as <code>status</code>/<code>value</code>; React's ping listener on the promise schedules the retry; 1 request in development. useEffect + useState: the request starts after the first commit; the data lives in state slots on the fiber; our <code>setTechnologies</code>/<code>setLoading</code> schedule the render; 2 requests in development because StrictMode runs effects twice (1 in production).</p>
+        <p class="rub">Marking: 1 for each of the four points, both sides needed.</p>
+      </div>
+    </div>
+    <div class="exq" data-marks="4" data-kind="Short note">
+      <div class="q">Write a short note on why the promise given to <code>use()</code> must be created outside the component that reads it.</div>
+      <div class="a">
+        <p>When <code>use</code> meets a pending promise, React tags it <code>status: "pending"</code>, attaches listeners that will write <code>status</code> and <code>value</code>, and throws to the nearest Suspense. When the promise settles, React renders the component again from the top; it does not resume it. Only the original promise object carries <code>"fulfilled"</code>, so the retry must receive the same object. A promise created inside the component is new on every render, has no status, starts a new request, and suspends again forever (22 requests in 2 s in our capture). Creating it once at module level, or in a cache or a framework, gives every render the same object.</p>
+        <p class="rub">Marking: 1 for the status written on the object, 1 for "re-run, not resume", 1 for the infinite loop, 1 for where to create it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="reading">
+  <div class="sechead"><span class="eyebrow">Reading list</span><h2>Everything this page cites, by depth</h2></div>
+  <p class="muted" style="font-size:.9rem;max-width:68ch">The numbered markers in the text open the relevant reading right where we need it. Here is all of it in one place: <b>Start here</b> for a first pass, <b>Go deeper</b> for the full treatment, and <b>Primary sources</b> for React's own reference pages.</p>
+  <div id="reading-list"></div>
+</section>
+
+<section id="sources">
+  <div class="sechead"><span class="eyebrow">Sources</span><h2>Original files and data</h2></div>
+  <ul class="src-list">
+    <li><a href="https://github.com/facebook/react/blob/v19.2.8/packages/react-reconciler/src/ReactFiberHooks.js">packages/react-reconciler/src/ReactFiberHooks.js</a></li>
+    <li><a href="https://github.com/facebook/react/blob/v19.2.8/packages/react-reconciler/src/ReactFiberCommitEffects.js">packages/react-reconciler/src/ReactFiberCommitEffects.js</a></li>
+    <li><a href="https://github.com/facebook/react/blob/v19.2.8/packages/react-reconciler/src/ReactFiberThenable.js">packages/react-reconciler/src/ReactFiberThenable.js</a></li>
+    <li><a href="https://github.com/facebook/react/blob/v19.2.8/packages/react-reconciler/src/ReactFiberWorkLoop.js">packages/react-reconciler/src/ReactFiberWorkLoop.js</a></li>
+    <li><a href="https://github.com/facebook/react/blob/v19.2.8/packages/shared/objectIs.js">packages/shared/objectIs.js</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/react-data-loading/data">Our capture script and its output (data/)</a></li>
+    <li><a href="https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/tree/main/react-data-loading/verify">Our check against real React (verify/)</a></li>
+  </ul>
+  <p class="muted" style="font-size:.84rem">React is MIT licensed, Copyright (c) Meta Platforms, Inc. and affiliates; excerpts are quoted for study, and the bundle in <code>vendor/</code> keeps React's licence notices.</p>
+</section>
+</main>
+</div>
+
+<script type="text/plain" id="c-plain">let count = 0;                          // created once: the script runs once
+const span = document.querySelector("#count");
+const button = document.querySelector("#plus");
+
+button.addEventListener("click", () => {   // runs on every click
+  count++;                                 // job 1: remember (memory only)
+» span.textContent = count;                // job 2: show (the only line the screen sees)
+});</script>
+<script type="text/plain" id="c-mountstate">function mountStateImpl<S>(initialState: (() => S) | S): Hook {
+  const hook = mountWorkInProgressHook();
+  if (typeof initialState === 'function') {
+    // …
+  }
+» hook.memoizedState = hook.baseState = initialState;
+  const queue: UpdateQueue<S, BasicStateAction<S>> = {
+    pending: null,
+    lanes: NoLanes,
+    dispatch: null,
+    lastRenderedReducer: basicStateReducer,
+    lastRenderedState: (initialState: any),
+  };
+  hook.queue = queue;
+  return hook;
+}
+
+function mountState<S>(
+  initialState: (() => S) | S,
+): [S, Dispatch<BasicStateAction<S>>] {
+  const hook = mountStateImpl(initialState);
+  const queue = hook.queue;
+  const dispatch: Dispatch<BasicStateAction<S>> = (dispatchSetState.bind(
+    null,
+    currentlyRenderingFiber,
+    queue,
+  ): any);
+  queue.dispatch = dispatch;
+» return [hook.memoizedState, dispatch];
+}</script>
+<script type="text/plain" id="c-dispatch">  } else {
+    const alternate = fiber.alternate;
+»   if (
+»     fiber.lanes === NoLanes &&
+»     (alternate === null || alternate.lanes === NoLanes)
+»   ) {
+      // The queue is currently empty, which means we can eagerly compute the
+      // next state before entering the render phase. If the new state is the
+      // same as the current state, we may be able to bail out entirely.
+      const lastRenderedReducer = queue.lastRenderedReducer;
+      if (lastRenderedReducer !== null) {
+        // …
+        try {
+          const currentState: S = (queue.lastRenderedState: any);
+          const eagerState = lastRenderedReducer(currentState, action);
+          // …
+»         if (is(eagerState, currentState)) {
+            // Fast path. We can bail out without scheduling React to re-render.
+            // …
+            enqueueConcurrentHookUpdateAndEagerlyBailout(fiber, queue, update);
+            return false;
+          }
+        } catch (error) {
+          // Suppress the error. It will throw again in the render phase.
+        } // …
+      }
+    }
+
+    const root = enqueueConcurrentHookUpdate(fiber, queue, update, lane);
+    if (root !== null) {
+»     scheduleUpdateOnFiber(root, fiber, lane);
+      entangleTransitionUpdate(root, queue, lane);
+      return true;
+    }
+  }</script>
+<script type="text/plain" id="c-mounteffect">function mountEffectImpl(
+  fiberFlags: Flags,
+  hookFlags: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const hook = mountWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  currentlyRenderingFiber.flags |= fiberFlags;
+  hook.memoizedState = pushSimpleEffect(
+»   HookHasEffect | hookFlags,
+    createEffectInstance(),
+»   create,
+    nextDeps,
+  );
+}</script>
+<script type="text/plain" id="c-commit">export function commitHookEffectListMount(
+  flags: HookFlags,
+  finishedWork: Fiber,
+) {
+  try {
+    const updateQueue: FunctionComponentUpdateQueue | null =
+      (finishedWork.updateQueue: any);
+    const lastEffect = updateQueue !== null ? updateQueue.lastEffect : null;
+    if (lastEffect !== null) {
+      const firstEffect = lastEffect.next;
+      let effect = firstEffect;
+      do {
+»       if ((effect.tag & flags) === flags) {
+          // …
+          // Mount
+          let destroy;
+          if (__DEV__) {
+            // …
+          } else {
+            const create = effect.create;
+            const inst = effect.inst;
+»           destroy = create();
+            inst.destroy = destroy;
+          }
+          // …</script>
+<script type="text/plain" id="c-updateeffect">function updateEffectImpl(
+  fiberFlags: Flags,
+  hookFlags: HookFlags,
+  create: () => (() => void) | void,
+  deps: Array<mixed> | void | null,
+): void {
+  const hook = updateWorkInProgressHook();
+  const nextDeps = deps === undefined ? null : deps;
+  const effect: Effect = hook.memoizedState;
+  const inst = effect.inst;
+
+  // currentHook is null on initial mount when rerendering after a render phase
+  // state update or for strict mode.
+  if (currentHook !== null) {
+»   if (nextDeps !== null) {
+      const prevEffect: Effect = currentHook.memoizedState;
+      const prevDeps = prevEffect.deps;
+      // $FlowFixMe[incompatible-call] (@poteto)
+»     if (areHookInputsEqual(nextDeps, prevDeps)) {
+        hook.memoizedState = pushSimpleEffect(
+          hookFlags,
+          inst,
+          create,
+          nextDeps,
+        );
+        return;
+      }
+    }
+  }
+
+  currentlyRenderingFiber.flags |= fiberFlags;
+
+  hook.memoizedState = pushSimpleEffect(
+»   HookHasEffect | hookFlags,
+    inst,
+    create,
+    nextDeps,
+  );
+}</script>
+<script type="text/plain" id="c-equal">function areHookInputsEqual(
+  nextDeps: Array<mixed>,
+  prevDeps: Array<mixed> | null,
+): boolean {
+  // …
+  if (prevDeps === null) {
+    // …
+    return false;
+  }
+  // …
+  for (let i = 0; i < prevDeps.length && i < nextDeps.length; i++) {
+»   if (is(nextDeps[i], prevDeps[i])) {
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+// packages/shared/objectIs.js
+const objectIs: (x: any, y: any) => boolean =
+  // $FlowFixMe[method-unbinding]
+» typeof Object.is === 'function' ? Object.is : is;</script>
+<script type="text/plain" id="c-use">function use<T>(usable: Usable<T>): T {
+  if (usable !== null && typeof usable === 'object') {
+    // $FlowFixMe[method-unbinding]
+»   if (typeof usable.then === 'function') {
+      // This is a thenable.
+      const thenable: Thenable<T> = (usable: any);
+»     return useThenable(thenable);
+    } else if (usable.$$typeof === REACT_CONTEXT_TYPE) {
+      const context: ReactContext<T> = (usable: any);
+      return readContext(context);
+    }
+  }
+
+  // eslint-disable-next-line react-internal/safe-string-coercion
+  throw new Error('An unsupported type was passed to use(): ' + String(usable));
+}</script>
+<script type="text/plain" id="c-ping">export function attachPingListener(
+  root: FiberRoot,
+  wakeable: Wakeable,
+  lanes: Lanes,
+) {
+  // …
+  if (!threadIDs.has(lanes)) {
+    workInProgressRootDidAttachPingListener = true;
+
+    // Memoize using the thread ID to prevent redundant listeners.
+    threadIDs.add(lanes);
+    const ping = pingSuspendedRoot.bind(null, root, wakeable, lanes);
+    // …
+»   wakeable.then(ping, ping);
+  }
+}</script>
+<script type="text/plain" id="c-track">  switch (thenable.status) {
+    case 'fulfilled': {
+      const fulfilledValue: T = thenable.value;
+»     return fulfilledValue;
+    }
+    case 'rejected': {
+      const rejectedError = thenable.reason;
+      checkIfUseWrappedInAsyncCatch(rejectedError);
+      throw rejectedError;
+    }
+    default: {
+      // …
+        const pendingThenable: PendingThenable<T> = (thenable: any);
+»       pendingThenable.status = 'pending';
+        pendingThenable.then(
+          fulfilledValue => {
+            if (thenable.status === 'pending') {
+              const fulfilledThenable: FulfilledThenable<T> = (thenable: any);
+»             fulfilledThenable.status = 'fulfilled';
+»             fulfilledThenable.value = fulfilledValue;
+            }
+          },
+          // … (the same for 'rejected')
+        );
+      // …
+      // Suspend.
+      //
+      // Throwing here is an implementation detail that allows us to unwind the
+      // call stack. But we shouldn't allow it to leak into userspace. Throw an
+      // opaque placeholder value instead of the actual thenable. If it doesn't
+      // get captured by the work loop, log a warning, because that means
+      // something in userspace must have caught it.
+      suspendedThenable = thenable;
+      // …
+»     throw SuspenseException;</script>
+<script type="text/plain" id="c-prewarm">// Tracks whether any siblings were skipped during the unwind phase after
+// something suspends. Used to determine whether to schedule another render
+// to prewarm the skipped siblings.
+» let workInProgressRootDidSkipSuspendedSiblings: boolean = false;
+// Whether the work-in-progress render is the result of a prewarm/prerender.
+// This tells us whether or not we should render the siblings after
+// something suspends.
+let workInProgressRootIsPrerendering: boolean = false;</script>
+<script type="text/plain" id="c-ours-suspense">import { Suspense, use } from "react";
+import type { Technology } from "../types";
+
+async function loadTechnologies(): Promise<Technology[]> {
+  const res = await fetch("/Technologies.json");   // exactly the file's name
+  const data = await res.json();
+  return data;
+}
+
+» const technologiesPromise = loadTechnologies();    // once, when the module runs
+
+function TechGrid() {
+» const technologies = use(technologiesPromise);   // value, or throw to Suspense
+  return (
+    <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <p>{technologies.length} technologies loaded</p>
+      {/* … the cards … */}
+    </div>
+  );
+}
+
+const Technologies = () => {
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-16">
+      {/* … heading … */}
+      <div className="mt-10 flex flex-col lg:flex-row lg:items-start gap-6">
+»       <Suspense fallback={<div className="flex-1 flex justify-center py-20"><span className="loading loading-spinner loading-lg"></span></div>}>
+          <TechGrid />
+        </Suspense>
+        <aside>{/* … Your Stack … */}</aside>
+      </div>
+    </section>
+  );
+};
+
+export default Technologies;</script>
+<script type="text/plain" id="c-ours-effect">import { useEffect, useState } from "react";
+import type { Technology } from "../types";
+
+function TechnologiesEffect() {
+» const [technologies, setTechnologies] = useState<Technology[]>([]);
+» const [loading, setLoading] = useState(true);
+
+» useEffect(() => {                       // stored now, called after the commit
+    async function loadTechnologies() {
+      const res = await fetch("/Technologies.json");
+      const data: Technology[] = await res.json();
+      setTechnologies(data);              // queue an update
+      setLoading(false);                  // batched into the same render
+    }
+    loadTechnologies();
+» }, []);                                 // nothing can change: run once
+
+  return (
+    <section className="max-w-6xl mx-auto px-4 py-16">
+      {/* … heading … */}
+      <div className="mt-10 flex flex-col lg:flex-row lg:items-start gap-6">
+»       {loading ? (
+          <div className="flex-1 flex justify-center py-20"><span className="loading loading-spinner loading-lg"></span></div>
+        ) : (
+          <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <p>{technologies.length} technologies loaded</p>
+          </div>
+        )}
+        <aside>{/* … Your Stack … */}</aside>
+      </div>
+    </section>
+  );
+}
+
+export default TechnologiesEffect;</script>
+
+<script src="../assets/reading.js?v=8c1d0168"></script>
+<script src="react-model.js?v=9517da6f"></script>
+<script src="capture-data.js?v=9206d778"></script>
+<script src="deps-real.js?v=b45ff951"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+  function $(id){return document.getElementById(id)}
+  function hl(line){
+    var re=/(\/\*.*?\*\/|\/\/.*$|\{\/\*.*?\*\/\})|("(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`)|\b(if|else|return|const|let|var|function|async|await|import|export|default|from|type|try|catch|finally|throw|new|typeof|for|do|while|switch|case|continue|true|false|null|undefined|boolean|void)\b|\b([A-Za-z_$][\w$]*)(?=\()|\b(\d+)\b/g;
+    var out="",last=0,m;
+    while((m=re.exec(line))){out+=esc(line.slice(last,m.index));var cls=m[1]?"t-com":m[2]?"t-str":m[3]?"t-kw":m[4]?"t-fn":"t-num";out+='<span class="'+cls+'">'+esc(m[0])+'</span>';last=re.lastIndex;if(m[0].length===0)re.lastIndex++}
+    return out+esc(line.slice(last));
+  }
+  document.querySelectorAll("pre[data-code]").forEach(function(pre){
+    var src=$(pre.getAttribute("data-code"));if(!src)return;
+    pre.innerHTML=src.textContent.replace(/^\n/,"").split("\n").map(function(l){var key=false;if(l.charAt(0)==="»"){key=true;l=" "+l.slice(1)}return '<span class="ln'+(key?' key':'')+'">'+(hl(l)||" ")+'</span>'}).join("");
+  });
+  var links=[].slice.call(document.querySelectorAll("#frames a")),map={};
+  links.forEach(function(a){map[a.getAttribute("href").slice(1)]=a});
+  if("IntersectionObserver" in window){var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){links.forEach(function(a){a.classList.remove("on")});if(map[e.target.id])map[e.target.id].classList.add("on")}})},{rootMargin:"-30% 0px -60% 0px"});Object.keys(map).forEach(function(id){var s=$(id);if(s)io.observe(s)})}
+
+  /* ---------- Frame 0: two counters ---------- */
+  var pc=0;
+  $("pjBtn").onclick=function(){pc++;$("pjVar").textContent=pc;if(!$("pjForget").checked)$("pjScreen").textContent=pc;$("pjWarn").textContent=(+$("pjScreen").textContent!==pc)?"the screen is out of date":""};
+  $("pjForget").onchange=function(){if(!this.checked){$("pjScreen").textContent=pc;$("pjWarn").textContent=""}};
+  var slot=0,renders=1;
+  function Counter(count){return "clicked "+count+" times"}
+  $("rxBtn").onclick=function(){slot=slot+1;renders++;var out=Counter(slot);$("rxScreen").textContent=slot;$("rxVar").textContent=slot;$("rxLog").textContent="setCount("+slot+") queued an update → render "+renders+": Counter() returned \""+out+"\" → commit changed the number"};
+
+  var M=window.ReactDataModel;if(!M)return;
+  /* ---------- line-by-line labs ---------- */
+  function screenHTML(s){
+    if(s==="blank")return '<span class="blank">blank: nothing committed yet</span>';
+    return '<span class="part">heading</span>'+(s==="spinner"?'<span class="part spin">spinner (fallback)</span>':'<span class="part grid">grid: 12 technologies loaded</span>')+'<span class="part">Your Stack</span>';
+  }
+  function stepper(id,T,fields){
+    var root=$(id),q=function(k){return root.querySelector('[data-k="'+k+'"]')},i=0;
+    function draw(){
+      var s=T.steps[i];
+      q("code").innerHTML=T.code.map(function(t,j){return '<span class="ln'+(s.l.indexOf(j+1)>=0?' hi':'')+'"><span class="n">'+(j+1)+'</span>'+(hl(t)||" ")+'</span>'}).join("");
+      q("desc").textContent=s.d;
+      fields.forEach(function(f){q(f).textContent=s[f]});
+      q("scr").innerHTML=screenHTML(s.scr);
+      q("ctr").textContent="step "+(i+1)+" of "+T.steps.length;
+      q("real").textContent=s.obs?"✓ real React logs this step":"";
+      q("prev").disabled=i===0;q("next").disabled=i===T.steps.length-1;
+      var hi=q("code").querySelector(".hi");var pane=q("code").parentNode;if(hi&&pane.scrollHeight>pane.clientHeight){var top=hi.offsetTop-pane.clientHeight/3;pane.scrollTop=Math.max(0,top)}
+    }
+    q("next").onclick=function(){if(i<T.steps.length-1){i++;draw()}};
+    q("prev").onclick=function(){if(i>0){i--;draw()}};
+    q("reset").onclick=function(){i=0;draw()};
+    root.addEventListener("keydown",function(e){if(e.target.tagName==="BUTTON"||e.target.classList.contains("codepane")){if(e.key==="ArrowRight"&&i<T.steps.length-1){i++;draw()}else if(e.key==="ArrowLeft"&&i>0){i--;draw()}}});
+    draw();
+  }
+  stepper("lab-effect",M.TIMELINES.effect,["st","e","n"]);
+  stepper("lab-suspense",M.TIMELINES.suspense,["p","n"]);
+
+  /* ---------- dependency-array lab ---------- */
+  var D=M.DepsModel,MODES=["none","empty","count","both"],mode="empty",S=null,hist=[],rows=[];
+  var CODE={none:"useEffect(() => {\n  console.log(\"effect ran\");\n});",empty:"useEffect(() => {\n  console.log(\"effect ran\");\n}, []);",count:"useEffect(() => {\n  console.log(\"effect ran\");\n}, [count]);",both:"useEffect(() => {\n  console.log(\"effect ran\");\n}, [count, dark]);"};
+  $("depModes").innerHTML=MODES.map(function(m){return '<button type="button" data-m="'+m+'">'+esc(D.LABEL[m])+'</button>'}).join("");
+  function name(a){return a==="inc"?"count + 1":a==="dark"?"toggle dark":"same value"}
+  function drawDeps(){
+    [].forEach.call($("depModes").children,function(b){b.classList.toggle("sel",b.getAttribute("data-m")===mode);b.setAttribute("aria-pressed",b.getAttribute("data-m")===mode)});
+    $("depCode").textContent=CODE[mode];
+    $("depState").textContent="count = "+S.count+", dark = "+S.dark;
+    $("depRows").innerHTML=rows.map(function(r,k){return '<tr><td>'+k+'</td><td>'+esc(r.m)+'</td><td>'+(r.rendered?'<span class="ran">render '+r.render+'</span>':'<span class="none">no render</span>')+'</td><td>'+(r.effect?'<span class="ran">ran</span>':'<span class="skip">skipped</span>')+'</td><td>'+esc(r.why)+'</td></tr>'}).join("");
+    var w=$("depRows").parentNode.parentNode;w.scrollTop=w.scrollHeight;
+  }
+  function resetDeps(){S=D.create(mode);hist=[];var r=D.mount(S);r.m="mount";rows=[r];$("depVerdict").textContent="";$("depVerdict").className="pill";drawDeps()}
+  [].forEach.call($("depModes").children,function(b){b.onclick=function(){mode=b.getAttribute("data-m");resetDeps()}});
+  [].forEach.call(document.querySelectorAll("#lab-deps [data-a]"),function(b){b.onclick=function(){var a=b.getAttribute("data-a");hist.push(a);var r=D.act(S,a);r.m=name(a);rows.push(r);$("depVerdict").textContent="";$("depVerdict").className="pill";drawDeps()}});
+  $("depReset").onclick=resetDeps;
+  var reactLoad=null;
+  function loadReact(){if(reactLoad)return reactLoad;reactLoad=new Promise(function(ok,bad){if(window.React&&window.ReactDOMClient)return ok();var s=document.createElement("script");s.src="vendor/react-19.2.8.production.js?v=a736ad63";s.onload=function(){ok()};s.onerror=function(){reactLoad=null;bad(new Error("could not load vendor/react-19.2.8.production.js"))};document.head.appendChild(s)});return reactLoad}
+  $("depCheck").onclick=function(){
+    var v=$("depVerdict"),mine=D.run(mode,hist);v.className="pill";v.textContent="loading real React…";
+    loadReact().then(function(){v.textContent="running "+(hist.length+1)+" steps on React "+window.React.version+"…";return window.runDepsReal(window.React,window.ReactDOMClient,mode,hist)}).then(function(real){
+      var bad=[];real.forEach(function(x,k){var m=mine[k];if(x.rendered!==m.rendered||x.effect!==m.effect)bad.push("#"+k+": React "+(x.rendered?"rendered":"did not render")+", effect "+(x.effect?"ran":"skipped"))});
+      v.className="pill "+(bad.length?"bad":"ok");
+      v.textContent=bad.length?"differs from real React: "+bad.join("; "):"✓ real React "+window.React.version+" in this browser did the same at all "+real.length+" moments";
+    }).catch(function(e){v.className="pill bad";v.textContent=String(e.message||e)});
+  };
+  resetDeps();
+
+  /* ---------- real output ---------- */
+  var C=window.RDL_CAPTURE;
+  if(C){
+    function list(el,log){$(el).innerHTML=log.map(function(l){var c=/^commit:/.test(l[0]);return '<li class="'+(c?'c':'')+'"><span class="s">'+esc(l[1])+'</span><span class="w">'+esc(l[0])+'</span></li>'}).join("")}
+    list("logSuspense",C.runs.suspense.log);list("logEffect",C.runs.effect.log);list("logStrict",C.runs["effect-strict"].log);list("logUncached",C.runs.uncached.log);
+    $("noteStrict").textContent=C.runs["effect-strict"].requests+" requests. StrictMode renders twice and runs the effect, cleans up, and runs it again, so two fetches race; the second response causes two more renders. The Suspense version under StrictMode sent "+C.runs["suspense-strict"].requests+" request.";
+    $("noteUncached").textContent="First 12 of "+C.runs.uncached.logLength+" lines. "+C.runs.uncached.requests+" requests in 2 s with a server answering in 100 ms, and the grid never appeared. Captured with React "+C.react+" in Chromium "+C.chromium+".";
+  }
+})();
+</script>
+<script src="../assets/root-kit.js?v=e1aa9936"></script>
+</body>
+</html>

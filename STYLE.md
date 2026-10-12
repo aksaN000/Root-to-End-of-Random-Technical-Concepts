@@ -40,6 +40,8 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 - **Cross-check a model against a number the real system reports.** Example: the tokenizer model's 46 tokens for the traced page against Chrome's own `parsed_tokens: 46`.
 - **Check input models with real input.** When the answer depends on how an event arrived, script-made events are not enough: the dispatch check clicks with Playwright's mouse, which enters Chrome at the browser process, and the lab asks the reader to click the target for real. A shared driver (`dispatch-real.js`) runs a program on a real DOM for both the verifier and the in-page check, so they test the same thing.
 - **When the real system is a library, compare its internals, not just its answers.** The autograd check compares the graph PyTorch records, the order its engine runs the nodes (pre-hooks on every node) and the gradients, so a model that got the right numbers by a different route would fail. Set float tolerances from what can legitimately differ (here the last bit of a product, scaled by the largest gradient in the graph) and say so on the page.
+- **When the real system is a library the reader runs, ship it and let the page check itself.** The React page vendors the pinned production build, loads it only when the reader presses "Check in this browser", and runs the reader's own clicks through the same driver file (`deps-real.js`) the verifier uses. The verifier fails if the vendored file drifts from a fresh build.
+- **Teach the line, not just the order.** For code the reader wrote, a line-by-line lab lights the running lines of their own file next to the state the system holds and what the screen shows; steps the real system reports are marked, and the verifier checks those steps' order.
 - **When the real system is a command-line tool, run its own code, not a copy.** The command check loads npm's parser, its option definitions and npm-package-arg from the npm that ships with Node, and runs the real `bin/npx-cli.js` with only its last line stubbed. Tables a model needs (npm's aliases, Tailwind's theme) are copied by an extract script and the check fails when they drift.
 - **Draw a lab's live copy exactly as the verifier does.** The hit-test lab and its check use one `toHTML()`, labels included, and anything decorative is kept out of the answer (labels have `pointer-events: none`; colours are `rgba` backgrounds, because `opacity` would create stacking contexts).
 
@@ -59,7 +61,7 @@ The left rail lists the frames as a call stack (bottom = root layer). The mobile
 
 ## Tracks
 
-Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Web dev track: the tools → JSX to the DOM → setState to the screen → a Next.js page; the Browser track: `fetch()` → HTML to pixels → a click to our listener; the ML track: autograd → a transformer). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
+Related pages form a **track** that follows one interaction or one pipeline, each page picking up where the previous one stops (for example the Web dev track: the tools → a JSON file to the screen → JSX to the DOM → setState to the screen → a Next.js page; the Browser track: `fetch()` → HTML to pixels → a click to our listener; the ML track: autograd → a transformer). The hero eyebrow says "<Track> track · n of N", the landing page lists the track with live, next and planned pages, and each page links to its neighbours. Plain API syntax that MDN already teaches well is linked from the reading list, not repeated; our pages explain the mechanism underneath.
 
 ## Visual system
 
@@ -90,6 +92,8 @@ Related pages form a **track** that follows one interaction or one pipeline, eac
 3. Commit as `aksaN000 <aksangoni.alif@gmail.com>`, with no co-author or tool attribution lines, push, and check the live URL.
 
 ## Changelog
+
+- **2026-10-12**: Web dev track page 2 of 5 (`react-data-loading`), checked against real React 19.2.8 in Chromium; the track grows to five pages. New rules: ship a library the reader runs and let the page check itself with the verifier's own driver, and line-by-line labs of the reader's own code. Real React showed two things the first sketch missed (a prewarm render after the fallback commits, and a same-value setState that still renders once right after an update), and the page teaches both from the source.
 
 - **2026-10-12**: Web dev track, page 1 of 4 (`web-dev-vocabulary`), with a command model checked against npm's own code and a Tailwind model checked against the real compiler. New rules: run a command-line tool's own code in its check, extract copied tables with a script that fails on drift, and a remembering section with a recall trainer for vocabulary-heavy pages. The landing page has a Web dev track and a fifth starting point.
 

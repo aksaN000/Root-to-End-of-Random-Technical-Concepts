@@ -1,14 +1,14 @@
 {
  "id": "pages",
- "date": "2026-10-11T22:24:28.853Z",
+ "date": "2026-10-12T04:36:52.488Z",
  "platform": "linux 6.18.44-fc-v114 x64",
  "node": "22.22.0",
  "v8": "12.4.254.21-node.33",
  "reference": "Chromium 141.0.7390.37 (Playwright 1.56.0), axe-core 4.13.0",
- "cases": 20,
- "matched": 20,
+ "cases": 22,
+ "matched": 22,
  "passed": true,
- "detail": "10 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa",
+ "detail": "11 pages × 2 widths; accessibility checked in light and dark mode against wcag2a, wcag2aa, wcag21a, wcag21aa, wcag22aa",
  "pages": [
   {
    "page": "home",
@@ -90,6 +90,18 @@
   },
   {
    "page": "lr-parser",
+   "width": 390,
+   "problems": 0,
+   "a11y": 0
+  },
+  {
+   "page": "react-data-loading",
+   "width": 1300,
+   "problems": 0,
+   "a11y": 0
+  },
+  {
+   "page": "react-data-loading",
    "width": 390,
    "problems": 0,
    "a11y": 0

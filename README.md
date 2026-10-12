@@ -8,7 +8,8 @@ Interactive simulations I build while learning computer science, each one tracin
 
 | Topic | What it traces | Open |
 |---|---|---|
-| [From the engine to the plugin](web-dev-vocabulary/) | Web dev track 1/4: the words a React project starts with, from the `node` binary's `main()` through runtimes, packages, the registry and scopes, how npm and npx read a command (model matches npm 10's own code on 4,793 cases), Vite's transform hook and plugins, and the CSS behind a Tailwind class (model matches Tailwind CSS 4 on 2,183 classes), ending with what memory research says and a spaced recall trainer | [web-dev-vocabulary/index.html](web-dev-vocabulary/index.html) |
+| [From the engine to the plugin](web-dev-vocabulary/) | Web dev track 1/5: the words a React project starts with, from the `node` binary's `main()` through runtimes, packages, the registry and scopes, how npm and npx read a command (model matches npm 10's own code on 4,793 cases), Vite's transform hook and plugins, and the CSS behind a Tailwind class (model matches Tailwind CSS 4 on 2,183 classes), ending with what memory research says and a spaced recall trainer | [web-dev-vocabulary/index.html](web-dev-vocabulary/index.html) |
+| [From a JSON file to the screen](react-data-loading/) | Web dev track 2/5: loading data into a React component three ways (plain JavaScript, `useEffect` + `useState`, `use(promise)` + `<Suspense>`), traced into React 19.2.8's hook slots, effect list, `Object.is` dependency check, `trackUsedThenable`'s throw and the ping that retries; line-by-line labs of our own Technologies component and a dependency-array lab that match real React (720 click programs, `react-data-loading/verify/`) | [react-data-loading/index.html](react-data-loading/index.html) |
 | [JavaScript event loop](js-event-loop/) | `fetch().then()` from process creation through Chromium's `RendererMain`, `MessagePumpDefault::Run`, the kernel wait, V8's promise builtins and the microtask queue, plus a playground that steps through our own async code and checks itself against the real engine | [js-event-loop/index.html](js-event-loop/index.html) |
 | [How V8 runs our JavaScript](v8-pipeline/) | One expression through V8's scanner, precedence-climbing parser, bytecode generator and Ignition interpreter, then hidden classes, inline caches, tiering and deoptimization. The bytecode model is verified against Node's V8 (`v8-pipeline/verify/`) | [v8-pipeline/index.html](v8-pipeline/index.html) |
 | [LR parser we can step through](lr-parser/) | Any grammar → FIRST/FOLLOW → LR(0) item sets → SLR table → step-by-step parse with a growing tree, then real GNU Bison: `yyparse`, default reductions, the dangling-else conflict, and why LALR beats SLR | [lr-parser/index.html](lr-parser/index.html) |
@@ -22,9 +23,9 @@ Interactive simulations I build while learning computer science, each one tracin
 
 Planned, roughly in order. New topics come at our own pace; [suggest one](https://github.com/aksaN000/Root-to-End-of-Random-Technical-Concepts/issues/new?template=topic.yml).
 
-1. **Web dev track 2/4: from JSX to the DOM.** `createRoot`, React elements, fibers, the render and commit phases, and event delegation at the root, checked against real React.
-2. **Web dev track 3/4: from setState to the screen.** The hook list on a fiber, update queues, batching, reconciliation and keys.
-3. **Web dev track 4/4: from a URL to a Next.js page.** File-based routing, server and client components, and what the server sends.
+1. **Web dev track 3/5: from JSX to the DOM.** `createRoot`, React elements, fibers, the render and commit phases, and event delegation at the root, checked against real React.
+2. **Web dev track 4/5: from setState to the screen.** The hook list on a fiber, update queues, batching, reconciliation and keys.
+3. **Web dev track 5/5: from a URL to a Next.js page.** File-based routing, server and client components, and what the server sends.
 4. **`hello.c` to `main`.** Compiler, linker, the ELF file, `execve`, the dynamic loader and `_start`.
 5. **ML track 2/2: one token through a transformer.** Embeddings, attention, the KV cache, and logits to softmax to sampling, checked against a real small model.
 6. **`malloc` to a page fault.** glibc's allocator, `brk` and `mmap`, page tables and the kernel's fault handler.

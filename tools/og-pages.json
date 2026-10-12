@@ -105,13 +105,25 @@
  {
   "slug": "web-dev-vocabulary",
   "h": "From the engine to the plugin",
-  "sub": "Web dev track 1/4: from the node binary to a Tailwind class",
+  "sub": "Web dev track 1/5: from the node binary to a Tailwind class",
   "chain": [
    "node",
    "npm \u00b7 npx",
    "Vite + plugins",
    "Tailwind",
    "our components"
+  ]
+ },
+ {
+  "slug": "react-data-loading",
+  "h": "From a JSON file to the screen",
+  "sub": "Web dev track 2/5: use() + Suspense, useEffect + useState, plain JS",
+  "chain": [
+   "the DOM",
+   "useState",
+   "useEffect",
+   "use() + Suspense",
+   "our component"
   ]
  }
 ]

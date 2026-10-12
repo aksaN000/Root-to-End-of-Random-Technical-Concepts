@@ -289,8 +289,20 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
         <div class="chain" aria-label="Layers traced">
           <span>main()</span><i>→</i><span>Node · browser</span><i>→</i><span>npm · npx</span><i>→</i><span>Vite plugins</span><i>→</i><span>Tailwind</span><i>→</i><span class="you">our components</span>
         </div>
-        <div class="meta"><span class="tag">Web dev track 1/4</span><span class="tag">npm</span><span class="tag">Vite</span><span class="tag">Tailwind CSS</span><span class="tag">learning</span><span class="tag">About 25 min</span></div>
+        <div class="meta"><span class="tag">Web dev track 1/5</span><span class="tag">npm</span><span class="tag">Vite</span><span class="tag">Tailwind CSS</span><span class="tag">learning</span><span class="tag">About 25 min</span></div>
         <p class="need">Needs: nothing beyond basic JavaScript. Opens the Web dev track; a good first page before the event-loop page and the Browser track.</p>
+      </div>
+      <span class="go">Open →</span>
+    </a>
+    <a class="sim" href="react-data-loading/" style="margin-top:12px">
+      <div style="min-width:0">
+        <h3>From a JSON file to the screen</h3>
+        <p>Loading data into a React component three ways: plain JavaScript, <code>useEffect</code> with <code>useState</code>, and <code>use(promise)</code> with <code>&lt;Suspense&gt;</code>. We follow each into React 19's source (the hook slots, the effect list, <code>Object.is</code> on the dependency array, the throw that Suspense catches) and step through our own code line by line. A dependency-array lab matches real React 19.2.8 on 720 click programs and can re-run any sequence on real React in the browser.</p>
+        <div class="chain" aria-label="Layers traced">
+          <span>the DOM</span><i>→</i><span>useState</span><i>→</i><span>useEffect</span><i>→</i><span>use + Suspense</span><i>→</i><span class="you">our component</span>
+        </div>
+        <div class="meta"><span class="tag">Web dev track 2/5</span><span class="tag">React 19</span><span class="tag">useEffect</span><span class="tag">Suspense</span><span class="tag">About 20 min</span></div>
+        <p class="need">Needs: basic JavaScript and promises (<code>fetch</code>, <code>async</code>/<code>await</code>), and a first React component. Follows page 1 of the Web dev track.</p>
       </div>
       <span class="go">Open →</span>
     </a>
@@ -298,12 +310,13 @@ Promise.resolve().then(() =&gt; <b>log</b>("C"));
 
   <section>
     <h2>Web dev track</h2>
-    <p class="maplede">From the tools on our machine to a running React and Next.js app: what npm, Vite and Tailwind do before the browser sees our code, then how React turns components into DOM and keeps it up to date, then how Next.js serves a page. It is the path of a first React project, and it hands over to the Browser track for what the browser does next.</p>
+    <p class="maplede">From the tools on our machine to a running React and Next.js app: what npm, Vite and Tailwind do before the browser sees our code, then how a component loads its data, how React turns components into DOM and keeps it up to date, then how Next.js serves a page. It is the path of a first React project, and it hands over to the Browser track for what the browser does next.</p>
     <nav class="map" aria-label="Web dev track">
       <a href="web-dev-vocabulary/">1 · node → npm → Vite → Tailwind<small>live</small></a><i>→</i>
-      <span class="soon">2 · JSX → fibers → the DOM<small>next</small></span><i>→</i>
-      <span class="soon">3 · setState → reconcile → commit<small>planned</small></span><i>→</i>
-      <span class="soon">4 · a URL → a Next.js page<small>planned</small></span>
+      <a href="react-data-loading/">2 · a JSON file → useEffect · use → the screen<small>live</small></a><i>→</i>
+      <span class="soon">3 · JSX → fibers → the DOM<small>next</small></span><i>→</i>
+      <span class="soon">4 · setState → reconcile → commit<small>planned</small></span><i>→</i>
+      <span class="soon">5 · a URL → a Next.js page<small>planned</small></span>
     </nav>
   </section>
 

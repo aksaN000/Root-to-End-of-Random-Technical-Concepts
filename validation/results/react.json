@@ -1,0 +1,14 @@
+{
+ "id": "react",
+ "date": "2026-10-12T04:29:23.991Z",
+ "platform": "linux 6.18.44-fc-v114 x64",
+ "node": "22.22.0",
+ "v8": "12.4.254.21-node.33",
+ "reference": "react and react-dom 19.2.8 (production and development builds, bundled with esbuild) in Playwright's Chromium",
+ "cases": 729,
+ "matched": 729,
+ "passed": true,
+ "seed": 2026,
+ "detail": "720 dependency-array programs (180 distinct click sequences, 120 of them every sequence up to length 4, on 4 arrays), checked for renders and effect runs at every step; 4 timeline runs of the two line-by-line labs; StrictMode request and render counts; the uncached-promise loop; the wrong-file-name blank page; the vendored bundle",
+ "failureCount": 0
+}
